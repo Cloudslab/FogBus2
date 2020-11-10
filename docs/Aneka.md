@@ -3,7 +3,8 @@ This is a brief installation guide of [Aneka 5.0](http://www.manjrasoft.com/down
 ## Environment
 - Windows Server (Any version with .NET 4.5 supports)
 ## Package
-- Aneka 5.0 Go to [Manjrasoft Download Center](http://www.manjrasoft.com/manjrasoft_downloads.html), click [Aneka 5.0 Software (Free Evaluation Version) Direct Download](http://www.manjrasoft.com/download/5.0/Aneka5.0.msi)
+- Aneka 5.0 
+    + Go to [Manjrasoft Download Center](http://www.manjrasoft.com/manjrasoft_downloads.html), click [Aneka 5.0 Software (Free Evaluation Version) Direct Download](http://www.manjrasoft.com/download/5.0/Aneka5.0.msi)
 
 ## Installation
 1. Run installer `Aneka5.0.msi`, click `Next`.
