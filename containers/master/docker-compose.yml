@@ -1,0 +1,21 @@
+version: '3'
+
+services: 
+  fogbus: 
+    build: 
+      context: .
+    ports:
+      - "80:80"
+    volumes: 
+      - ./src:/var/www/html/
+
+  mysql: 
+    image: "mysql:5"
+    ports: 
+      - "3306:3306"
+    environment: 
+      MYSQL_DATABASE: users
+      MYSQL_ROOT_PASSWORD: fogbus
+    volumes:
+       - ./data/db:/var/lib/mysql
+       - ./data/mysql-dump:/docker-entrypoint-initdb.d

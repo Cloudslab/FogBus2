@@ -1,0 +1,10 @@
+version: '3'
+
+services: 
+  fogbus: 
+    build: 
+      context: .
+    ports:
+      - "81:80"
+    volumes: 
+      - ./src:/var/www/html/
