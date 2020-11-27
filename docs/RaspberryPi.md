@@ -1,7 +1,7 @@
 # FogBus on RaspberryPi
 
 ## Requirements
-- [Raspberri Pi devices](https://www.raspberrypi.org/products/)
+- [Raspberry Pi devices](https://www.raspberrypi.org/products/)
 
 ## Image Preparation
 Go to [Ubuntu Website](https://ubuntu.com/tutorials/how-to-install-ubuntu-on-your-raspberry-pi) and follow the tutorial to install ubuntu on your Raspberry Pi device. 
