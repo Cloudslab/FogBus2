@@ -1,10 +1,19 @@
 version: '3'
 
 services: 
-  fogbus: 
+
+  fogbus-worker:
+    container_name: fogbus-worker
     build: 
-      context: .
-    ports:
-      - "81:80"
+      context: ../../
+      dockerfile: ./containers/worker/Dockerfile
     volumes: 
-      - ./src:/var/www/html/
+        - ../../src/worker:/config/www/
+        - ../../src/nginx:/config/nginx
+    environment:
+      PUID: 1000
+      PGID: 1000
+      TZ: Australia/Melbourne
+    ports:
+      - 81:80
+    restart: unless-stopped

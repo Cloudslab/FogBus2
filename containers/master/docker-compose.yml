@@ -1,21 +1,36 @@
 version: '3'
 
-services: 
-  fogbus: 
-    build: 
-      context: .
-    ports:
-      - "80:80"
-    volumes: 
-      - ./src:/var/www/html/
+services:
 
-  mysql: 
-    image: "mysql:5"
-    ports: 
+  fogbus-master: 
+    container_name: fogbus-master
+    build: 
+      context: ../../
+      dockerfile: ./containers/master/Dockerfile
+    volumes: 
+        - ../../src/master:/config/www/
+        - ../../src/nginx:/config/nginx
+    environment:
+      PUID: 1000
+      PGID: 1000
+      TZ: Australia/Melbourne
+    ports:
+      - 80:80
+    restart: unless-stopped
+
+  database:
+    image: linuxserver/mariadb:110.4.17mariabionic-ls2
+    container_name: fogbus-database
+    volumes: 
+      - ../../src/mysql-dump:/config/initdb.d/
+      - ./data/db:/config
+    ports:
       - "3306:3306"
-    environment: 
+    environment:
+      PUID: 1000
+      PGID: 1000
+      TZ: Australia/Melbourne
       MYSQL_DATABASE: users
-      MYSQL_ROOT_PASSWORD: fogbus
-    volumes:
-       - ./data/db:/var/lib/mysql
-       - ./data/mysql-dump:/docker-entrypoint-initdb.d
+      MYSQL_USER: fogbus
+      MYSQL_PASSWORD: fogbus
+    restart: unless-stopped

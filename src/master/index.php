@@ -31,8 +31,8 @@
 session_start();
 
 // Database settings
-$host = "mysql";
-$user = "root";
+$host = "database";
+$user = "fogbus";
 $pass = "fogbus";
 $db = "users";
 

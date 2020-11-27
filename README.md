@@ -1,6 +1,7 @@
 # Notes 
 
-Here you can find some docs 
+The following are the guidelines to setup Aneka and FogBus
 
-- Aneka [Installation Guide](docs/Aneka.md)
-- FogBus Containers [Setup Guide](docs/FogBusContainers.md)
+- [Aneka](docs/Aneka.md)
+- [FogBus Containers](docs/FogBusContainers.md)
+- [Raspberry Pi](docs/RaspberryPi.md)
