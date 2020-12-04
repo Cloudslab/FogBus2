@@ -1,3 +1,4 @@
 **/master/data/db
 .DS_Store
 *~
+.vscode/
