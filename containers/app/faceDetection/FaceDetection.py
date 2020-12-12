@@ -1,5 +1,3 @@
-# Authorised by Mohammad Goudarzi
-
 import cv2
 import sys
 import os

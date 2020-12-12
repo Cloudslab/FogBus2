@@ -1,7 +1,8 @@
-# Authorised by Mohammad Goudarzi
-
 import cv2
 import numpy as np
+
+def nothing():
+    pass
 
 cv2.namedWindow('Trackbars')
 cv2.moveWindow('Trackbars', 1320, 0)

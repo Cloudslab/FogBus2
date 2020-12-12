@@ -92,7 +92,7 @@ def run():
             if laplacian > thresholdLaplacian:
                 preStopFrame = frame
                 preStopPHash = get_pHash(preStopFrame)
-                # showWindow(frame, frame)
+                showWindow(frame, frame)
                 saveFrame(frame, frameNumber,
                           pytesseract.image_to_string(frame))
                 gotFrame += 1
@@ -139,7 +139,7 @@ def run():
                             saveFrame(frame, frameNumber, text)
                             gotFrame += 1
                     preText = text
-            # showWindow(preStopFrame, preFrame)
+            showWindow(preStopFrame, preFrame)
             preFrame = frame
         else:
             break
