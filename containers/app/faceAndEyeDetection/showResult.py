@@ -5,7 +5,14 @@ import json
 
 
 def show():
-    filename = sys.argv[1]
+    if len(sys.argv) < 2:
+        isWebCamera = True
+
+    if isWebCamera:
+        filename = "./output/WebCamera.mp4"
+    else:
+        filename = sys.argv[1]
+        
     cap = cv2.VideoCapture(filename)
     f = open("./output/%s.json" % os.path.basename(filename), "r")
     facesRes = json.loads(f.read())

@@ -1,5 +1,8 @@
 # Base
-FROM linuxserver/nginx:09f3a698-ls105 
+FROM linuxserver/nginx
+
+# Alter Mirror
+RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.tuna.tsinghua.edu.cn/g' /etc/apk/repositories
 
 # JAVA8
 RUN apk add --no-cache openjdk8

@@ -19,7 +19,7 @@ services:
     restart: unless-stopped
 
   database:
-    image: linuxserver/mariadb:110.4.17mariabionic-ls2
+    image: linuxserver/mariadb
     container_name: fogbus-database
     volumes: 
       - ../../src/mysql-dump:/config/initdb.d/

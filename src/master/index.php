@@ -31,7 +31,7 @@
 session_start();
 
 // Database settings
-$host = "database";
+$host = "fogbus-database";
 $user = "fogbus";
 $pass = "fogbus";
 $db = "users";

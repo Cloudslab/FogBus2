@@ -5,7 +5,10 @@ import json
 
 
 def show():
-    filename = sys.argv[1]
+    if len(sys.argv) < 2:
+        filename = "WebCamera"
+    else:
+        filename = sys.argv[1]
     cap = cv2.VideoCapture(filename)
     f = open("./output/%s.json" % os.path.basename(filename), "r")
     boxesRes = json.loads(f.read())
