@@ -2,3 +2,8 @@
 .DS_Store
 *~
 .vscode/
+*.mp4
+*.json
+*.jpg
+*.txt
+src/nginx/nginx.conf
