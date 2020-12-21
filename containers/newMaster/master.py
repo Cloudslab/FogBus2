@@ -3,42 +3,32 @@ import socketio
 import logging
 
 from logger import get_logger
-from registry import Registry
+from registry import Registry, RegistryNamespace
 from datatype import Master, NodeSpecs
 from message import Message
 
 
-class RegistryNamespace(socketio.Namespace):
+class FogMaster:
 
-    def __init__(self, namespace=None, logger=logging):
-        super(RegistryNamespace, self).__init__(namespace=namespace)
-        self.registry = Registry()
-        self.logger = logger
+    def __init__(self, host: str, port: int):
+        self.host = host
+        self.port = port
 
-    def on_connect(self, socketID, environ):
-        pass
+    def run(self):
+        logger = get_logger('Master', logging.INFO)
 
-    def on_register(self, socketID, msg):
-        nodeSpecs = Message.decrypt(msg)
-        workerID = self.registry.addWoker(socketID, nodeSpecs)
-        sio.emit("id",  to=socketID, data=workerID, namespace='/registry')
-        logger.info("[*] Worker-%d joined: \n%s" % (workerID, nodeSpecs.info()))
+        sio = socketio.Server()
+        app = socketio.WSGIApp(sio, static_files={
+            '/': {'content_type': 'text/html', 'filename': 'html/index.html'}
+        })
+        sio.register_namespace(RegistryNamespace(
+            '/registry', sio=sio, logger=logger))
 
-    def on_disconnect(self, socketID):
-        print('disconnect ', socketID)
+        logger.info("[*] Master serves at: %s:%d" % (self.host,  self.port))
+        eventlet.wsgi.server(eventlet.listen((self.host,  self.port)),
+                             app, log_output=False)
 
 
 if __name__ == '__main__':
-    logger = get_logger('Master', logging.INFO)
-
-    sio = socketio.Server()
-    app = socketio.WSGIApp(sio, static_files={
-        '/': {'content_type': 'text/html', 'filename': 'html/index.html'}
-    })
-    sio.register_namespace(RegistryNamespace('/registry', logger))
-
-    host = ''
-    port = 5000
-    logger.info("[*] Master serves at: %s:%d" % (host, port))
-    eventlet.wsgi.server(eventlet.listen((host, port)),
-                         app, log_output=False)
+    master = FogMaster('', 5000)
+    master.run()
