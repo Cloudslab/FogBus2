@@ -10,23 +10,25 @@ from message import Message
 
 class FogMaster:
 
-    def __init__(self, host: str, port: int):
+    def __init__(self, host: str, port: int, logger=logging):
         self.host = host
         self.port = port
+        self.sio = socketio.Server()
+        self.registry = Registry()
+        self.logger = get_logger('Master', logging.INFO)
 
     def run(self):
-        logger = get_logger('Master', logging.INFO)
 
-        sio = socketio.Server()
-        app = socketio.WSGIApp(sio, static_files={
+        app = socketio.WSGIApp(self.sio, static_files={
             '/': {'content_type': 'text/html', 'filename': 'html/index.html'}
         })
-        sio.register_namespace(RegistryNamespace(
-            '/registry', sio=sio, logger=logger))
+        self.sio.register_namespace(RegistryNamespace(
+            '/registry', registry=self.registry, sio=self.sio, logLevel=self.logger.level))
 
-        logger.info("[*] Master serves at: %s:%d" % (self.host,  self.port))
         eventlet.wsgi.server(eventlet.listen((self.host,  self.port)),
-                             app, log_output=False)
+                             app, log=get_logger("EventLet", logging.DEBUG), log_output=False)
+        self.logger.info("[*] Master serves at: %s:%d" %
+                         (self.host,  self.port))
 
 
 if __name__ == '__main__':

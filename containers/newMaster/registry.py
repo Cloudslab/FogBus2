@@ -1,5 +1,7 @@
 import socketio
 import logging
+
+from logger import get_logger
 from datatype import Worker, NodeSpecs
 from message import Message
 
@@ -20,10 +22,10 @@ class Registry:
 
 class RegistryNamespace(socketio.Namespace):
 
-    def __init__(self, namespace=None, logger=logging, sio = None):
+    def __init__(self, namespace=None, registry = None, sio = None, logLevel = logging.DEBUG):
         super(RegistryNamespace, self).__init__(namespace=namespace)
-        self.registry = Registry()
-        self.logger = logger
+        self.registry = registry
+        self.logger = get_logger("Registry", logLevel)
         self.sio = sio
 
     def on_connect(self, socketID, environ):
@@ -38,6 +40,3 @@ class RegistryNamespace(socketio.Namespace):
     def on_disconnect(self, socketID):
         print('disconnect ', socketID)
 
-if __name__ == "__main__":
-    print("[*] Test Registry")
-    registry = Registry()
