@@ -27,3 +27,15 @@ class Worker:
         self.id = id
         self.sid = sid
         self.specs: NodeSpecs
+
+
+class Task:
+
+    def __init__(self, taskID: int, userID: int, inputData):
+        self.taskID = taskID
+        self.userID = userID
+        self.inputData = inputData
+        self.taskID = None
+        self.workerID = None
+        self.outputData = None
+        self.hasDone = False

@@ -1,27 +1,35 @@
-# ref: https://gist.github.com/kittinan/e7ecefddda5616eab2765fdb2affed1b
+import cv2
 import socket
 import sys
-import base64
-import cv2
 import struct
 import pickle
-import numpy as np
+import queue
+import threading
 
 
-def serve():
+def sendFrame():
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    host = sys.argv[1]
-    port = int(sys.argv[2])
+    host = "192.168.3.49"
+    port = 9999
     s.connect((host, port))
-    handle(s, host, port)
 
+    
 
-def handle(s, host, port):
-    data = b""
-    payload_size = struct.calcsize(">L")
-
+    cam = cv2.VideoCapture(0)
+    cam.set(cv2.CAP_PROP_FPS, 30)
     while True:
+        print("Sending frames")
+        ret, frame = cam.read()
+        if not ret:
+            break
+        _, frame_png = cv2.imencode('.jpg', frame)
 
+        data = pickle.dumps(frame_png, 0)
+        s.sendall(struct.pack(">L", len(data)) + data)
+
+        print("Receiving frames")
+        data = b""
+        payload_size = struct.calcsize(">L")
         while len(data) < payload_size:
             data += s.recv(4096)
 
@@ -37,11 +45,10 @@ def handle(s, host, port):
         frame = pickle.loads(frame_data, fix_imports=True, encoding="bytes")
         frame = cv2.imdecode(frame, cv2.IMREAD_COLOR)
 
-        cv2.imshow('Video Stream From %s:%d' % (host, port), frame)
-
+        cv2.imshow("User Face Detection", frame)
         if cv2.waitKey(1) == ord('q'):
             break
 
 
 if __name__ == "__main__":
-    serve()
+    threading.Thread(target=sendFrame).start()
