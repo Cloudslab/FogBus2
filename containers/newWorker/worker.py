@@ -1,5 +1,6 @@
 import socketio
 from datatype import NodeSpecs
+from message import Message
 
 sio = socketio.Client()
 
@@ -27,5 +28,6 @@ def disconnect():
 
 sio.connect('http://127.0.0.1:5000', namespaces=['/registry'])
 print(sio.connection_namespaces)
-sio.emit('register', 1, namespace='/registry')
+sio.emit('register', Message.encrypt(
+    NodeSpecs(1, 1, 1, 1)), namespace='/registry')
 sio.wait()

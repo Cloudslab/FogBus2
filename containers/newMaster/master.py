@@ -5,6 +5,8 @@ import logging
 from logger import get_logger
 from registry import Registry
 from datatype import Master, NodeSpecs
+from message import Message
+
 
 class RegistryNamespace(socketio.Namespace):
 
@@ -13,20 +15,16 @@ class RegistryNamespace(socketio.Namespace):
         self.registry = Registry()
         self.logger = logger
 
-    def connect(self, socketID, environ):
-        print("connect")
+    def on_connect(self, socketID, environ):
         pass
 
-    def register(self, socketID, t):
-        
-        workerID = self.registry.addWoker(socketID, NodeSpecs(1, 2, 3, 4))
-        sio.emit("id",  to=socketID, data=workerID, )
-        logger.info(self.registry.workers)
+    def on_register(self, socketID, msg):
+        nodeSpecs = Message.decrypt(msg)
+        workerID = self.registry.addWoker(socketID, nodeSpecs)
+        sio.emit("id",  to=socketID, data=workerID, namespace='/registry')
+        logger.info("[*] Worker-%d joined: \n%s" % (workerID, nodeSpecs.info()))
 
-    def my_message(self, socketID, data):
-        print('message ', data)
-
-    def disconnect(self, socketID):
+    def on_disconnect(self, socketID):
         print('disconnect ', socketID)
 
 
