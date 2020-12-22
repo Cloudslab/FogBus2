@@ -19,7 +19,7 @@ class FogMaster:
         self.port = port
         self.sio = socketio.Server()
         self.registry = Registry()
-        self.taskManager = TaskManager()
+        self.taskManager = TaskManager(registry=self.registry)
         self.logger = get_logger('Master', logLevel)
 
     def run(self):
@@ -29,11 +29,15 @@ class FogMaster:
         self.sio.register_namespace(RegistryNamespace(
             '/registry', registry=self.registry, sio=self.sio, logLevel=self.logger.level))
 
+        self.sio.register_namespace(TaskNamespace(
+            '/task', taskManager=self.taskManager, sio=self.sio, logLevel=self.logger.level))
+
+        self.logger.info("[*] Master serves at: %s:%d", self.host,  self.port)
+
         eventlet.wsgi.server(eventlet.listen((self.host,  self.port)),
                              app,
                              log=get_logger("EventLet", logging.DEBUG),
                              log_output=False)
-        self.logger.info("[*] Master serves at: %s:%d", self.host,  self.port)
 
 
 if __name__ == '__main__':
