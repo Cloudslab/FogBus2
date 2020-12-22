@@ -1,9 +1,9 @@
-import eventlet
-import socketio
 import logging
 import threading
-import cv2
 from queue import Queue
+import eventlet
+import socketio
+import cv2
 
 from logger import get_logger
 from registry import Registry, RegistryNamespace
@@ -14,40 +14,29 @@ from message import Message
 
 class FogMaster:
 
-    def __init__(self, host: str, port: int, logger=logging):
+    def __init__(self, host: str, port: int, logLevel=logging.DEBUG):
         self.host = host
         self.port = port
         self.sio = socketio.Server()
         self.registry = Registry()
         self.taskManager = TaskManager()
-        self.logger = get_logger('Master', logging.INFO)
-        self.q = Queue()
-
-    @staticmethod
-    def cam():
-        cam = cv2.VideoCapture(0)
-        while True:
-            ret, frame = cam.read()
-            if not ret:
-                break
-            self.q.put(frame)
+        self.logger = get_logger('Master', logLevel)
 
     def run(self):
-        threading.Thread(target=self.cam).start()
-
         app = socketio.WSGIApp(self.sio, static_files={
             '/': {'content_type': 'text/html', 'filename': 'html/index.html'}
         })
         self.sio.register_namespace(RegistryNamespace(
-            '/registry', registry=self.registry, sio=self.sio, logLevel=self.logger.level, q =self.q))
+            '/registry', registry=self.registry, sio=self.sio, logLevel=self.logger.level))
 
         eventlet.wsgi.server(eventlet.listen((self.host,  self.port)),
-                             app, log=get_logger("EventLet", logging.DEBUG), log_output=False)
-        self.logger.info("[*] Master serves at: %s:%d" %
-                         (self.host,  self.port))
+                             app,
+                             log=get_logger("EventLet", logging.DEBUG),
+                             log_output=False)
+        self.logger.info("[*] Master serves at: %s:%d", self.host,  self.port)
 
 
 if __name__ == '__main__':
 
-    master = FogMaster('', 5000)
+    master = FogMaster('', 5000, logging.INFO)
     master.run()

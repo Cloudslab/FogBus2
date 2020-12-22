@@ -11,25 +11,32 @@ class Registry:
 
     def __init__(self):
         self.id = 0
-        self.workers = {}
+        self.workersByID = {}
+        self.workersBySocketID = {}
 
-    def addWoker(self, sid: str, nodeSpecs: NodeSpecs):
+    def addWoker(self, socketID: str, nodeSpecs: NodeSpecs):
         self.id += 1
-        self.workers[self.id] = Worker(self.id, sid, nodeSpecs)
+        worker = Worker(self.id, socketID, nodeSpecs)
+        self.workersByID[self.id] = worker
+        self.workersBySocketID[socketID] = worker
         return self.id
 
-    def remove(self, workerID):
-        del self.workers[workerID]
+    def removeByID(self, workerID):
+        del self.workersBySocketID[self.workersByID[workerID].socketID]
+        del self.workersByID[workerID]
+
+    def removeBySocketID(self, socketID):
+        del self.workersByID[self.workersBySocketID[socketID].workerID]
+        del self.workersBySocketID[socketID]
 
 
 class RegistryNamespace(socketio.Namespace):
 
-    def __init__(self, namespace=None, registry=None, sio=None, logLevel=logging.DEBUG, q= None):
+    def __init__(self, namespace=None, registry=None, sio=None, logLevel=logging.DEBUG):
         super(RegistryNamespace, self).__init__(namespace=namespace)
         self.registry = registry
         self.logger = get_logger("Registry", logLevel)
         self.sio = sio
-        self.q = q
 
     def on_connect(self, socketID, environ):
         pass
@@ -37,15 +44,9 @@ class RegistryNamespace(socketio.Namespace):
     def on_register(self, socketID, msg):
         nodeSpecs = Message.decrypt(msg)
         workerID = self.registry.addWoker(socketID, nodeSpecs)
-        self.logger.info("[*] Worker-%d joined: \n%s" %
-                         (workerID, nodeSpecs.info()))
-
-       
-
-    def on_finish(self, data):
-        print("finished")
-        frame = Message.decrypt(data)
-        cv2.imwrite("?.jpg", frame)
+        self.logger.info("[*] Worker-%d joined: \n%s",
+                         workerID, nodeSpecs.info())
 
     def on_disconnect(self, socketID):
+        self.registry.removeBySocketID(socketID)
         print('disconnect ', socketID)
