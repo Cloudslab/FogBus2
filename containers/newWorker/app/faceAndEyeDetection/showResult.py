@@ -9,7 +9,7 @@ def show():
         isWebCamera = True
 
     if isWebCamera:
-        filename = "./output/WebCamera.mp4"
+        filename = "output/WebCamera.mp4"
     else:
         filename = sys.argv[1]
         

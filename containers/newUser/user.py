@@ -1,5 +1,5 @@
 import socketio
-from datatype import NodeSpecs
+import cv2
 from message import Message
 
 sio = socketio.Client()

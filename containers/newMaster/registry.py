@@ -1,49 +1,62 @@
 import logging
 import socketio
 
+from queue import Queue
 from logger import get_logger
 from datatype import Worker, User, NodeSpecs
 from message import Message
+from typing import NoReturn
 
 
 class Registry:
 
     def __init__(self):
         self.currentWorkerID = 0
-        self.workersByID = {}
-        self.workersBySocketID = {}
+        self.workersByWorkerID: {Worker} = {}
+        self.workersBySocketID: {Worker} = {}
         self.currentUserID = 0
-        self.usersByID = {}
-        self.usersBySocketID = {}
+        self.usersByUserID: {User} = {}
+        self.usersBySocketID: {User} = {}
+        self.waitingWorkers = Queue()
 
     def addWorker(self, socketID: str, nodeSpecs: NodeSpecs):
+        # TODO: racing
         self.currentWorkerID += 1
-        worker = Worker(self.currentWorkerID, socketID, nodeSpecs)
-        self.workersByID[self.currentWorkerID] = worker
+
+        workerID = self.currentWorkerID
+        worker = Worker(workerID, socketID, nodeSpecs)
+        self.workersByWorkerID[workerID] = worker
         self.workersBySocketID[socketID] = worker
-        return self.currentWorkerID
+        self.workerWait(workerID)
+        return workerID
+
+    def workerWait(self, workerID: int) -> NoReturn:
+        self.waitingWorkers.put(workerID)
+
+    def workerWork(self) -> Worker:
+        return self.waitingWorkers.get(block=False)
 
     def removeWorkerByID(self, workerID):
-        del self.workersBySocketID[self.workersByID[workerID].socketID]
-        del self.workersByID[workerID]
+        del self.workersBySocketID[self.workersByWorkerID[workerID].socketID]
+        del self.workersByWorkerID[workerID]
 
     def removeWorkerBySocketID(self, socketID):
-        del self.workersByID[self.workersBySocketID[socketID].workerID]
+        del self.workersByWorkerID[self.workersBySocketID[socketID].workerID]
         del self.workersBySocketID[socketID]
 
     def addUser(self, socketID: str):
         self.currentUserID += 1
         user = User(self.currentUserID, socketID)
-        self.usersByID[self.currentUserID] = user
+        self.usersByUserID[self.currentUserID] = user
         self.usersBySocketID[socketID] = user
         return self.currentUserID
 
     def removeUserByID(self, userID):
-        del self.usersBySocketID[self.usersByID[userID].socketID]
-        del self.usersByID[userID]
+        del self.usersBySocketID[self.usersByUserID[userID].socketID]
+        del self.usersByUserID[userID]
 
     def removeUserBySocketID(self, socketID):
-        del self.usersByID[self.usersBySocketID[socketID].userID]
+        del self.usersByUserID[self.usersBySocketID[socketID].userID]
         del self.usersBySocketID[socketID]
 
 
@@ -74,4 +87,3 @@ class RegistryNamespace(socketio.Namespace):
         else:
             self.logger.info("[*] Worker-%d exited.", self.registry.workersBySocketID[socketID].workerID)
             self.registry.removeWorkerBySocketID(socketID)
-

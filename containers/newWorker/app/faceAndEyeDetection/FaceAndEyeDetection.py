@@ -23,7 +23,7 @@ def run():
         isWebCamera = True
 
     if isWebCamera:
-        filename = "./output/WebCamera.mp4"
+        filename = "output/WebCamera.mp4"
         cam = cv2.VideoCapture(0)
         out = cv2.VideoWriter(
             filename,
