@@ -44,5 +44,5 @@ class FogMaster:
 
 
 if __name__ == '__main__':
-    master = FogMaster('', 5000, logging.DEBUG)
+    master = FogMaster('', 5000, logging.INFO)
     master.run()

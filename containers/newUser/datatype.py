@@ -39,7 +39,7 @@ class User:
 class Task:
 
     def __init__(self, taskID: int, userID: int, inputData):
-        self.TaskID = taskID
+        self.taskID = taskID
         self.userID = userID
         self.inputData = inputData
         self.workerID = None

@@ -25,7 +25,11 @@ print(sio.connection_namespaces)
 msg = {"role": "user"}
 sio.emit('register', Message.encrypt(msg), namespace='/registry')
 
-msg = {"userID": 1, "inputData": "inputData"}
+frame = 1
+camera = cv2.VideoCapture(0)
+_, frame = camera.read()
+camera.release()
+msg = {"userID": 1, "inputData": frame}
 sio.emit('submit', Message.encrypt(msg), namespace='/task')
 
 sio.wait()
