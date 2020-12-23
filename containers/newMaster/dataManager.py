@@ -55,7 +55,12 @@ class DataManager:
             data += clientSocket.recv(4096)
 
         data = data[:dataSize]
-        return data
+        return Message.decrypt(data)
+
+    @staticmethod
+    def sendMessage(clientSocket, data):
+        dataEncrypted = Message.encrypt(data)
+        clientSocket.sendall(struct.pack(">L", len(dataEncrypted)) + dataEncrypted)
 
     def receiveData(self, clientSocket: socket.socket):
         # TODO: racing
@@ -64,17 +69,17 @@ class DataManager:
         self.logger.debug("Receiving data: %d", dataID)
 
         data = self.receiveMessage(clientSocket)
+        self.sendMessage(clientSocket, dataID)
+
         self.data[dataID] = data
         self.logger.debug("Received data: %d", dataID)
 
     def sendData(self, clientSocket: socket.socket):
-        message = self.receiveMessage(clientSocket)
-        request = Message.decrypt(message)
-        dataID = request['dataID']
-        self.logger.debug("Sending data: %d", dataID)
+        dataID = self.receiveMessage(clientSocket)
         if dataID in self.data:
+            self.logger.debug("Sending data: %d", dataID)
             data = self.data[dataID]
-            clientSocket.sendall(struct.pack(">L", len(data)) + data)
+            self.sendMessage(clientSocket, data)
             self.logger.debug("Sent data: %d", dataID)
         else:
             self.logger.debug("No such data: %d", dataID)

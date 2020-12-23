@@ -1,62 +1,53 @@
-import socketio
 import cv2
 import socket
-import threading
+import sys
+import logging
 import struct
-from message import Message
-from typing import Any
+import pickle
+import queue
+import threading
+
+from logger import get_logger
+from broker import Broker
+from dataManager import DataManager
 
 
-def run():
-    sio = socketio.Client()
+class User:
 
-    @sio.event(namespace='/registry')
-    def connect():
-        print('connection established')
+    def __init__(self,
+                 broker: Broker,
+                 dataManager: DataManager,
+                 logLevel=logging.DEBUG):
+        self.logger = get_logger('User', logLevel)
+        self.broker: Broker = broker
+        self.dataManager: DataManager = dataManager
+        self.app = app
 
-    @sio.event(namespace='/registry')
-    def task(data):
-        print("task comes")
+    @staticmethod
+    def getFrames(self, framesQueue: queue.Queue, videoStream: cv2.VideoCapture):
+        while True:
+            print("Sending frames")
+            ret, frame = videoStream.read()
+            if not ret:
+                break
+            framesQueue.put(frame)
 
-    @sio.event(namespace='/registry')
-    def disconnect():
-        print('disconnected from server')
+    def run(self):
+        self.broker.run()
+        self.dataManager.run()
 
-    def emit(sio: socketio.Client, event: str, message: bytes, namespace: str):
+    def input(self):
+        framesQueue = queue.Queue()
+        threading.Thread(target=self.getFrames, args=(framesQueue,)).start()
+
+    def output(self):
         pass
 
-    sio.connect('http://127.0.0.1:5000', namespaces=['/registry', '/task'])
-    print(sio.connection_namespaces)
-    msg = {"role": "user"}
-    sio.emit('register', Message.encrypt(msg), namespace='/registry')
 
-    frame = 1
-    camera = cv2.VideoCapture(0)
-    _, frame = camera.read()
-    camera.release()
-    msg = {"userID": 1, "inputData": frame, "partition": 1, "total": 100}
-    emit(sio, 'submit', Message.encrypt(msg), namespace='/task')
-
-    sio.wait()
-
-
-def sendFrame():
-    cam = cv2.VideoCapture(0)
-    _, frame = cam.read()
-    cam.release()
-    _, frameJpg = cv2.imencode('.jpg', frame)
-    sendMessage(frameJpg)
-
-
-def sendMessage(data: Any):
-    dataEncrypted = Message.encrypt(data)
-    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    host = "127.0.0.1"
-    port = 5001
-    s.connect((host, port))
-    s.sendall(struct.pack(">L", len(dataEncrypted)) + dataEncrypted)
-    print("done")
-
-
-if __name__ == '__main__':
-    sendFrame()
+if __name__ == "__main__":
+    broker = Broker('http://127.0.0.1', 5000)
+    dataManager = DataManager(host='0.0.0.0',
+                              portSending=5001,
+                              portReceiving=5002,
+                              logLevel=logging.DEBUG)
+    user = User(broker=broker, dataManager=dataManager)

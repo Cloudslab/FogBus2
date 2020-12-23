@@ -12,26 +12,20 @@ from message import Message
 class DataManager:
 
     def __init__(self, host: str, portReceiving: int, portSending: int, logLevel=logging.DEBUG):
-        self.dataToSend = queue.Queue()
-        self.dataToReceive = queue.Queue()
-        self.dataReceived = {}
+
         self.host: str = host
         self.portReceiving: int = portReceiving
         self.portSending: int = portSending
+
+        self.senderSocket: socket.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.receiverSocket: socket.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.logger = get_logger('DataManager', logLevel)
 
-    def run(self):
-        threading.Thread(target=self._client,
-                         args=(self.host,
-                               self.portSending,
-                               self.sendData
-                               )).start()
-
-        threading.Thread(target=self._client,
-                         args=(self.host,
-                               self.portReceiving,
-                               self.receiveData
-                               )).start()
+    def connect(self):
+        self.senderSocket.connect((self.host, self.portSending))
+        self.logger.debug("Sender connected.")
+        self.receiverSocket.connect((self.host, self.portReceiving))
+        self.logger.debug("Receiver connected.")
 
     @staticmethod
     def _client(host: str, port: int, handler: Callable):
@@ -54,28 +48,25 @@ class DataManager:
             data += clientSocket.recv(4096)
 
         data = data[:dataSize]
-        return data
+        return Message.decrypt(data)
 
     @staticmethod
     def sendMessage(clientSocket, data):
         dataEncrypted = Message.encrypt(data)
         clientSocket.sendall(struct.pack(">L", len(dataEncrypted)) + dataEncrypted)
 
-    def sendData(self, clientSocket: socket.socket):
-        while True:
-            data = self.dataToSend.get()
-            self.sendMessage(clientSocket, data)
-            self.logger.debug("Sent data")
+    def sendData(self, data):
+        self.sendMessage(self.senderSocket, data)
+        dataID = self.receiveMessage(self.senderSocket)
+        self.logger.debug("Sent data, got id: %d", dataID)
+        return dataID
 
-    def receiveData(self, clientSocket: socket.socket):
-        while True:
-            request = self.dataToReceive.get()
-            dataID = request['dataID']
-            self.sendMessage(clientSocket, request)
-            self.logger.debug("Receiving data: %d", dataID)
-            data = self.receiveMessage(clientSocket)
-            self.dataReceived[dataID] = Message.decrypt(data)
-            self.logger.debug("Received data: %d", dataID)
+    def receiveData(self, dataID):
+        self.sendMessage(self.receiverSocket, dataID)
+        self.logger.debug("Receiving data: %d", dataID)
+        data = self.receiveMessage(self.receiverSocket)
+        self.logger.debug("Received data: %d", dataID)
+        return data
 
 
 if __name__ == '__main__':
@@ -83,7 +74,8 @@ if __name__ == '__main__':
                               portSending=5001,
                               portReceiving=5002,
                               logLevel=logging.DEBUG)
-    dataManager.run()
+    dataManager.connect()
 
-    dataManager.dataToSend.put(999)
-    dataManager.dataToReceive.put({"dataID": 1})
+    dataID = dataManager.sendData(999)
+    data = dataManager.receiveData(dataID)
+    print(data)
