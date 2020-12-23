@@ -5,19 +5,21 @@ import socketio
 from time import sleep
 from queue import Queue, Empty
 from logger import get_logger
-from datatype import Worker, NodeSpecs, Task
+from datatype import Task
 from registry import Registry
 from message import Message
-from typing import NoReturn, Any
+from typing import NoReturn
+from dataManager import DataManager
 
 
 class TaskManager:
 
-    def __init__(self):
+    def __init__(self, logLevel=logging.DEBUG):
         self.currentTaskID = 0
         self.waitingTasks = Queue()
         self.finishedTasks = Queue()
         self.processingTasks: {Task} = {}
+        self.logger = get_logger('TaskManager', logLevel)
 
     def submit(self, userID, inputData):
         # TODO: racing
@@ -52,13 +54,15 @@ class TaskManager:
 class Coordinator:
 
     def __init__(self,
+                 registry: Registry,
+                 sio: socketio.Server,
                  taskManager: TaskManager,
-                 registry: Registry = None,
-                 sio=None,
+                 dataManager: DataManager,
                  logLevel=logging.DEBUG):
         self.registry: Registry = registry
         self.sio: socketio.Server = sio
-        self.taskManager = taskManager
+        self.taskManager: TaskManager = taskManager
+        self.dataManager: DataManager = dataManager
         self.logger = get_logger("Coordinator", logLevel)
 
     def run(self):
@@ -103,8 +107,8 @@ class Coordinator:
         self.sio.emit(
             'task',
             to=socketID,
-            data=Message.encrypt(inputData)
-            , namespace='/task')
+            data=Message.encrypt(inputData),
+            namespace='/task')
 
     def sendResult(self, userID: int, outData):
         socketID = self.registry.usersByUserID[userID].socketID
@@ -119,7 +123,9 @@ class TaskNamespace(socketio.Namespace):
 
     def __init__(self, namespace=None, taskManager: TaskManager = None,
                  registry: Registry = None,
-                 sio=None, logLevel=logging.DEBUG):
+                 sio: socketio.Server = None,
+                 dataManager: DataManager = None,
+                 logLevel=logging.DEBUG):
         super(TaskNamespace, self).__init__(namespace=namespace)
         self.taskManager: TaskManager = taskManager
         self.registry: Registry = registry
@@ -127,6 +133,7 @@ class TaskNamespace(socketio.Namespace):
         self.coordinator = Coordinator(taskManager=self.taskManager,
                                        registry=self.registry,
                                        sio=self.sio,
+                                       dataManager=dataManager,
                                        logLevel=logLevel)
         self.logger = get_logger("TaskNamespace", logLevel)
 

@@ -5,6 +5,7 @@ import socketio
 from logger import get_logger
 from registry import Registry, RegistryNamespace
 from task import TaskManager, TaskNamespace
+from dataManager import DataManager
 
 
 class FogMaster:
@@ -12,9 +13,10 @@ class FogMaster:
     def __init__(self, host: str, port: int, logLevel=logging.DEBUG):
         self.host = host
         self.port = port
-        self.sio = socketio.Server()
-        self.registry = Registry()
-        self.taskManager = TaskManager()
+        self.sio: socketio.Server = socketio.Server()
+        self.registry: Registry = Registry()
+        self.taskManager: TaskManager = TaskManager(logLevel)
+        self.dataManager: DataManager = DataManager(self.host, self.port, logLevel)
         self.logger = get_logger('Master', logLevel)
 
     def run(self):
@@ -30,9 +32,11 @@ class FogMaster:
 
         self.sio.register_namespace(
             TaskNamespace(
-                '/task', taskManager=self.taskManager,
+                '/task',
                 registry=self.registry,
                 sio=self.sio,
+                taskManager=self.taskManager,
+                dataManager=self.dataManager,
                 logLevel=self.logger.level))
 
         self.logger.info("[*] Master serves at: %s:%d", self.host, self.port)
