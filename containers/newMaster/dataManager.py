@@ -26,7 +26,7 @@ class DataManager:
 
         threading.Thread(target=self._server,
                          args=(self.host,
-                               self.portReceiving,
+                               self.portSending,
                                self.sendData
                                )).start()
 
@@ -69,8 +69,20 @@ class DataManager:
 
     def sendData(self, clientSocket: socket.socket):
         message = self.receiveMessage(clientSocket)
-        dataID = Message.decrypt(message)
-        self.logger.debug("Send data: %d", dataID)
+        request = Message.decrypt(message)
+        dataID = request['dataID']
+        self.logger.debug("Sending data: %d", dataID)
         if dataID in self.data:
             data = self.data[dataID]
             clientSocket.sendall(struct.pack(">L", len(data)) + data)
+            self.logger.debug("Sent data: %d", dataID)
+        else:
+            self.logger.debug("No such data: %d", dataID)
+
+
+if __name__ == '__main__':
+    dataManager = DataManager(host='0.0.0.0',
+                              portReceiving=5001,
+                              portSending=5002,
+                              logLevel=logging.DEBUG)
+    dataManager.serve()
