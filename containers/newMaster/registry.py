@@ -10,7 +10,7 @@ from typing import NoReturn
 
 class Registry:
 
-    def __init__(self):
+    def __init__(self, logLevel=logging.DEBUG):
         self.currentWorkerID = 0
         self.workersByWorkerID: {Worker} = {}
         self.workersBySocketID: {Worker} = {}
@@ -18,16 +18,17 @@ class Registry:
         self.usersByUserID: {User} = {}
         self.usersBySocketID: {User} = {}
         self.waitingWorkers = Queue()
+        self.logger = get_logger('MasterRegistry', logLevel)
 
     def addWorker(self, socketID: str, nodeSpecs: NodeSpecs):
         # TODO: racing
         self.currentWorkerID += 1
-
         workerID = self.currentWorkerID
         worker = Worker(workerID, socketID, nodeSpecs)
         self.workersByWorkerID[workerID] = worker
         self.workersBySocketID[socketID] = worker
         self.workerWait(workerID)
+        self.logger.info("Worker-%d added.", workerID)
         return workerID
 
     def workerWait(self, workerID: int) -> NoReturn:
@@ -45,11 +46,14 @@ class Registry:
         del self.workersBySocketID[socketID]
 
     def addUser(self, socketID: str):
+        # TODO: racing
         self.currentUserID += 1
-        user = User(self.currentUserID, socketID)
-        self.usersByUserID[self.currentUserID] = user
+        userID = self.currentUserID
+        user = User(userID, socketID)
+        self.usersByUserID[userID] = user
         self.usersBySocketID[socketID] = user
-        return self.currentUserID
+        self.logger.info("User-%d added.", userID)
+        return userID
 
     def removeUserByID(self, userID):
         del self.usersBySocketID[self.usersByUserID[userID].socketID]
@@ -65,20 +69,21 @@ class RegistryNamespace(socketio.Namespace):
     def __init__(self, namespace=None, registry=None, sio=None, logLevel=logging.DEBUG):
         super(RegistryNamespace, self).__init__(namespace=namespace)
         self.registry = registry
-        self.logger = get_logger("Registry", logLevel)
+        self.logger = get_logger("MasterRegistryNamespace", logLevel)
         self.sio = sio
 
-    def on_register(self, socketID, msg):
-        data = Message.decrypt(msg)
-        role = data["role"]
+    def on_register(self, socketID, message):
+        messageDecrypted = Message.decrypt(message)
+        role = messageDecrypted["role"]
         if role == "user":
             userID = self.registry.addUser(socketID)
-            self.logger.info("[*] User-%d joined.", userID)
+            messageEncrypted = Message.encrypt(userID)
+            self.emit('registered', data=messageEncrypted)
         elif role == "worker":
-            nodeSpecs = data["nodeSpecs"]
+            nodeSpecs = messageDecrypted["nodeSpecs"]
             workerID = self.registry.addWorker(socketID, nodeSpecs)
-            self.logger.info("[*] Worker-%d joined: \n%s",
-                             workerID, nodeSpecs.info())
+            messageEncrypted = Message.encrypt(workerID)
+            self.emit('registered', data=messageEncrypted)
 
     def on_exit(self, socketID):
         if socketID in self.registry.usersBySocketID:

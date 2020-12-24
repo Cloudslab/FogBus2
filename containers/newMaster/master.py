@@ -14,8 +14,8 @@ class FogMaster:
         self.host = host
         self.port = port
         self.sio: socketio.Server = socketio.Server()
-        self.registry: Registry = Registry()
-        self.taskManager: TaskManager = TaskManager(logLevel)
+        self.registry: Registry = Registry(logLevel=logLevel)
+        self.taskManager: TaskManager = TaskManager(logLevel=logLevel)
         self.dataManager: DataManager = DataManager(self.host, self.port, logLevel)
         self.logger = get_logger('Master', logLevel)
 

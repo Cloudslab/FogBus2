@@ -155,8 +155,6 @@ class TaskNamespace(socketio.Namespace):
     def on_finish(self, socketID, message):
         messageDecrypted = Message.decrypt(message)
         taskID = messageDecrypted["taskID"]
-        dataID = messageDecrypted["dataID"]
-        resultID = messageDecrypted["resultID"]
 
         if taskID not in self.taskManager.processingTasks[taskID]:
             return
@@ -166,6 +164,9 @@ class TaskNamespace(socketio.Namespace):
 
         if not workerID == task.workerID:
             return
+
+        dataID = messageDecrypted["dataID"]
+        resultID = messageDecrypted["resultID"]
         self.taskManager.finish(taskID, resultID)
         self.notify(dataID, resultID)
         self.logger.debug("Received Finished Task-%d, dataID: %d, resultID: %d", taskID, dataID, resultID)
