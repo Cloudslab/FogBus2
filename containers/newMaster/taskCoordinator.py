@@ -73,7 +73,7 @@ class TaskCoordinator:
             room=worker.taskSocketID,
             data=messageEncrypted,
             namespace='/task')
-        self.logger.debug("Sent task %d", task.taskID)
+        self.logger.debug("Sent Task-%d to Worker-%d", task.taskID, worker.workerID)
 
     def sendResult(self, task: Task):
         user = self.registry.users[task.userID]
