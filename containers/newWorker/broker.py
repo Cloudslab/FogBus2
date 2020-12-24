@@ -35,6 +35,7 @@ class TaskNamespace(socketio.ClientNamespace):
     def __init__(self, namespace=None, logLevel=logging.DEBUG):
         super(TaskNamespace, self).__init__(namespace=namespace)
         self.isConnected = False
+        self.isRegistered = False
         self.workerID = None
         self.logger = get_logger("WorkerTask", logLevel)
 
@@ -64,7 +65,17 @@ class TaskNamespace(socketio.ClientNamespace):
         resultID = messageDecrypted["resultID"]
         dataID = messageDecrypted["dataID"]
         self.logger.debug("Received Result-%d -> dataID-%d", resultID, dataID)
-        pass
+
+    def register(self):
+        message = {'workerID': self.workerID, 'role': 'worker'}
+        messageEncrypted = Message.encrypt(message)
+        self.emit('register', data=messageEncrypted)
+
+    def on_registered(self, message):
+        messageDecrypted = Message.decrypt(message)
+        workerID = messageDecrypted['workerID']
+        if workerID == self.workerID:
+            self.isRegistered = True
 
 
 class Broker:
@@ -86,6 +97,9 @@ class Broker:
         while self.registryNamespace.workerID is None:
             pass
         self.taskNamespace.workerID = self.registryNamespace.workerID
+        self.taskNamespace.register()
+        while not self.taskNamespace.isRegistered:
+            pass
         self.logger.info("Got workerID-%d", self.taskNamespace.workerID)
 
     def connect(self):

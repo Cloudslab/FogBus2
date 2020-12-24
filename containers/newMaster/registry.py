@@ -29,7 +29,7 @@ class Registry:
         return workerID
 
     def updateWorkerTaskSocketID(self, workerID: int, socketID: int):
-        self.users[workerID].taskSocketID = socketID
+        self.workers[workerID].taskSocketID = socketID
         self.logger.info("Worker-%d updated taskSocketID.", workerID)
 
     def workerWait(self, worker: Worker) -> NoReturn:
