@@ -38,6 +38,9 @@ class Registry:
     def workerWork(self) -> Worker:
         return self.waitingWorkers.get(block=False)
 
+    def workerFree(self, worker: Worker):
+        self.waitingWorkers.put(worker)
+
     def removeWorker(self, workerID):
         del self.workers[workerID]
 
@@ -78,7 +81,7 @@ class RegistryNamespace(socketio.Namespace):
             nodeSpecs = messageDecrypted["nodeSpecs"]
             workerID = self.registry.addWorker(socketID, nodeSpecs)
             messageEncrypted = Message.encrypt(workerID)
-            self.sio.emit('registered', room=socketID, data=messageEncrypted)
+            self.emit('registered', room=socketID, data=messageEncrypted)
 
     def on_exit(self, socketID):
         if socketID in self.registry.usersBySocketID:
