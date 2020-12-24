@@ -19,17 +19,21 @@ class Master:
 
 class Worker:
 
-    def __init__(self, workerID: int, socketID: str, specs: NodeSpecs):
+    def __init__(self, workerID: int, registrySocketID: str, specs: NodeSpecs):
         self.workerID = workerID
-        self.socketID = socketID
+        self.registrySocketID = registrySocketID
         self.specs = specs
+        self.taskSocketID = None
 
 
 class User:
 
-    def __init__(self, userID: int, socketID: str):
+    def __init__(self, userID: int, registrySocketID: str):
         self.userID = userID
-        self.socketID = socketID
+        self.registrySocketID = registrySocketID
+        self.taskSocketID = None
+
+
 
 
 class Task:

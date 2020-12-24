@@ -106,13 +106,13 @@ class Coordinator:
         messageEncrypted = Message.encrypt(message)
         self.sio.emit(
             'task',
-            to=worker.socketID,
+            to=worker.taskSocketID,
             data=messageEncrypted,
             namespace='/task')
         self.logger.debug("Sent task %d", task.taskID)
 
     def sendResult(self, task: Task):
-        user = self.registry.usersByUserID[task.userID]
+        user = self.registry.users[task.userID]
         message = {"appID": task.dataID, "dataID": task.resultID}
         messageEncrypted = Message.encrypt(message)
         self.sio.emit(
@@ -143,11 +143,28 @@ class TaskNamespace(socketio.Namespace):
 
         self.coordinator.run()
 
+    def on_register(self, socketID, message):
+        messageDecrypted = Message.decrypt(message)
+        if "role" not in messageDecrypted:
+            return
+        role = messageDecrypted["role"]
+
+        if role == 'user':
+            userID = messageDecrypted["userID"]
+            self.registry.updateUserTaskSocketID(userID=userID, socketID=socketID)
+            message = {'userID': userID}
+        elif role == 'worker':
+            workerID = messageDecrypted["workerID"]
+            self.registry.updateWorkerTaskSocketID(workerID=workerID, socketID=socketID)
+            message = {'workerID': workerID}
+
+        messageEncrypted = Message.encrypt(message)
+        self.emit('registered', data=messageEncrypted)
+
     def on_submit(self, socketID, message):
         messageDecrypted = Message.decrypt(message)
-        user = self.registry.usersBySocketID[socketID]
         userID = messageDecrypted["userID"]
-        if not userID == user.userID:
+        if not socketID == self.registry.users[userID].taskSocketID:
             return
 
         appID = messageDecrypted["appID"]
@@ -158,17 +175,17 @@ class TaskNamespace(socketio.Namespace):
         messageEncrypted = Message.encrypt(message)
         self.sio.emit("submitted", to=socketID,
                       data=messageEncrypted, namespace='/task')
-        self.logger.info("[*] Received Task: %d.", taskID)
+        self.logger.info("[*] Received Task-%d from User-%d", taskID, userID)
 
     def on_finish(self, socketID, message):
         messageDecrypted = Message.decrypt(message)
-        taskID = messageDecrypted["taskID"]
+        workerID = messageDecrypted['workerID']
 
-        if taskID not in self.taskManager.processingTasks[taskID]:
+        if not socketID == self.registry.workers[workerID].taskSocketID:
             return
 
+        taskID = messageDecrypted['taskID']
         task = self.taskManager.processingTasks[taskID]
-        workerID = self.registry.workersBySocketID[socketID].workerID
 
         if not workerID == task.workerID:
             return

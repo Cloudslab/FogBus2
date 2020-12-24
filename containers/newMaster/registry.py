@@ -12,11 +12,9 @@ class Registry:
 
     def __init__(self, logLevel=logging.DEBUG):
         self.currentWorkerID = 0
-        self.workersByWorkerID: {Worker} = {}
-        self.workersBySocketID: {Worker} = {}
+        self.workers: {Worker} = {}
         self.currentUserID = 0
-        self.usersByUserID: {User} = {}
-        self.usersBySocketID: {User} = {}
+        self.users: {User} = {}
         self.waitingWorkers = Queue()
         self.logger = get_logger('MasterRegistry', logLevel)
 
@@ -25,11 +23,14 @@ class Registry:
         self.currentWorkerID += 1
         workerID = self.currentWorkerID
         worker = Worker(workerID, socketID, nodeSpecs)
-        self.workersByWorkerID[workerID] = worker
-        self.workersBySocketID[socketID] = worker
+        self.workers[workerID] = worker
         self.workerWait(worker)
         self.logger.info("Worker-%d added. %s", workerID, worker.specs.info())
         return workerID
+
+    def updateWorkerTaskSocketID(self, workerID: int, socketID: int):
+        self.users[workerID].taskSocketID = socketID
+        self.logger.info("Worker-%d updated taskSocketID.", workerID)
 
     def workerWait(self, worker: Worker) -> NoReturn:
         self.waitingWorkers.put(worker)
@@ -37,31 +38,24 @@ class Registry:
     def workerWork(self) -> Worker:
         return self.waitingWorkers.get(block=False)
 
-    def removeWorkerByID(self, workerID):
-        del self.workersBySocketID[self.workersByWorkerID[workerID].socketID]
-        del self.workersByWorkerID[workerID]
-
-    def removeWorkerBySocketID(self, socketID):
-        del self.workersByWorkerID[self.workersBySocketID[socketID].workerID]
-        del self.workersBySocketID[socketID]
+    def removeWorker(self, workerID):
+        del self.workers[workerID]
 
     def addUser(self, socketID: str):
         # TODO: racing
         self.currentUserID += 1
         userID = self.currentUserID
         user = User(userID, socketID)
-        self.usersByUserID[userID] = user
-        self.usersBySocketID[socketID] = user
+        self.users[userID] = user
         self.logger.info("User-%d added.", userID)
         return userID
 
-    def removeUserByID(self, userID):
-        del self.usersBySocketID[self.usersByUserID[userID].socketID]
-        del self.usersByUserID[userID]
+    def updateUserTaskSocketID(self, userID: int, socketID: int):
+        self.users[userID].taskSocketID = socketID
+        self.logger.info("User-%d updated taskSocketID.", userID)
 
-    def removeUserBySocketID(self, socketID):
-        del self.usersByUserID[self.usersBySocketID[socketID].workerID]
-        del self.usersBySocketID[socketID]
+    def removeUser(self, userID):
+        del self.users[userID]
 
 
 class RegistryNamespace(socketio.Namespace):

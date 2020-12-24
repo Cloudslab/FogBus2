@@ -34,6 +34,7 @@ class TaskNamespace(socketio.ClientNamespace):
     def __init__(self, namespace=None, logLevel=logging.DEBUG):
         super(TaskNamespace, self).__init__(namespace=namespace)
         self.isConnected = False
+        self.isRegistered = False
         self.userID = None
         self.logger = get_logger("UserTask", logLevel)
 
@@ -46,7 +47,7 @@ class TaskNamespace(socketio.ClientNamespace):
         self.logger.info("[!] Disconnected.")
 
     def submit(self, appID: int, dataID: int):
-        message = {'appID': appID, 'dataID': dataID}
+        message = {'userID': self.userID, 'appID': appID, 'dataID': dataID}
         messageEncrypted = Message.encrypt(message)
         self.emit('submit', messageEncrypted)
         self.logger.debug("Submitted Task appID: %d, dataID: %d", appID, dataID)
@@ -63,6 +64,17 @@ class TaskNamespace(socketio.ClientNamespace):
         resultID = messageDecrypted["resultID"]
         dataID = messageDecrypted["dataID"]
         self.logger.debug("Received Result-%d -> dataID-%d", resultID, dataID)
+
+    def register(self):
+        message = {'userID': self.userID, 'role': 'user'}
+        messageEncrypted = Message.encrypt(message)
+        self.emit('register', data=messageEncrypted)
+
+    def on_registered(self, message):
+        messageDecrypted = Message.decrypt(message)
+        userID = messageDecrypted['userID']
+        if userID == self.userID:
+            self.isRegistered = True
 
 
 class Broker:
@@ -84,6 +96,9 @@ class Broker:
         while self.registryNamespace.userID is None:
             pass
         self.taskNamespace.userID = self.registryNamespace.userID
+        self.taskNamespace.register()
+        while not self.taskNamespace.isRegistered:
+            pass
         self.logger.info("Got userID-%d", self.taskNamespace.userID)
 
     def connect(self):
