@@ -21,7 +21,6 @@ class User:
         self.logger = get_logger('User', logLevel)
         self.broker: Broker = broker
         self.dataManager: DataManager = dataManager
-        self.app = app
 
     @staticmethod
     def getFrames(self, framesQueue: queue.Queue, videoStream: cv2.VideoCapture):

@@ -40,3 +40,6 @@ class Broker:
 if __name__ == '__main__':
     broker = Broker('http://127.0.0.1', 5000, logLevel=logging.DEBUG)
     broker.run()
+    from time import sleep
+    sleep(2)
+    broker.taskNamespace.finish(1, 1, 2)

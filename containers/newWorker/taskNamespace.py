@@ -28,7 +28,7 @@ class TaskNamespace(socketio.ClientNamespace):
         self.logger.debug("Received Task-%d, appID: %d, dataID: %d", taskID, appID, dataID)
 
     def finish(self, taskID, dataID, resultID):
-        message = {'taskID': taskID, 'dataID': dataID, 'resultID': resultID}
+        message = {'workerID': self.workerID, 'taskID': taskID, 'dataID': dataID, 'resultID': resultID}
         messageEncrypted = Message.encrypt(message)
         self.emit('finish', messageEncrypted)
         self.logger.debug("Finished Task-%d, dataID: %d, resultID: %d", taskID, dataID, resultID)

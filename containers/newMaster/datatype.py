@@ -34,8 +34,6 @@ class User:
         self.taskSocketID = None
 
 
-
-
 class Task:
 
     def __init__(self, userID: int, taskID: int, appID: int, dataID: int):

@@ -37,7 +37,6 @@ class TaskCoordinator:
         n = 0
         while True:
             worker = None
-            task = None
             try:
                 worker = self.registry.workerWork()
                 task = self.taskManager.getUnfinishedTask(worker.workerID)
@@ -77,11 +76,11 @@ class TaskCoordinator:
 
     def sendResult(self, task: Task):
         user = self.registry.users[task.userID]
-        message = {"appID": task.dataID, "dataID": task.resultID}
+        message = {"taskID": task.taskID, "appID": task.appID, "dataID": task.dataID, "resultID": task.resultID}
         messageEncrypted = Message.encrypt(message)
         self.taskNamespace.emit(
             'result',
-            room=user.socketID,
+            room=user.taskSocketID,
             data=messageEncrypted,
             namespace='/task')
         self.logger.debug("Sent result %d", task.taskID)

@@ -18,14 +18,9 @@ class Broker:
 
     def run(self):
         threading.Thread(target=self.connect).start()
-        while not self.taskNamespace.isConnected or \
-                not self.registryNamespace.connected:
+        while not self.registryNamespace.isRegistered:
             pass
-        self.registryNamespace.register()
-        while self.registryNamespace.userID is None:
-            pass
-        self.taskNamespace.userID = self.registryNamespace.userID
-        self.taskNamespace.register()
+        self.taskNamespace.setUserID(self.registryNamespace.userID)
         while not self.taskNamespace.isRegistered:
             pass
         self.logger.info("Got userID-%d", self.taskNamespace.userID)
