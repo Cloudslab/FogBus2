@@ -21,15 +21,15 @@ class TaskManager:
         self.processingTasks: {Task} = {}
         self.logger = get_logger('TaskManager', logLevel)
 
-    def submit(self, userID, inputData):
+    def submit(self, appID, dataID):
         # TODO: racing
         self.currentTaskID += 1
         taskID = self.currentTaskID
         self.waitingTasks.put(
             Task(
                 taskID=taskID,
-                userID=userID,
-                inputData=inputData))
+                appID=appID,
+                dataID=dataID))
         return taskID
 
     def getUnfinishedTask(self, workerID: int) -> Task:
@@ -139,20 +139,25 @@ class TaskNamespace(socketio.Namespace):
 
         self.coordinator.run()
 
-    def on_submit(self, socketID, data):
-        msg = Message.decrypt(data)
-        userID = msg["userID"]
-        inputData = msg["inputData"]
+    def on_submit(self, socketID, message):
+        messageDecrypted = Message.decrypt(message)
+        appID = messageDecrypted["appID"]
+        dataID = messageDecrypted["dataID"]
 
-        taskID = self.taskManager.submit(userID, inputData)
-        self.sio.emit("taskReceived", to=socketID,
-                      data=taskID, namespace='/task')
-        self.logger.info("[*] taskReceived: %d.", taskID)
+        taskID = self.taskManager.submit(appID, dataID)
 
-    def on_finish(self, socketID, data):
-        msg = Message.decrypt(data)
-        taskID = msg["taskID"]
-        outData = msg["outData"]
+        message = {'taskID': taskID, 'appID': appID, 'dataID': dataID}
+        messageEncrypted = Message.encrypt(message)
+        self.sio.emit("submitted", to=socketID,
+                      data=messageEncrypted, namespace='/task')
+        self.logger.info("[*] Received Task: %d.", taskID)
+
+    def on_finish(self, socketID, message):
+        messageDecrypted = Message.decrypt(message)
+        taskID = messageDecrypted["taskID"]
+        dataID = messageDecrypted["dataID"]
+        resultID = messageDecrypted["resultID"]
+
         if taskID not in self.taskManager.processingTasks[taskID]:
             return
 
@@ -161,4 +166,9 @@ class TaskNamespace(socketio.Namespace):
 
         if not workerID == task.workerID:
             return
-        self.taskManager.finish(taskID, outData)
+        self.taskManager.finish(taskID, resultID)
+        self.notify(dataID, resultID)
+        self.logger.debug("Received Finished Task-%d, dataID: %d, resultID: %d", taskID, dataID, resultID)
+
+    def notify(self, dataID, resultID):
+        pass

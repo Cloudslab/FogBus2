@@ -8,56 +8,51 @@ from message import Message
 class RegistryNamespace(socketio.ClientNamespace):
     def __init__(self, namespace=None, logLevel=logging.DEBUG):
         super(RegistryNamespace, self).__init__(namespace=namespace)
-        self.connected = False
-        self.logger = get_logger("UserRegistry", logLevel)
+        self.logger = get_logger("WorkerRegistry", logLevel)
 
     def on_connect(self):
-        self.connected = True
         self.logger.info("[*] Connected.")
 
     def on_disconnect(self):
-        self.connected = False
         self.logger.info("[!] Disconnected.")
 
 
 class TaskNamespace(socketio.ClientNamespace):
     def __init__(self, namespace=None, logLevel=logging.DEBUG):
         super(TaskNamespace, self).__init__(namespace=namespace)
-        self.connected = False
-        self.logger = get_logger("UserTask", logLevel)
+        self.logger = get_logger("WorkerTask", logLevel)
 
     def on_connect(self):
-        self.connected = True
         self.logger.info("[*] Connected.")
 
     def on_disconnect(self):
-        self.connected = False
         self.logger.info("[!] Disconnected.")
 
-    def submit(self, appID: int, dataID: int):
-        message = {'appID': appID, 'dataID': dataID}
-        messageEncrypted = Message.encrypt(message)
-        self.emit('submit', messageEncrypted)
-        self.logger.debug("Submitted Task appID: %d, dataID: %d", appID, dataID)
+    def on_workOn(self, message):
+        decryptedMessage = Message.decrypt(message)
+        taskID = decryptedMessage["taskID"]
+        appID = decryptedMessage["appID"]
+        dataID = decryptedMessage["dataID"]
+        self.logger.debug("Working on Task-%d, appID: %d, dataID: %d", taskID, appID, dataID)
 
-    def on_submitted(self, message):
-        messageDecrypted = Message.decrypt(message)
-        taskID = messageDecrypted["taskID"]
-        appID = messageDecrypted["appID"]
-        dataID = messageDecrypted["dataID"]
-        self.logger.debug("Received Task-%d -> appID: %d, dataID: %d", taskID, appID, dataID)
+    def finish(self, taskID, dataID, resultID):
+        message = {'taskID': taskID, 'dataID': dataID, 'resultID': resultID}
+        messageEncrypted = Message.encrypt(message)
+        self.emit('finish', messageEncrypted)
+        self.logger.debug("Finished Task-%d, dataID: %d, resultID: %d", taskID, dataID, resultID)
 
     def on_result(self, message):
         messageDecrypted = Message.decrypt(message)
         resultID = messageDecrypted["resultID"]
         dataID = messageDecrypted["dataID"]
         self.logger.debug("Received Result-%d -> dataID-%d", resultID, dataID)
+        pass
 
 
 class Broker:
 
     def __init__(self, host: str, port: int, logLevel=logging.DEBUG):
-        self.logger = get_logger('UserSideBroker', logLevel)
+        self.logger = get_logger('WorkerSideBroker', logLevel)
         self.host = host
         self.port = port
         self.sio = socketio.Client()
@@ -66,9 +61,6 @@ class Broker:
 
     def run(self):
         threading.Thread(target=self.connect).start()
-        while not self.taskNamespace.connected or \
-                not self.registryNamespace.connected:
-            pass
 
     def connect(self):
         self.sio.register_namespace(self.registryNamespace)
@@ -81,4 +73,3 @@ class Broker:
 if __name__ == '__main__':
     broker = Broker('http://127.0.0.1', 5000, logLevel=logging.DEBUG)
     broker.run()
-    broker.taskNamespace.submit(1, 88)
