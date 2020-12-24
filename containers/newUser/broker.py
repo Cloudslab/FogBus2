@@ -33,16 +33,16 @@ class RegistryNamespace(socketio.ClientNamespace):
 class TaskNamespace(socketio.ClientNamespace):
     def __init__(self, namespace=None, logLevel=logging.DEBUG):
         super(TaskNamespace, self).__init__(namespace=namespace)
-        self.connected = False
+        self.isConnected = False
         self.userID = None
         self.logger = get_logger("UserTask", logLevel)
 
     def on_connect(self):
-        self.connected = True
+        self.isConnected = True
         self.logger.info("[*] Connected.")
 
     def on_disconnect(self):
-        self.connected = False
+        self.isConnected = False
         self.logger.info("[!] Disconnected.")
 
     def submit(self, appID: int, dataID: int):
@@ -77,7 +77,7 @@ class Broker:
 
     def run(self):
         threading.Thread(target=self.connect).start()
-        while not self.taskNamespace.connected or \
+        while not self.taskNamespace.isConnected or \
                 not self.registryNamespace.connected:
             pass
         self.registryNamespace.register()

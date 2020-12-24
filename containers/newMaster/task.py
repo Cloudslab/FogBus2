@@ -5,7 +5,7 @@ import socketio
 from time import sleep
 from queue import Queue, Empty
 from logger import get_logger
-from datatype import Task
+from datatype import Task, Worker
 from registry import Registry
 from message import Message
 from typing import NoReturn
@@ -21,12 +21,13 @@ class TaskManager:
         self.processingTasks: {Task} = {}
         self.logger = get_logger('TaskManager', logLevel)
 
-    def submit(self, appID, dataID):
+    def submit(self, userID: int, appID: int, dataID: int):
         # TODO: racing
         self.currentTaskID += 1
         taskID = self.currentTaskID
         self.waitingTasks.put(
             Task(
+                userID=userID,
                 taskID=taskID,
                 appID=appID,
                 dataID=dataID))
@@ -78,8 +79,7 @@ class Coordinator:
             try:
                 worker = self.registry.workerWork()
                 task = self.taskManager.getUnfinishedTask(worker.workerID)
-                self.sendTask(worker.workerID, task.inputData)
-                self.logger.debug("sent task %d", task.taskID)
+                self.sendTask(worker, task)
             except Empty:
                 n += 1
                 if n > 1000:
@@ -93,8 +93,7 @@ class Coordinator:
         while True:
             try:
                 task = self.taskManager.getFinishedTask()
-                self.sendResult(task.userID, task.outputData)
-                self.logger.debug("sent result %d", task.taskID)
+                self.sendResult(task)
             except Empty:
                 n += 1
                 if n > 1000:
@@ -102,21 +101,26 @@ class Coordinator:
                     sleep(1)
                     n = 0
 
-    def sendTask(self, workerID: int, inputData: str):
-        socketID = self.registry.workersByWorkerID[workerID]
+    def sendTask(self, worker: Worker, task: Task):
+        message = {"appID": task.appID, "dataID": task.dataID}
+        messageEncrypted = Message.encrypt(message)
         self.sio.emit(
             'task',
-            to=socketID,
-            data=Message.encrypt(inputData),
+            to=worker.socketID,
+            data=messageEncrypted,
             namespace='/task')
+        self.logger.debug("Sent task %d", task.taskID)
 
-    def sendResult(self, userID: int, outData):
-        socketID = self.registry.usersByUserID[userID].socketID
+    def sendResult(self, task: Task):
+        user = self.registry.usersByUserID[task.userID]
+        message = {"appID": task.dataID, "dataID": task.resultID}
+        messageEncrypted = Message.encrypt(message)
         self.sio.emit(
             'result',
-            to=socketID,
-            data=Message.encrypt(outData),
+            to=user.socketID,
+            data=messageEncrypted,
             namespace='/task')
+        self.logger.debug("Sent result %d", task.taskID)
 
 
 class TaskNamespace(socketio.Namespace):
@@ -141,10 +145,14 @@ class TaskNamespace(socketio.Namespace):
 
     def on_submit(self, socketID, message):
         messageDecrypted = Message.decrypt(message)
+        user = self.registry.usersBySocketID[socketID]
+        userID = messageDecrypted["userID"]
+        if not userID == user.userID:
+            return
+
         appID = messageDecrypted["appID"]
         dataID = messageDecrypted["dataID"]
-
-        taskID = self.taskManager.submit(appID, dataID)
+        taskID = self.taskManager.submit(userID, appID, dataID)
 
         message = {'taskID': taskID, 'appID': appID, 'dataID': dataID}
         messageEncrypted = Message.encrypt(message)

@@ -27,12 +27,12 @@ class Registry:
         worker = Worker(workerID, socketID, nodeSpecs)
         self.workersByWorkerID[workerID] = worker
         self.workersBySocketID[socketID] = worker
-        self.workerWait(workerID)
-        self.logger.info("Worker-%d added.", workerID)
+        self.workerWait(worker)
+        self.logger.info("Worker-%d added. %s", workerID, worker.specs.info())
         return workerID
 
-    def workerWait(self, workerID: int) -> NoReturn:
-        self.waitingWorkers.put(workerID)
+    def workerWait(self, worker: Worker) -> NoReturn:
+        self.waitingWorkers.put(worker)
 
     def workerWork(self) -> Worker:
         return self.waitingWorkers.get(block=False)
@@ -60,7 +60,7 @@ class Registry:
         del self.usersByUserID[userID]
 
     def removeUserBySocketID(self, socketID):
-        del self.usersByUserID[self.usersBySocketID[socketID].userID]
+        del self.usersByUserID[self.usersBySocketID[socketID].workerID]
         del self.usersBySocketID[socketID]
 
 
@@ -87,7 +87,7 @@ class RegistryNamespace(socketio.Namespace):
 
     def on_exit(self, socketID):
         if socketID in self.registry.usersBySocketID:
-            self.logger.info("[*] User-%d exited.", self.registry.usersBySocketID[socketID].userID)
+            self.logger.info("[*] User-%d exited.", self.registry.usersBySocketID[socketID].workerID)
             self.registry.removeUserBySocketID(socketID)
         else:
             self.logger.info("[*] Worker-%d exited.", self.registry.workersBySocketID[socketID].workerID)

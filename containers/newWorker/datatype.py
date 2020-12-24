@@ -6,11 +6,7 @@ class NodeSpecs:
         self.network = network
 
     def info(self):
-        return "\
-                Cores: %d\n\
-                ram: %d GB\n\
-                disk: %d GB\n\
-                network: %d Mbps\n" % (self.cores, self.ram, self.disk, self.cores)
+        return "Cores: %d\tRam: %d GB\tDisk: %d GB\tNetwork: %d Mbps" % (self.cores, self.ram, self.disk, self.network)
 
 
 class Master:
@@ -23,18 +19,25 @@ class Master:
 
 class Worker:
 
-    def __init__(self, workerID: int, socektID: str, specs: NodeSpecs):
+    def __init__(self, workerID: int, socketID: str, specs: NodeSpecs):
         self.workerID = workerID
-        self.socketID = socektID
+        self.socketID = socketID
         self.specs = specs
+
+
+class User:
+
+    def __init__(self, userID: int, socketID: str):
+        self.userID = userID
+        self.socketID = socketID
 
 
 class Task:
 
-    def __init__(self, taskID: int, userID: int, inputData):
-        self.TaskID = taskID
-        self.userID = userID
-        self.inputData = inputData
+    def __init__(self, taskID: int, appID: int, dataID: int):
+        self.taskID = taskID
+        self.appID = appID
+        self.dataID = dataID
         self.workerID = None
         self.outputData = None
         self.hasDone = False
