@@ -153,13 +153,17 @@ class TaskNamespace(socketio.Namespace):
             userID = messageDecrypted["userID"]
             self.registry.updateUserTaskSocketID(userID=userID, socketID=socketID)
             message = {'userID': userID}
+            messageEncrypted = Message.encrypt(message)
+            user = self.registry.users[userID]
+            self.emit('registered', room=user.taskSocketID, data=messageEncrypted)
+
         elif role == 'worker':
             workerID = messageDecrypted["workerID"]
             self.registry.updateWorkerTaskSocketID(workerID=workerID, socketID=socketID)
             message = {'workerID': workerID}
-
-        messageEncrypted = Message.encrypt(message)
-        self.emit('registered', data=messageEncrypted)
+            messageEncrypted = Message.encrypt(message)
+            worker = self.registry.workers[workerID]
+            self.sio.emit('registered', room=worker.taskSocketID, data=messageEncrypted)
 
     def on_submit(self, socketID, message):
         messageDecrypted = Message.decrypt(message)

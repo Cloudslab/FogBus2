@@ -64,7 +64,7 @@ class RegistryNamespace(socketio.Namespace):
         super(RegistryNamespace, self).__init__(namespace=namespace)
         self.registry = registry
         self.logger = get_logger("MasterRegistryNamespace", logLevel)
-        self.sio = sio
+        self.sio: socketio.Server = sio
 
     def on_register(self, socketID, message):
         messageDecrypted = Message.decrypt(message)
@@ -72,12 +72,13 @@ class RegistryNamespace(socketio.Namespace):
         if role == "user":
             userID = self.registry.addUser(socketID)
             messageEncrypted = Message.encrypt(userID)
-            self.emit('registered', data=messageEncrypted)
+            self.emit('registered', room=socketID, data=messageEncrypted)
+
         elif role == "worker":
             nodeSpecs = messageDecrypted["nodeSpecs"]
             workerID = self.registry.addWorker(socketID, nodeSpecs)
             messageEncrypted = Message.encrypt(workerID)
-            self.emit('registered', data=messageEncrypted)
+            self.sio.emit('registered', room=socketID, data=messageEncrypted)
 
     def on_exit(self, socketID):
         if socketID in self.registry.usersBySocketID:
