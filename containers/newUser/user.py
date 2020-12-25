@@ -2,8 +2,7 @@ import logging
 import sys
 
 from broker import Broker
-from app import ApplicationUserSide
-from apps import FaceDetection, FaceAndEyeDetection
+from apps import FaceDetection, FaceAndEyeDetection, ColorTracking
 
 if __name__ == "__main__":
     broker = Broker(
@@ -21,4 +20,7 @@ if __name__ == "__main__":
         app.run()
     elif appID == 1:
         app = FaceAndEyeDetection(1, broker, videoPath)
+        app.run()
+    elif appID == 2:
+        app = ColorTracking(2, broker, videoPath)
         app.run()

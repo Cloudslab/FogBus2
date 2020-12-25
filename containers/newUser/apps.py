@@ -1,7 +1,6 @@
 import cv2
 import numpy as np
 from datatype import ApplicationUserSide
-from broker import Broker
 
 
 class FaceDetection(ApplicationUserSide):
@@ -29,6 +28,7 @@ class FaceDetection(ApplicationUserSide):
 
 class FaceAndEyeDetection(ApplicationUserSide):
     def run(self):
+        self.appName = 'FaceAndEyeDetection'
         self.broker.run()
 
         while True:
@@ -49,18 +49,16 @@ class FaceAndEyeDetection(ApplicationUserSide):
 
 
 class ColorTracking(ApplicationUserSide):
-    # WIP
 
-    def __init__(self, appID: int, appName: str, broker: Broker, videoPath=None):
-        super().__init__(appID, appName, broker, videoPath)
-        self.face_cascade = cv2.CascadeClassifier('./cascade/haar-face.xml')
-        self.eye_cascade = cv2.CascadeClassifier('./cascade/haar-eye.xml')
-
+    @staticmethod
     def nothing():
         pass
 
     def run(self):
+        self.appName = 'ColorTracking'
         cv2.namedWindow('Trackbars')
+
+        self.broker.run()
         cv2.moveWindow('Trackbars', 1320, 0)
 
         cv2.createTrackbar('hueLower', 'Trackbars', 50, 179, self.nothing)
@@ -77,7 +75,6 @@ class ColorTracking(ApplicationUserSide):
             ret, frame = self.capture.read()
             if not ret:
                 break
-            hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
             hueLow = cv2.getTrackbarPos('hueLower', 'Trackbars')
             hueUp = cv2.getTrackbarPos('hueUpper', 'Trackbars')
 
@@ -96,20 +93,24 @@ class ColorTracking(ApplicationUserSide):
             l_b2 = np.array([hue2Low, Ls, Lv])
             u_b2 = np.array([hue2Up, Us, Uv])
 
-            FGmask = cv2.inRange(hsv, l_b, u_b)
-            FGmask2 = cv2.inRange(hsv, l_b2, u_b2)
-            FGmaskComp = cv2.add(FGmask, FGmask2)
+            width = frame.shape[1]
+            height = frame.shape[0]
+            targetWidth = int(width * 320 / height)
+            frame = cv2.resize(frame, (targetWidth, 320))
+            inputData = (frame,
+                         hueLow, hueUp,
+                         hue2Low, hue2Up,
+                         Ls, Us,
+                         Lv, Uv,
+                         l_b, u_b,
+                         l_b2, u_b2
+                         )
+
+            resultData = self.broker.submit(self.appID, inputData)
+            (FGmaskComp, frame) = resultData
+
             cv2.imshow('FGmaskComp', FGmaskComp)
             cv2.moveWindow('FGmaskComp', 0, 530)
-
-            contours, _ = cv2.findContours(
-                FGmaskComp, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-            contours = sorted(contours, key=lambda x: cv2.contourArea(x), reverse=True)
-            for cnt in contours:
-                area = cv2.contourArea(cnt)
-                (x, y, w, h) = cv2.boundingRect(cnt)
-                if area >= 50:
-                    cv2.rectangle(frame, (x, y), (x + w, y + h), (255, 0, 0), 3)
 
             cv2.imshow('nanoCam', frame)
             cv2.moveWindow('nanoCam', 0, 0)
