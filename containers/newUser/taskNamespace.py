@@ -1,6 +1,7 @@
 import logging
 import socketio
 from logger import get_logger
+from queue import Queue
 from message import Message
 
 
@@ -11,6 +12,7 @@ class TaskNamespace(socketio.ClientNamespace):
         self.canRegister = False
         self.isRegistered = False
         self.userID = None
+        self.resultDataQueue: Queue = Queue()
         self.logger = get_logger("User-Task", logLevel)
 
     def on_connect(self):
@@ -64,4 +66,5 @@ class TaskNamespace(socketio.ClientNamespace):
         taskID = messageDecrypted["taskID"]
         appID = messageDecrypted["appID"]
         dataID = messageDecrypted["dataID"]
+        self.resultDataQueue.put(resultID)
         self.logger.debug("Received resultID-%d, taskID-%d, dataID-%d, appID-%d", resultID, taskID, dataID, appID)

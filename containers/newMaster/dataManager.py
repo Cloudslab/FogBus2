@@ -15,7 +15,7 @@ class DataManager:
         self.portReceiving: int = portReceiving
         self.portSending: int = portSending
         self.data: {bytes} = {}
-        self.logger = get_logger('DataManager', logLevel)
+        self.logger = get_logger('Master-DataManager', logLevel)
 
     def serve(self):
         threading.Thread(target=self._server,
@@ -41,7 +41,7 @@ class DataManager:
             threading.Thread(target=handler, args=(clientSocket,)).start()
 
     @staticmethod
-    def receiveMessage(clientSocket: socket.socket) -> bytes:
+    def receivePackage(clientSocket: socket.socket) -> bytes:
         data = b""
         payloadSize = struct.calcsize(">L")
         while len(data) < payloadSize:
@@ -58,7 +58,7 @@ class DataManager:
         return Message.decrypt(data)
 
     @staticmethod
-    def sendMessage(clientSocket, data):
+    def sendPackage(clientSocket, data):
         dataEncrypted = Message.encrypt(data)
         clientSocket.sendall(struct.pack(">L", len(dataEncrypted)) + dataEncrypted)
 
@@ -66,23 +66,23 @@ class DataManager:
         # TODO: racing
         self.dataID += 1
         dataID = self.dataID
-        self.logger.debug("Receiving data: %d", dataID)
+        self.logger.debug("Receiving dataID-%d", dataID)
 
-        data = self.receiveMessage(clientSocket)
-        self.sendMessage(clientSocket, dataID)
+        data = self.receivePackage(clientSocket)
+        self.sendPackage(clientSocket, dataID)
 
         self.data[dataID] = data
-        self.logger.debug("Received data: %d", dataID)
+        self.logger.debug("Received dataID-%d", dataID)
 
     def sendData(self, clientSocket: socket.socket):
-        dataID = self.receiveMessage(clientSocket)
+        dataID = self.receivePackage(clientSocket)
         if dataID in self.data:
-            self.logger.debug("Sending data: %d", dataID)
+            self.logger.debug("Sending dataID-%d", dataID)
             data = self.data[dataID]
-            self.sendMessage(clientSocket, data)
-            self.logger.debug("Sent data: %d", dataID)
+            self.sendPackage(clientSocket, data)
+            self.logger.debug("Sent dataID-%d", dataID)
         else:
-            self.logger.debug("No such data: %d", dataID)
+            self.logger.debug("Does not have dataID-%d", dataID)
 
 
 if __name__ == '__main__':

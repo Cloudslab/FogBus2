@@ -45,7 +45,7 @@ class TaskNamespace(socketio.ClientNamespace):
         appID = messageDecrypted["appID"]
         dataID = messageDecrypted["dataID"]
         self.logger.debug("Received Task-%d, appID: %d, dataID: %d", taskID, appID, dataID)
-        messageDecrypted['resultID'] = 2
+        messageDecrypted['resultID'] = dataID
         messageDecrypted['workerID'] = self.workerID
         messageEncrypted = Message.encrypt(messageDecrypted)
         return messageEncrypted
