@@ -36,12 +36,11 @@ class User:
 
 class Task:
 
-    def __init__(self, userID: int, taskID: int, appID: int, dataID: int):
+    def __init__(self, workerID: int, userID: int, taskID: int, appID: int, dataID: int):
+        self.workerID = workerID
         self.userID = userID
         self.taskID = taskID
         self.appID = appID
         self.dataID = dataID
         self.resultID = None
-        self.workerID = None
-        self.outputData = None
         self.hasDone = False

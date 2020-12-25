@@ -4,20 +4,19 @@ import socketio
 from logger import get_logger
 from registry import Registry
 from message import Message
-from dataManager import DataManager
 from taskManager import TaskManager
+from datatype import Task
+from queue import Empty
 
 
 class TaskNamespace(socketio.Namespace):
 
     def __init__(self, namespace=None, taskManager: TaskManager = None,
                  registry: Registry = None,
-                 sio: socketio.Server = None,
                  logLevel=logging.DEBUG):
         super(TaskNamespace, self).__init__(namespace=namespace)
         self.taskManager: TaskManager = taskManager
         self.registry: Registry = registry
-        self.sio: socketio.Server = sio
         self.logger = get_logger("TaskNamespace", logLevel)
 
     def on_register(self, socketID, message):
@@ -28,18 +27,18 @@ class TaskNamespace(socketio.Namespace):
 
         if role == 'user':
             userID = messageDecrypted["userID"]
-            self.registry.updateUserTaskSocketID(userID=userID, socketID=socketID)
+            user = self.registry.users[userID]
+            user.taskSocketID = socketID
             message = {'userID': userID}
             messageEncrypted = Message.encrypt(message)
-            user = self.registry.users[userID]
             self.emit('registered', room=user.taskSocketID, data=messageEncrypted)
 
         elif role == 'worker':
             workerID = messageDecrypted["workerID"]
-            self.registry.updateWorkerTaskSocketID(workerID=workerID, socketID=socketID)
+            worker = self.registry.workers[workerID]
+            worker.taskSocketID = socketID
             message = {'workerID': workerID}
             messageEncrypted = Message.encrypt(message)
-            worker = self.registry.workers[workerID]
             self.emit('registered', room=worker.taskSocketID, data=messageEncrypted)
 
     def on_submit(self, socketID, message):
@@ -50,32 +49,45 @@ class TaskNamespace(socketio.Namespace):
 
         appID = messageDecrypted["appID"]
         dataID = messageDecrypted["dataID"]
-        taskID = self.taskManager.submit(userID, appID, dataID)
+        try:
+            worker = self.registry.waitingWorkers.get(block=False)
+            task = Task(
+                workerID=worker.workerID,
+                userID=userID,
+                taskID=1,
+                appID=appID,
+                dataID=dataID)
+            self.taskManager.processingTasks[task.taskID] = task
+            message = {"taskID": task.taskID, "appID": task.appID, "dataID": task.dataID}
+            messageEncrypted = Message.encrypt(message)
+            self.emit(
+                'task',
+                room=worker.taskSocketID,
+                data=messageEncrypted,
+                callback=self.sendResult
+            )
+            self.logger.debug("Sent Task-%d to Worker-%d", task.taskID, worker.workerID)
+            message = {'isHandling': True,
+                       'taskID': task.taskID,
+                       'appID': task.appID,
+                       'dataID': task.dataID}
+            return Message.encrypt(message)
+        except Empty:
+            message = {'isHandling': False,
+                       'reason': 'No worker now',
+                       'appID': appID,
+                       'dataID': dataID}
+            return Message.encrypt(message)
 
-        message = {'taskID': taskID, 'appID': appID, 'dataID': dataID}
-        messageEncrypted = Message.encrypt(message)
-        self.sio.emit("submitted", to=socketID,
-                      data=messageEncrypted, namespace='/task')
-        self.logger.info("[*] Received Task-%d from User-%d", taskID, userID)
-
-    def on_finish(self, socketID, message):
+    def sendResult(self, message):
         messageDecrypted = Message.decrypt(message)
-        workerID = messageDecrypted['workerID']
-
-        if not socketID == self.registry.workers[workerID].taskSocketID:
-            return
-
         taskID = messageDecrypted['taskID']
         task = self.taskManager.processingTasks[taskID]
-
-        if not workerID == task.workerID:
-            return
-
-        dataID = messageDecrypted["dataID"]
-        resultID = messageDecrypted["resultID"]
-        self.taskManager.finish(taskID, resultID)
-        self.notify(dataID, resultID)
-        self.logger.debug("Received Finished Task-%d, dataID: %d, resultID: %d", taskID, dataID, resultID)
-
-    def notify(self, dataID, resultID):
-        pass
+        user = self.registry.users[task.userID]
+        messageEncrypted = Message.encrypt(messageDecrypted)
+        worker = self.registry.workers[task.workerID]
+        self.registry.waitingWorkers.put(worker)
+        self.emit('result',
+                  room=user.taskSocketID,
+                  data=messageEncrypted)
+        self.logger.debug("Sent result of Task-%d to User-%d", task.taskID, task.userID)

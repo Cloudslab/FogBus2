@@ -3,10 +3,10 @@ import eventlet
 import socketio
 
 from logger import get_logger
-from registry import Registry, RegistryNamespace
+from registry import Registry
+from registryNamespace import RegistryNamespace
 from taskManager import TaskManager
 from taskNamespace import TaskNamespace
-from taskCoordinator import TaskCoordinator
 from dataManager import DataManager
 
 
@@ -27,25 +27,15 @@ class FogMaster:
         self.registryNamespace = RegistryNamespace(
             '/registry',
             registry=self.registry,
-            sio=self.sio,
             logLevel=self.logger.level)
         self.taskNamespace = TaskNamespace(
             '/task',
             registry=self.registry,
-            sio=self.sio,
             taskManager=self.taskManager,
             logLevel=self.logger.level)
 
-        self.taskCoordinator: TaskCoordinator = \
-            TaskCoordinator(registry=self.registry,
-                            taskNamespace=self.taskNamespace,
-                            taskManager=self.taskManager,
-                            dataManager=self.dataManager,
-                            logLevel=self.logger.level)
-
-
     def run(self):
-        self.taskCoordinator.run()
+        # self.taskCoordinator.run()
 
         app = socketio.WSGIApp(self.sio, static_files={
             '/': {'content_type': 'text/html', 'filename': 'html/index.html'}

@@ -3,15 +3,15 @@ import socketio
 
 from logger import get_logger
 from message import Message
+from registry import Registry
 
 
 class RegistryNamespace(socketio.Namespace):
 
-    def __init__(self, namespace=None, registry=None, sio=None, logLevel=logging.DEBUG):
+    def __init__(self, namespace=None, registry: Registry = None, logLevel=logging.DEBUG):
         super(RegistryNamespace, self).__init__(namespace=namespace)
-        self.registry = registry
+        self.registry: Registry = registry
         self.logger = get_logger("MasterRegistryNamespace", logLevel)
-        self.sio: socketio.Server = sio
 
     def on_register(self, socketID, message):
         messageDecrypted = Message.decrypt(message)
@@ -29,7 +29,7 @@ class RegistryNamespace(socketio.Namespace):
             nodeSpecs = messageDecrypted["nodeSpecs"]
             if 'workerID' in messageDecrypted:
                 workerID = messageDecrypted['workerID']
-                self.registry.workers[workerID].workerSocketID = socketID
+                self.registry.workers[workerID].registrySocketID = socketID
             else:
                 workerID = self.registry.addWorker(
                     workerSocketID=socketID,
@@ -37,11 +37,3 @@ class RegistryNamespace(socketio.Namespace):
 
             messageEncrypted = Message.encrypt(workerID)
             self.emit('registered', room=socketID, data=messageEncrypted)
-
-    def on_exit(self, socketID):
-        if socketID in self.registry.usersBySocketID:
-            self.logger.info("[*] User-%d exited.", self.registry.usersBySocketID[socketID].workerID)
-            self.registry.removeUserBySocketID(socketID)
-        else:
-            self.logger.info("[*] Worker-%d exited.", self.registry.workersBySocketID[socketID].workerID)
-            self.registry.removeWorkerBySocketID(socketID)

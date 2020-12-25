@@ -10,10 +10,12 @@ class RegistryNamespace(socketio.ClientNamespace):
         super(RegistryNamespace, self).__init__(namespace=namespace)
         self.connected = False
         self.workerID = None
-        self.logger = get_logger("WorkerRegistry", logLevel)
+        self.isRegistered = False
+        self.logger = get_logger("Worker-Registry", logLevel)
 
     def on_connect(self):
         self.connected = True
+        self.register()
         self.logger.info("[*] Connected.")
 
     def on_disconnect(self):
@@ -22,10 +24,12 @@ class RegistryNamespace(socketio.ClientNamespace):
 
     def register(self):
         message = {'role': 'worker', 'nodeSpecs': NodeSpecs(1, 2, 3, 4)}
+        if self.workerID is not None:
+            message['workerID'] = self.workerID
         messageEncrypted = Message.encrypt(message)
         self.emit('register', messageEncrypted)
 
     def on_registered(self, message):
         workerID = Message.decrypt(message)
         self.workerID = workerID
-
+        self.isRegistered = True

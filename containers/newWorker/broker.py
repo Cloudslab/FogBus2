@@ -9,7 +9,7 @@ from taskNamespace import TaskNamespace
 class Broker:
 
     def __init__(self, host: str, port: int, logLevel=logging.DEBUG):
-        self.logger = get_logger('WorkerSideBroker', logLevel)
+        self.logger = get_logger('Worker-Broker', logLevel)
         self.host = host
         self.port = port
         self.sio = socketio.Client()
@@ -18,15 +18,10 @@ class Broker:
 
     def run(self):
         threading.Thread(target=self.connect).start()
-        while not self.taskNamespace.isConnected or \
-                not self.registryNamespace.connected:
+        while not self.registryNamespace.isRegistered:
             pass
-        self.registryNamespace.register()
-        while self.registryNamespace.workerID is None:
-            pass
-        self.taskNamespace.workerID = self.registryNamespace.workerID
-        self.taskNamespace.register()
-        while not self.taskNamespace.isRegistered:
+        self.taskNamespace.updateWorkerID(self.registryNamespace.workerID)
+        while not self.registryNamespace.isRegistered:
             pass
         self.logger.info("Got workerID-%d", self.taskNamespace.workerID)
 
@@ -40,6 +35,4 @@ class Broker:
 if __name__ == '__main__':
     broker = Broker('http://127.0.0.1', 5000, logLevel=logging.DEBUG)
     broker.run()
-    from time import sleep
-    sleep(2)
-    broker.taskNamespace.finish(1, 1, 2)
+

@@ -9,7 +9,7 @@ from taskNamespace import TaskNamespace
 class Broker:
 
     def __init__(self, host: str, port: int, logLevel=logging.DEBUG):
-        self.logger = get_logger('UserSideBroker', logLevel)
+        self.logger = get_logger('User-Broker', logLevel)
         self.host = host
         self.port = port
         self.sio = socketio.Client()

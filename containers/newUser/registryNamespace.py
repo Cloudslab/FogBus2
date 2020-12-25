@@ -10,7 +10,7 @@ class RegistryNamespace(socketio.ClientNamespace):
         self.connected = False
         self.userID = None
         self.isRegistered = False
-        self.logger = get_logger("UserRegistry", logLevel)
+        self.logger = get_logger("User-Registry", logLevel)
 
     def on_connect(self):
         self.connected = True

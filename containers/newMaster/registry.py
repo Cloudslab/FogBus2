@@ -5,18 +5,17 @@ from queue import Queue
 from logger import get_logger
 from datatype import Worker, User, NodeSpecs
 from typing import NoReturn
-from registryNamespace import RegistryNamespace
 
 
 class Registry:
 
     def __init__(self, logLevel=logging.DEBUG):
-        self.currentWorkerID = 0
-        self.workers: {Worker} = {}
-        self.currentUserID = 0
-        self.users: {User} = {}
-        self.waitingWorkers = Queue()
-        self.logger = get_logger('MasterRegistry', logLevel)
+        self.currentWorkerID: int = 0
+        self.workers: dict[int, Worker] = {}
+        self.currentUserID: int = 0
+        self.users: dict[int, User] = {}
+        self.waitingWorkers: Queue[Worker] = Queue()
+        self.logger = get_logger('Master-Registry', logLevel)
 
     def addWorker(self, workerSocketID: str, nodeSpecs: NodeSpecs):
         # TODO: racing
@@ -28,15 +27,11 @@ class Registry:
         self.logger.info("Worker-%d added. %s", workerID, worker.specs.info())
         return workerID
 
-    def updateWorkerTaskSocketID(self, workerID: int, socketID: int):
-        self.workers[workerID].taskSocketID = socketID
-        self.logger.info("Worker-%d updated taskSocketID.", workerID)
-
     def workerWait(self, worker: Worker) -> NoReturn:
         self.waitingWorkers.put(worker)
 
     def workerWork(self) -> Worker:
-        return self.waitingWorkers.get(block=False)
+        return self.waitingWorkers.get()
 
     def workerFree(self, worker: Worker):
         self.waitingWorkers.put(worker)
@@ -52,10 +47,6 @@ class Registry:
         self.users[userID] = user
         self.logger.info("User-%d added.", userID)
         return userID
-
-    def updateUserTaskSocketID(self, userID: int, socketID: int):
-        self.users[userID].taskSocketID = socketID
-        self.logger.info("User-%d updated taskSocketID.", userID)
 
     def removeUser(self, userID):
         del self.users[userID]

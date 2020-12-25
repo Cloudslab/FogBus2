@@ -9,22 +9,24 @@ class TaskManager:
 
     def __init__(self, logLevel=logging.DEBUG):
         self.currentTaskID = 0
-        self.waitingTasks = Queue()
-        self.finishedTasks = Queue()
-        self.processingTasks: {Task} = {}
+        self.waitingTasks: Queue[Task] = Queue()
+        self.finishedTasks: Queue[Task] = Queue()
+        self.processingTasks: dict[int, Task] = {}
         self.logger = get_logger('TaskManager', logLevel)
 
-    def submit(self, userID: int, appID: int, dataID: int):
+    def submit(self, workerID: int, userID: int, appID: int, dataID: int) -> Task:
         # TODO: racing
         self.currentTaskID += 1
         taskID = self.currentTaskID
-        self.waitingTasks.put(
-            Task(
-                userID=userID,
-                taskID=taskID,
-                appID=appID,
-                dataID=dataID))
-        return taskID
+        task = Task(
+            workerID=workerID,
+            userID=userID,
+            taskID=taskID,
+            appID=appID,
+            dataID=dataID)
+        self.processingTasks[taskID] = task
+        # self.waitingTasks.put(task)
+        return task
 
     def getUnfinishedTask(self, workerID: int) -> Task:
         task = self.waitingTasks.get(block=False)
@@ -36,10 +38,10 @@ class TaskManager:
         task = self.finishedTasks.get(block=False)
         return task
 
-    def finish(self, taskID, outputData: bytes) -> NoReturn:
+    def finish(self, taskID, resultID: int):
         if taskID in self.processingTasks:
             task = self.processingTasks[taskID]
-            task.outputData = outputData
+            task.resultID = resultID
             task.hasDone = True
             self.finishedTasks.put(task)
             del self.processingTasks[taskID]

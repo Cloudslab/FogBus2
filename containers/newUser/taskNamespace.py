@@ -11,7 +11,7 @@ class TaskNamespace(socketio.ClientNamespace):
         self.canRegister = False
         self.isRegistered = False
         self.userID = None
-        self.logger = get_logger("UserTask", logLevel)
+        self.logger = get_logger("User-Task", logLevel)
 
     def on_connect(self):
         self.isConnected = True
@@ -21,31 +21,6 @@ class TaskNamespace(socketio.ClientNamespace):
     def on_disconnect(self):
         self.isConnected = False
         self.logger.info("[!] Disconnected.")
-
-    def setUserID(self, userID: int):
-        self.userID = userID
-        self.canRegister = True
-
-    def submit(self, appID: int, dataID: int):
-        message = {'userID': self.userID, 'appID': appID, 'dataID': dataID}
-        messageEncrypted = Message.encrypt(message)
-        self.emit('submit', messageEncrypted)
-        self.logger.debug("Submitted Task appID: %d, dataID: %d", appID, dataID)
-
-    def on_submitted(self, message):
-        messageDecrypted = Message.decrypt(message)
-        taskID = messageDecrypted["taskID"]
-        appID = messageDecrypted["appID"]
-        dataID = messageDecrypted["dataID"]
-        self.logger.debug("Received Task-%d -> appID: %d, dataID: %d", taskID, appID, dataID)
-
-    def on_result(self, message):
-        messageDecrypted = Message.decrypt(message)
-        taskID = messageDecrypted["taskID"]
-        appID = messageDecrypted["appID"]
-        resultID = messageDecrypted["resultID"]
-        dataID = messageDecrypted["dataID"]
-        self.logger.debug("Received TaskID-%d, Result-%d, dataID-%d, appID-%d", taskID, resultID, dataID, appID)
 
     def register(self):
         while not self.canRegister:
@@ -59,3 +34,34 @@ class TaskNamespace(socketio.ClientNamespace):
         userID = messageDecrypted['userID']
         if userID == self.userID:
             self.isRegistered = True
+
+    def setUserID(self, userID: int):
+        self.userID = userID
+        self.canRegister = True
+
+    def submit(self, appID: int, dataID: int):
+        message = {'userID': self.userID, 'appID': appID, 'dataID': dataID}
+        messageEncrypted = Message.encrypt(message)
+        self.emit('submit', messageEncrypted, callback=self.submitCallback)
+
+    def submitCallback(self, message):
+        messageDecrypted = Message.decrypt(message)
+        isHandling = messageDecrypted['isHandling']
+        if isHandling:
+            taskID = messageDecrypted['taskID']
+            appID = messageDecrypted['appID']
+            dataID = messageDecrypted['dataID']
+            self.logger.debug("Submitted task taskID-%d, appID-%d, dataID-%d", taskID, appID, dataID)
+        else:
+            reason = messageDecrypted['reason']
+            appID = messageDecrypted['appID']
+            dataID = messageDecrypted['dataID']
+            self.logger.debug("Cannot submit appID-%d, dataID-%d because %s", appID, dataID, reason)
+
+    def on_result(self, message):
+        messageDecrypted = Message.decrypt(message)
+        resultID = messageDecrypted["resultID"]
+        taskID = messageDecrypted["taskID"]
+        appID = messageDecrypted["appID"]
+        dataID = messageDecrypted["dataID"]
+        self.logger.debug("Received resultID-%d, taskID-%d, dataID-%d, appID-%d", resultID, taskID, dataID, appID)
