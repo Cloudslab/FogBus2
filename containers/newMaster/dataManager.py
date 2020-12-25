@@ -80,6 +80,7 @@ class DataManager:
             self.logger.debug("Sending dataID-%d", dataID)
             data = self.data[dataID]
             self.sendPackage(clientSocket, data)
+            del self.data[dataID]
             self.logger.debug("Sent dataID-%d", dataID)
         else:
             self.logger.debug("Does not have dataID-%d", dataID)
