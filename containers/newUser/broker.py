@@ -53,10 +53,10 @@ class Broker:
 
     def submit(self, appID, inputData):
         dataID = self.dataManager.sendData(inputData)
-        print('dataID', dataID)
         self.taskNamespace.submit(appID=appID, dataID=dataID)
         resultID = self.taskNamespace.resultDataQueue.get()
-        print('resultID', resultID)
+        if resultID is None:
+            return None
         resultData = self.dataManager.receiveData(resultID)
         return resultData
 

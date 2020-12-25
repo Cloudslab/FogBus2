@@ -14,5 +14,9 @@ if __name__ == "__main__":
         logLevel=logging.DEBUG)
     appID = int(sys.argv[1])
     appName = sys.argv[2]
-    app = ApplicationUserSide(appID, appName, broker)
+    if len(sys.argv) > 3:
+        videoPath = sys.argv[3]
+        app = ApplicationUserSide(appID, appName, broker, videoPath)
+    else:
+        app = ApplicationUserSide(appID, appName, broker)
     app.run()

@@ -59,6 +59,7 @@ class TaskNamespace(socketio.ClientNamespace):
             appID = messageDecrypted['appID']
             dataID = messageDecrypted['dataID']
             self.logger.debug("Cannot submit appID-%d, dataID-%d because %s", appID, dataID, reason)
+            self.resultDataQueue.put(None)
 
     def on_result(self, message):
         messageDecrypted = Message.decrypt(message)
