@@ -41,3 +41,16 @@ class Task:
         self.workerID = None
         self.outputData = None
         self.hasDone = False
+
+
+from abc import abstractmethod
+
+
+class ApplicationUserSide:
+
+    def __init__(self, appID: int):
+        self.appID = appID
+
+    @abstractmethod
+    def process(self, inputData):
+        pass

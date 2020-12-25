@@ -2,15 +2,27 @@ import logging
 import socketio
 from logger import get_logger
 from message import Message
+from dataManager import DataManager
+from typing import List
+from datatype import ApplicationUserSide
 
 
 class TaskNamespace(socketio.ClientNamespace):
-    def __init__(self, namespace=None, logLevel=logging.DEBUG):
+    def __init__(
+            self,
+            namespace=None,
+            appList=None,
+            dataManager: DataManager = None,
+            logLevel=logging.DEBUG):
         super(TaskNamespace, self).__init__(namespace=namespace)
+        if appList is None:
+            appList = []
         self.isConnected = False
         self.canRegister = False
         self.isRegistered = False
         self.workerID = None
+        self.appList: List[ApplicationUserSide] = appList
+        self.dataManager = dataManager
         self.logger = get_logger("Worker-Task", logLevel)
 
     def on_connect(self):
@@ -45,7 +57,15 @@ class TaskNamespace(socketio.ClientNamespace):
         appID = messageDecrypted["appID"]
         dataID = messageDecrypted["dataID"]
         self.logger.debug("Received Task-%d, appID: %d, dataID: %d", taskID, appID, dataID)
-        messageDecrypted['resultID'] = dataID
+        if appID >= len(self.appList):
+            messageDecrypted['resultID'] = dataID
+        else:
+            app = self.appList[appID]
+            inputData = self.dataManager.receiveData(dataID=dataID)
+            resultData = app.process(inputData)
+            resultDataID = self.dataManager.sendData(resultData)
+            messageDecrypted['resultID'] = resultDataID
+
         messageDecrypted['workerID'] = self.workerID
         messageEncrypted = Message.encrypt(messageDecrypted)
         return messageEncrypted
