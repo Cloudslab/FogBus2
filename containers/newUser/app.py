@@ -4,9 +4,10 @@ from broker import Broker
 
 class ApplicationUserSide:
 
-    def __init__(self, appID: int, broker: Broker):
+    def __init__(self, appID: int, appName: str, broker: Broker):
         self.appID: int = appID
         self.broker: Broker = broker
+        self.appName: str = appName
 
     def run(self):
         self.broker.run()
@@ -17,7 +18,7 @@ class ApplicationUserSide:
             if not ret:
                 break
             frame = self.broker.submit(self.appID, frame)
-            cv2.imshow("App-1", frame)
+            cv2.imshow("App-%d %s" % (self.appID, self.appName), frame)
             if cv2.waitKey(1) == ord('q'):
                 break
         capture.release()

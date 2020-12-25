@@ -1,4 +1,5 @@
 import logging
+import sys
 
 from broker import Broker
 from app import ApplicationUserSide
@@ -11,5 +12,7 @@ if __name__ == "__main__":
         portSending=5001,
         portReceiving=5002,
         logLevel=logging.DEBUG)
-    app = ApplicationUserSide(1, broker)
+    appID = int(sys.argv[1])
+    appName = sys.argv[2]
+    app = ApplicationUserSide(appID, appName, broker)
     app.run()
