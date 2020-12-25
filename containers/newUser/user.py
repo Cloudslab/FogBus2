@@ -3,6 +3,7 @@ import sys
 
 from broker import Broker
 from app import ApplicationUserSide
+from apps import FaceDetection, FaceAndEyeDetection
 
 if __name__ == "__main__":
     broker = Broker(
@@ -13,10 +14,11 @@ if __name__ == "__main__":
         portReceiving=5002,
         logLevel=logging.DEBUG)
     appID = int(sys.argv[1])
-    appName = sys.argv[2]
-    if len(sys.argv) > 3:
-        videoPath = sys.argv[3]
-        app = ApplicationUserSide(appID, appName, broker, videoPath)
-    else:
-        app = ApplicationUserSide(appID, appName, broker)
-    app.run()
+    videoPath = sys.argv[2] if len(sys.argv) > 2 else None
+
+    if appID == 0:
+        app = FaceDetection(0, broker, videoPath)
+        app.run()
+    elif appID == 1:
+        app = FaceAndEyeDetection(1, broker, videoPath)
+        app.run()

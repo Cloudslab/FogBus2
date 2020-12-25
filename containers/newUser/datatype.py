@@ -1,3 +1,8 @@
+import cv2
+from abc import abstractmethod
+from broker import Broker
+
+
 class NodeSpecs:
     def __init__(self, cores, ram, disk, network):
         self.cores = cores
@@ -45,3 +50,17 @@ class Task:
         self.workerID = None
         self.outputData = None
         self.hasDone = False
+
+
+class ApplicationUserSide:
+
+    def __init__(self, appID: int, broker: Broker, videoPath=None):
+        self.appID = appID
+        self.appName = None
+        self.broker = broker
+        self.capture = cv2.VideoCapture(0) if videoPath is None \
+            else cv2.VideoCapture(videoPath)
+
+    @abstractmethod
+    def run(self):
+        pass
