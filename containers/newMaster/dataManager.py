@@ -3,46 +3,46 @@ import threading
 import struct
 import socket
 from logger import get_logger
-from typing import Callable
-from message import Message
+from queue import Queue
 
 
 class DataManager:
 
-    def __init__(self, host: str, portReceiving: int, portSending: int, logLevel=logging.DEBUG):
+    def __init__(self, host: str, port: int, logLevel=logging.DEBUG):
         self.dataID = 0
         self.host: str = host
-        self.portReceiving: int = portReceiving
-        self.portSending: int = portSending
-        self.data: {bytes} = {}
-        self.logger = get_logger('Master-DataManager', logLevel)
+        self.port: int = port
+        self.serverSocket: socket.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.logger = get_logger('Master-MainService', logLevel)
 
     def serve(self):
-        threading.Thread(target=self._server,
-                         args=(self.host,
-                               self.portReceiving,
-                               self.receiveData
-                               )).start()
-
-        threading.Thread(target=self._server,
-                         args=(self.host,
-                               self.portSending,
-                               self.sendData
-                               )).start()
-
-    def _server(self, host: str, port: int, handler: Callable):
-        serverSocket = socket.socket(
-            socket.AF_INET, socket.SOCK_STREAM)
-        serverSocket.bind((host, port))
-        serverSocket.listen(5)
-        self.logger.info("[*] Server starts at %s:%d", host, port)
+        self.serverSocket.bind((self.host, self.port))
+        self.serverSocket.listen()
+        self.logger.info('[*] serves at %s:%d over tcp.', self.host, self.port)
         while True:
-            clientSocket, _ = serverSocket.accept()
-            threading.Thread(target=handler, args=(clientSocket,)).start()
+            clientSocket, _ = self.serverSocket.accept()
+            receivingQueue = Queue()
+            sendingQueue = Queue()
+            threading.Thread(target=self.receiveData,
+                             args=(clientSocket, receivingQueue
+                                   )).start()
+            threading.Thread(target=self.sendData,
+                             args=(clientSocket, sendingQueue
+                                   )).start()
+
+    def receiveData(self, clientSocket: socket.socket, receivingQueue: Queue):
+        while True:
+            data = self.receivePackage(clientSocket)
+            receivingQueue.put(data)
+
+    def sendData(self, clientSocket: socket.socket, sendingQueue: Queue):
+        while True:
+            data = sendingQueue.get()
+            self.sendPackage(clientSocket, data)
 
     @staticmethod
     def receivePackage(clientSocket: socket.socket) -> bytes:
-        data = b""
+        data = b''
         payloadSize = struct.calcsize(">L")
         while len(data) < payloadSize:
             data += clientSocket.recv(4096)
@@ -55,40 +55,15 @@ class DataManager:
             data += clientSocket.recv(4096)
 
         data = data[:dataSize]
-        return Message.decrypt(data)
+        return data
 
     @staticmethod
-    def sendPackage(clientSocket, data):
-        dataEncrypted = Message.encrypt(data)
-        clientSocket.sendall(struct.pack(">L", len(dataEncrypted)) + dataEncrypted)
-
-    def receiveData(self, clientSocket: socket.socket):
-        # TODO: racing
-        self.dataID += 1
-        dataID = self.dataID
-        self.logger.debug("Receiving dataID-%d", dataID)
-
-        data = self.receivePackage(clientSocket)
-        self.sendPackage(clientSocket, dataID)
-
-        self.data[dataID] = data
-        self.logger.debug("Received dataID-%d", dataID)
-
-    def sendData(self, clientSocket: socket.socket):
-        dataID = self.receivePackage(clientSocket)
-        if dataID in self.data:
-            self.logger.debug("Sending dataID-%d", dataID)
-            data = self.data[dataID]
-            self.sendPackage(clientSocket, data)
-            del self.data[dataID]
-            self.logger.debug("Sent dataID-%d", dataID)
-        else:
-            self.logger.debug("Does not have dataID-%d", dataID)
+    def sendPackage(clientSocket: socket.socket, data: bytes):
+        clientSocket.sendall(struct.pack(">L", len(data)) + data)
 
 
 if __name__ == '__main__':
     dataManager = DataManager(host='0.0.0.0',
-                              portReceiving=5001,
-                              portSending=5002,
+                              port=5000,
                               logLevel=logging.DEBUG)
     dataManager.serve()

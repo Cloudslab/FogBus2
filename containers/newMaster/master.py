@@ -22,7 +22,7 @@ class FogMaster:
 
         self.taskManager: TaskManager = TaskManager(logLevel=logLevel)
         self.dataManager: DataManager = DataManager(host=self.host,
-                                                    portReceiving=self.portReceiving,
+                                                    port=self.portReceiving,
                                                     portSending=self.portSending,
                                                     logLevel=logLevel)
 
