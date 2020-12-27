@@ -5,7 +5,6 @@ import socket
 
 from logger import get_logger
 from queue import Queue
-from message import Message
 
 
 class DataManager:
@@ -14,18 +13,20 @@ class DataManager:
         self.dataID = 0
         self.host: str = host
         self.port: int = port
+        self.receivingQueue: Queue[bytes] = Queue()
+        self.sendingQueue: Queue[bytes] = Queue()
         self.clientSocket: socket.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
         self.logger = get_logger('Master-MainService', logLevel)
 
     def run(self):
         self.clientSocket.connect((self.host, self.port))
-        receivingQueue = Queue()
-        sendingQueue = Queue()
+
         threading.Thread(target=self.receiveData,
-                         args=(self.clientSocket, receivingQueue
+                         args=(self.clientSocket, self.receivingQueue
                                )).start()
         threading.Thread(target=self.sendData,
-                         args=(self.clientSocket, sendingQueue
+                         args=(self.clientSocket, self.sendingQueue
                                )).start()
         self.logger.info("[*] Connected to %s:%d over tcp.", self.host, self.port)
 

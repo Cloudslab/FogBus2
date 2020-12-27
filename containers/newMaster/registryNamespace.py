@@ -19,7 +19,7 @@ class RegistryNamespace(socketio.Namespace):
         if role == "user":
             if 'userID' in messageDecrypted:
                 userID = messageDecrypted['userID']
-                self.registry.users[userID].registrySocketID = socketID
+                self.registry.users[userID].socketID = socketID
             else:
                 userID = self.registry.addUser(registrySocketID=socketID)
             messageEncrypted = Message.encrypt(userID)
@@ -29,9 +29,9 @@ class RegistryNamespace(socketio.Namespace):
             nodeSpecs = messageDecrypted["nodeSpecs"]
             if 'workerID' in messageDecrypted:
                 workerID = messageDecrypted['workerID']
-                self.registry.workers[workerID].registrySocketID = socketID
+                self.registry.workers[workerID].socketID = socketID
             else:
-                workerID = self.registry.addWorker(
+                workerID = self.registry.__addWorker(
                     workerSocketID=socketID,
                     nodeSpecs=nodeSpecs)
 

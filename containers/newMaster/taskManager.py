@@ -2,7 +2,6 @@ import logging
 from queue import Queue
 from logger import get_logger
 from datatype import Task
-from typing import NoReturn
 
 
 class TaskManager:
