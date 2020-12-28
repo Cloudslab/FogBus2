@@ -7,7 +7,7 @@ from datatype import Worker, User, NodeSpecs
 from typing import NoReturn
 from typing import List
 from datatype import Client
-
+from collections import defaultdict
 
 class Registry:
 
@@ -21,7 +21,7 @@ class Registry:
         self.usersBySocketID: dict[int, User] = {}
         self.waitingWorkers: Queue[Worker] = Queue()
 
-        self.workersQueueByAppID: List[Queue[Worker]] = []
+        self.workersQueueByAppID: dict[int, Queue[Worker]] = defaultdict(Queue[Worker])
         self.logger = get_logger('Master-Registry', logLevel)
 
     def register(self, client: Client, message: dict) -> Client:

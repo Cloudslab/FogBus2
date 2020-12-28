@@ -1,67 +1,65 @@
 import logging
-import socketio
 import threading
 from logger import get_logger
-from registryNamespace import RegistryNamespace
-from taskNamespace import TaskNamespace
+from datatype import NodeSpecs
 from dataManager import DataManager
+from message import Message
+from typing import NoReturn, Any
 
 
 class Broker:
 
     def __init__(
             self,
-            serverHost: str,
-            serverPort: int,
-            dataHost: str,
-            portReceiving: int,
-            portSending: int,
-            appList=None,
+            host: str,
+            port: int,
             logLevel=logging.DEBUG):
         self.logger = get_logger('Worker-Broker', logLevel)
-        self.serverHost = serverHost
-        self.serverPort = serverPort
-        self.sio = socketio.Client()
-
+        self.host = host
+        self.port = port
+        self.workerID = None
+        self.data: dict[int, dict[int, Any]] = {}
         self.dataManager: DataManager = DataManager(
-            host=dataHost,
-            portSending=portSending,
-            portReceiving=portReceiving,
+            host=self.host,
+            port=self.port,
             logLevel=self.logger.level)
-        self.registryNamespace = RegistryNamespace(
-            '/registry',
-            logLevel=logLevel)
-        self.taskNamespace = TaskNamespace(
-            '/task',
-            appList=appList,
-            dataManager=self.dataManager,
-            logLevel=logLevel)
 
     def run(self):
-        threading.Thread(target=self.connect).start()
-        while not self.registryNamespace.isRegistered:
-            pass
-        self.taskNamespace.updateWorkerID(self.registryNamespace.workerID)
-        while not self.registryNamespace.isRegistered:
-            pass
-        self.logger.info("Got workerID-%d", self.taskNamespace.workerID)
+        self.dataManager.run()
+        threading.Thread(target=self.receivedMessageHandler).start()
+        self.register()
 
-    def connect(self):
-        self.sio.register_namespace(self.registryNamespace)
-        self.sio.register_namespace(self.taskNamespace)
-        self.sio.connect('%s:%d' % (self.serverHost, self.serverPort))
-        self.sio.wait()
+    def register(self) -> NoReturn:
+        message = {'type': 'register',
+                   'role': 'worker',
+                   'nodeSpecs': NodeSpecs(1, 2, 3, 4),
+                   'appIDs': [0, 1, 2, 3]}
+        self.send(message)
+        self.logger.info("[*] Registering ...")
+        while self.workerID is None:
+            pass
+        self.logger.info("[*] Registered with workerID-%d", self.workerID)
+
+    def send(self, data) -> NoReturn:
+        self.dataManager.sendingQueue.put(Message.encrypt(data))
+
+    def receivedMessageHandler(self):
+        self.logger.info('[*] Received Message Handler stated.')
+        while True:
+            messageEncrypted = self.dataManager.receivingQueue.get()
+            message = Message.decrypt(messageEncrypted)
+            if message['type'] == 'workerID':
+                self.workerID = message['workerID']
+            elif message['type'] == 'task':
+                dataID = message['dataID']
+                userID = message['userID']
+                self.data[userID] = {}
+                self.data[userID][dataID] = message['data']
 
 
 if __name__ == '__main__':
-    from apps import appList
-
     broker = Broker(
-        serverHost='http://127.0.0.1',
-        serverPort=5000,
-        dataHost='127.0.0.1',
-        portSending=5001,
-        portReceiving=5002,
-        appList=appList,
+        host='127.0.0.1',
+        port=5000,
         logLevel=logging.DEBUG)
     broker.run()

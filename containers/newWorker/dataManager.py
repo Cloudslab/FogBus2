@@ -1,41 +1,46 @@
 import logging
-import socket
 import threading
 import struct
+import socket
 
 from logger import get_logger
-from typing import Callable
-from message import Message
+from queue import Queue
 
 
 class DataManager:
 
-    def __init__(self, host: str, portReceiving: int, portSending: int, logLevel=logging.DEBUG):
+    def __init__(self, host: str, port: int, logLevel=logging.DEBUG):
+        self.dataID = 0
         self.host: str = host
-        self.portReceiving: int = portReceiving
-        self.portSending: int = portSending
+        self.port: int = port
+        self.receivingQueue: Queue[bytes] = Queue()
+        self.sendingQueue: Queue[bytes] = Queue()
+        self.clientSocket: socket.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
-        self.senderSocket: socket.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.receiverSocket: socket.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.logger = get_logger('DataManager', logLevel)
+        self.logger = get_logger('User-DataManager', logLevel)
 
-    def senderReconnect(self):
-        self.senderSocket: socket.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.senderSocket.connect((self.host, self.portSending))
+    def run(self):
+        self.clientSocket.connect((self.host, self.port))
 
-    def receiverReconnect(self):
-        self.receiverSocket: socket.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.receiverSocket.connect((self.host, self.portReceiving))
+        threading.Thread(target=self.__readData,
+                         args=(self.receivingQueue,)).start()
+        threading.Thread(target=self.__writeData,
+                         args=(self.sendingQueue,)).start()
+        self.logger.info("[*] Connected to %s:%d over tcp.", self.host, self.port)
+
+    def __readData(self, receivingQueue: Queue):
+        while True:
+            data = self.__receivePackage(self.clientSocket)
+            receivingQueue.put(data)
+
+    def __writeData(self, sendingQueue: Queue):
+        while True:
+            data = sendingQueue.get()
+            self.__sendPackage(self.clientSocket, data)
 
     @staticmethod
-    def _client(host: str, port: int, handler: Callable):
-        clientSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        clientSocket.connect((host, port))
-        threading.Thread(target=handler, args=(clientSocket,)).start()
-
-    @staticmethod
-    def receiveMessage(clientSocket: socket.socket) -> bytes:
-        data = b""
+    def __receivePackage(clientSocket: socket.socket) -> bytes:
+        data = b''
         payloadSize = struct.calcsize(">L")
         while len(data) < payloadSize:
             data += clientSocket.recv(4096)
@@ -48,37 +53,15 @@ class DataManager:
             data += clientSocket.recv(4096)
 
         data = data[:dataSize]
-        return Message.decrypt(data)
+        return data
 
     @staticmethod
-    def sendMessage(clientSocket, data):
-        dataEncrypted = Message.encrypt(data)
-        clientSocket.sendall(struct.pack(">L", len(dataEncrypted)) + dataEncrypted)
-
-    def sendData(self, data):
-        self.senderReconnect()
-        self.sendMessage(self.senderSocket, data)
-        dataID = self.receiveMessage(self.senderSocket)
-        self.senderSocket.close()
-        self.logger.debug("Sent data, got id: %d", dataID)
-        return dataID
-
-    def receiveData(self, dataID):
-        self.receiverReconnect()
-        self.sendMessage(self.receiverSocket, dataID)
-        self.logger.debug("Receiving data: %d", dataID)
-        data = self.receiveMessage(self.receiverSocket)
-        self.receiverSocket.close()
-        self.logger.debug("Received data: %d", dataID)
-        return data
+    def __sendPackage(clientSocket: socket.socket, data: bytes):
+        clientSocket.sendall(struct.pack(">L", len(data)) + data)
 
 
 if __name__ == '__main__':
-    dataManager = DataManager(host='127.0.0.1',
-                              portSending=5001,
-                              portReceiving=5002,
+    dataManager = DataManager(host='0.0.0.0',
+                              port=5000,
                               logLevel=logging.DEBUG)
-
-    dataID = dataManager.sendData(999)
-    data = dataManager.receiveData(dataID)
-    print(data)
+    dataManager.run()
