@@ -1,3 +1,7 @@
+import socket
+from queue import Queue
+
+
 class NodeSpecs:
     def __init__(self, cores, ram, disk, network):
         self.cores = cores
@@ -9,6 +13,16 @@ class NodeSpecs:
         return "Cores: %d\tRam: %d GB\tDisk: %d GB\tNetwork: %d Mbps" % (self.cores, self.ram, self.disk, self.network)
 
 
+class Client:
+
+    def __init__(self, socketID: int, socket_: socket.socket, sendingQueue: Queue[bytes], receivingQueue: Queue[bytes]):
+        self.socketID: int = socketID
+        self.socket: socket.socket = socket_
+        self.sendingQueue: Queue[bytes] = sendingQueue
+        self.receivingQueue: Queue[bytes] = receivingQueue
+        self.active = True
+
+
 class Master:
 
     def __init__(self, host: str, port: int, masterID: int = 0):
@@ -17,19 +31,41 @@ class Master:
         self.masterID = masterID
 
 
-class Worker:
+class Worker(Client):
 
-    def __init__(self, workerID: int, socketID: int, specs: NodeSpecs):
+    def __init__(
+            self,
+            socketID: int,
+            socket_: socket.socket,
+            sendingQueue: Queue[bytes],
+            receivingQueue: Queue[bytes],
+            workerID: int,
+            specs: NodeSpecs):
+        super(Worker, self).__init__(
+            socketID=socketID,
+            socket_=socket_,
+            sendingQueue=sendingQueue,
+            receivingQueue=receivingQueue)
+
         self.workerID = workerID
-        self.socketID = socketID
         self.specs = specs
 
 
-class User:
+class User(Client):
 
-    def __init__(self, userID: int, socketID: int):
+    def __init__(
+            self,
+            socketID: int,
+            socket_: socket.socket,
+            sendingQueue: Queue[bytes],
+            receivingQueue: Queue[bytes],
+            userID: int):
+        super(User, self).__init__(
+            socketID=socketID,
+            socket_=socket_,
+            sendingQueue=sendingQueue,
+            receivingQueue=receivingQueue)
         self.userID = userID
-        self.socketID = socketID
 
 
 class Task:

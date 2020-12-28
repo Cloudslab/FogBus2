@@ -21,7 +21,7 @@ class RegistryNamespace(socketio.Namespace):
                 userID = messageDecrypted['userID']
                 self.registry.users[userID].socketID = socketID
             else:
-                userID = self.registry.addUser(registrySocketID=socketID)
+                userID = self.registry.__addUser(registrySocketID=socketID)
             messageEncrypted = Message.encrypt(userID)
             self.emit('registered', room=socketID, data=messageEncrypted)
 

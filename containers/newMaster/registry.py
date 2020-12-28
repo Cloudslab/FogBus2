@@ -5,6 +5,8 @@ from queue import Queue
 from logger import get_logger
 from datatype import Worker, User, NodeSpecs
 from typing import NoReturn
+from typing import List
+from datatype import Client
 
 
 class Registry:
@@ -16,47 +18,71 @@ class Registry:
         self.__currentUserID: int = 0
         self.__lockCurrentUserID: Lock = Lock()
         self.users: dict[int, User] = {}
+        self.usersBySocketID: dict[int, User] = {}
         self.waitingWorkers: Queue[Worker] = Queue()
+
+        self.workersQueueByAppID: List[Queue[Worker]] = []
         self.logger = get_logger('Master-Registry', logLevel)
 
-    def register(self, socketID: int, message: dict):
+    def register(self, client: Client, message: dict) -> Client:
         role = message['role']
         if role == 'user':
-            self.addUser(socketID)
-        pass
+            return self.__addUser(client)
+        elif role == 'worker':
+            return self.__addWorker(client, message)
 
-    def __addWorker(self, workerSocketID: int, nodeSpecs: NodeSpecs):
+    def __addWorker(self, client: Client, message: dict) -> Worker:
+        nodeSpecs: NodeSpecs = message['nodeSpecs']
         self.__lockCurrentWorkerID.acquire()
         self.__currentWorkerID += 1
         workerID = self.__currentWorkerID
         self.__lockCurrentWorkerID.release()
-        worker = Worker(workerID, workerSocketID, nodeSpecs)
+        worker = Worker(
+            socketID=client.socketID,
+            socket_=client.socket,
+            sendingQueue=client.sendingQueue,
+            receivingQueue=client.receivingQueue,
+            workerID=workerID,
+            specs=nodeSpecs
+        )
         self.workers[workerID] = worker
-        self.workerWait(worker)
+        self.workerWait(worker, appIDs=message['appIDs'])
         self.logger.info("Worker-%d added. %s", workerID, worker.specs.info())
-        return workerID
+        return worker
 
-    def workerWait(self, worker: Worker) -> NoReturn:
-        self.waitingWorkers.put(worker)
+    def workerWait(self, worker: Worker, appID: int = None, appIDs: dict = None) -> NoReturn:
+        if appID is not None:
+            self.workersQueueByAppID[appID].put(worker)
+        else:
+            for appID in appIDs:
+                self.workersQueueByAppID[appID].put(worker)
 
-    def workerWork(self) -> Worker:
-        return self.waitingWorkers.get()
+    def workerWork(self, appID: int) -> Worker:
+        while True:
+            worker = self.workersQueueByAppID[appID].get(block=False)
+            if not worker.active:
+                continue
+            else:
+                return worker
 
-    def workerFree(self, worker: Worker):
-        self.waitingWorkers.put(worker)
+    def removeWorker(self, workerID) -> NoReturn:
+        self.workers[workerID].active = False
 
-    def removeWorker(self, workerID):
-        del self.workers[workerID]
-
-    def addUser(self, registrySocketID: int):
+    def __addUser(self, client: Client) -> User:
+        registrySocketID = client.socketID
         self.__lockCurrentUserID.acquire()
         self.__currentUserID += 1
         userID = self.__currentUserID
         self.__lockCurrentUserID.release()
-        user = User(userID=userID, socketID=registrySocketID)
+        user = User(socketID=client.socketID,
+                    socket_=client.socket,
+                    receivingQueue=client.receivingQueue,
+                    sendingQueue=client.sendingQueue,
+                    userID=userID)
         self.users[userID] = user
+        self.usersBySocketID[registrySocketID] = user
         self.logger.info("User-%d added.", userID)
-        return userID
+        return user
 
     def removeUser(self, userID):
         del self.users[userID]

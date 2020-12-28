@@ -6,11 +6,8 @@ from apps import FaceDetection, FaceAndEyeDetection, ColorTracking
 
 if __name__ == "__main__":
     broker = Broker(
-        serverHost='http://127.0.0.1',
-        serverPort=5000,
-        dataHost='127.0.0.1',
-        portSending=5001,
-        portReceiving=5002,
+        host='http://127.0.0.1',
+        port=5000,
         logLevel=logging.DEBUG)
     appID = int(sys.argv[1])
     videoPath = sys.argv[2] if len(sys.argv) > 2 else None

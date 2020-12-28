@@ -1,73 +1,59 @@
 import logging
-import socketio
 import threading
 from logger import get_logger
-from registryNamespace import RegistryNamespace
-from taskNamespace import TaskNamespace
 from dataManager import DataManager
+from message import Message
+from typing import NoReturn, Any
 
 
 class Broker:
 
     def __init__(
             self,
-            serverHost: str,
-            serverPort: int,
-            dataHost: str,
-            portReceiving: int,
-            portSending: int,
+            host: str,
+            port: int,
             logLevel=logging.DEBUG):
         self.logger = get_logger('User-Broker', logLevel)
-        self.serverHost = serverHost
-        self.serverPort = serverPort
-        self.dataHost = dataHost
-        self.portReceiving = portReceiving
-        self.portSending = portSending
-        self.sio = socketio.Client()
+        self.host = host
+        self.port = port
+        self.userID = None
+        self.data: dict[int, Any] = {}
         self.dataManager: DataManager = DataManager(
-            host=self.dataHost,
-            portSending=self.portSending,
-            portReceiving=self.portReceiving,
-            logLevel=self.logger.level)
-        self.registryNamespace = RegistryNamespace(
-            '/registry',
-            logLevel=self.logger.level)
-        self.taskNamespace = TaskNamespace(
-            '/task',
+            host=self.host,
+            port=self.port,
             logLevel=self.logger.level)
 
     def run(self):
-        threading.Thread(target=self.connect).start()
-        while not self.registryNamespace.isRegistered:
-            pass
-        self.taskNamespace.setUserID(self.registryNamespace.userID)
-        while not self.taskNamespace.isRegistered:
-            pass
-        self.logger.info("Got userID-%d", self.taskNamespace.userID)
+        self.dataManager.run()
+        threading.Thread(target=self.receivedMessageHandler).start()
+        self.register()
 
-    def connect(self):
-        self.sio.register_namespace(self.registryNamespace)
-        self.sio.register_namespace(self.taskNamespace)
-        self.sio.connect('%s:%d' % (self.serverHost, self.serverPort))
-        self.sio.wait()
+    def register(self) -> NoReturn:
+        message = {'type': 'register', 'role': 'user'}
+        self.send(message)
+        self.logger.info("[*] Registering ...")
+        while self.userID is None:
+            pass
+        self.logger.info("[*] Registered with userID-%d", self.userID)
 
-    def submit(self, appID, inputData):
-        dataID = self.dataManager.sendData(inputData)
-        self.taskNamespace.submit(appID=appID, dataID=dataID)
-        resultID = self.taskNamespace.resultDataQueue.get()
-        if resultID is None:
-            return None
-        resultData = self.dataManager.receiveData(resultID)
-        return resultData
+    def send(self, data) -> NoReturn:
+        self.dataManager.sendingQueue.put(Message.encrypt(data))
+
+    def receivedMessageHandler(self):
+        self.logger.info('[*] Received Message Handler stated.')
+        while True:
+            messageEncrypted = self.dataManager.receivingQueue.get()
+            message = Message.decrypt(messageEncrypted)
+            if message['type'] == 'userID':
+                self.userID = message['userID']
+            elif message['type'] == 'result':
+                dataID = message['dataID']
+                self.data[dataID] = message['data']
 
 
 if __name__ == '__main__':
     broker = Broker(
-        serverHost='http://127.0.0.1',
-        serverPort=5000,
-        dataHost='127.0.0.1',
-        portSending=5001,
-        portReceiving=5002,
+        host='127.0.0.1',
+        port=5000,
         logLevel=logging.DEBUG)
     broker.run()
-    print(broker.submit(1, 998))

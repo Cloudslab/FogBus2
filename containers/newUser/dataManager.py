@@ -17,31 +17,29 @@ class DataManager:
         self.sendingQueue: Queue[bytes] = Queue()
         self.clientSocket: socket.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
-        self.logger = get_logger('Master-MainService', logLevel)
+        self.logger = get_logger('User-DataManager', logLevel)
 
     def run(self):
         self.clientSocket.connect((self.host, self.port))
 
-        threading.Thread(target=self.receiveData,
-                         args=(self.clientSocket, self.receivingQueue
-                               )).start()
-        threading.Thread(target=self.sendData,
-                         args=(self.clientSocket, self.sendingQueue
-                               )).start()
+        threading.Thread(target=self.__readData,
+                         args=(self.receivingQueue,)).start()
+        threading.Thread(target=self.__writeData,
+                         args=(self.sendingQueue,)).start()
         self.logger.info("[*] Connected to %s:%d over tcp.", self.host, self.port)
 
-    def receiveData(self, clientSocket: socket.socket, receivingQueue: Queue):
+    def __readData(self, receivingQueue: Queue):
         while True:
-            data = self.receivePackage(clientSocket)
+            data = self.__receivePackage(self.clientSocket)
             receivingQueue.put(data)
 
-    def sendData(self, clientSocket: socket.socket, sendingQueue: Queue):
+    def __writeData(self, sendingQueue: Queue):
         while True:
             data = sendingQueue.get()
-            self.sendPackage(clientSocket, data)
+            self.__sendPackage(self.clientSocket, data)
 
     @staticmethod
-    def receivePackage(clientSocket: socket.socket) -> bytes:
+    def __receivePackage(clientSocket: socket.socket) -> bytes:
         data = b''
         payloadSize = struct.calcsize(">L")
         while len(data) < payloadSize:
@@ -58,7 +56,7 @@ class DataManager:
         return data
 
     @staticmethod
-    def sendPackage(clientSocket: socket.socket, data: bytes):
+    def __sendPackage(clientSocket: socket.socket, data: bytes):
         clientSocket.sendall(struct.pack(">L", len(data)) + data)
 
 

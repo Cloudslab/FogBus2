@@ -5,15 +5,7 @@ import socket
 from logger import get_logger
 from queue import Queue
 from typing import NoReturn
-
-
-class Client:
-
-    def __init__(self, socket_: socket.socket, sendingQueue: Queue[bytes], receivingQueue: Queue[bytes]):
-        self.socket: socket.socket = socket_
-        self.sendingQueue: Queue[bytes] = sendingQueue
-        self.receivingQueue: Queue[bytes] = receivingQueue
-        self.active = True
+from datatype import Client
 
 
 class DataManager:
@@ -47,7 +39,11 @@ class DataManager:
             receivingQueue: Queue[bytes] = Queue()
             sendingQueue: Queue[bytes] = Queue()
             socketID = self.__newSocketID()
-            self.__sockets[socketID] = Client(clientSocket, receivingQueue, sendingQueue)
+            self.__sockets[socketID] = Client(
+                socketID=socketID,
+                socket_=clientSocket,
+                receivingQueue=receivingQueue,
+                sendingQueue=sendingQueue)
             threading.Thread(target=self.__receiveData,
                              args=(clientSocket, receivingQueue
                                    )).start()
@@ -55,18 +51,19 @@ class DataManager:
                              args=(clientSocket, sendingQueue
                                    )).start()
 
-    def getActiveClients(self) -> [int]:
+    def getActiveClients(self) -> [Client]:
         result = []
         for i in range(len(self.__sockets)):
-            if self.__sockets[i].active:
-                result.append(result)
+            socketID = i + 1
+            if self.__sockets[socketID].active:
+                result.append(self.__sockets[socketID])
         return result
 
-    def readData(self, socketID: int) -> bytes:
-        return self.__sockets[socketID].receivingQueue.get(block=False)
+    def readData(self, client: Client) -> bytes:
+        return self.__sockets[client.socketID].receivingQueue.get(block=False)
 
-    def writeData(self, socketID: int, data: bytes) -> NoReturn:
-        self.__sockets[socketID].receivingQueue.put(data)
+    def writeData(self, client: Client, data: bytes) -> NoReturn:
+        self.__sockets[client.socketID].sendingQueue.put(data)
 
     def __receiveData(
             self,
