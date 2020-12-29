@@ -4,8 +4,16 @@ from logger import get_logger
 from dataManager import DataManager
 from message import Message
 from typing import NoReturn
-from datatype import DataFrame
 from collections import defaultdict
+from typing import Any
+
+
+class DataFrame:
+
+    def __init__(self, data: Any, dataID: int, result: Any = None):
+        self.data: Any = data
+        self.dataID: int = dataID
+        self.result: Any = result
 
 
 class Broker:
@@ -52,7 +60,7 @@ class Broker:
                 self.userID = message['userID']
             elif message['type'] == 'result':
                 dataID = message['dataID']
-                self.data[dataID] = message['data']
+                self.data[dataID].result = message['result']
 
     def newDataID(self, data) -> int:
         self.lockData.acquire()
@@ -64,7 +72,7 @@ class Broker:
 
     def submit(self, appID: int, data) -> int:
         dataID = self.newDataID(data)
-        message = {'appID': appID, 'data': data, dataID: 'dataID'}
+        message = {'type': 'submitData', 'appID': appID, 'data': data, 'dataID': dataID}
         self.dataManager.sendingQueue.put(Message.encrypt(message))
         return dataID
 
@@ -75,3 +83,7 @@ if __name__ == '__main__':
         port=5000,
         logLevel=logging.DEBUG)
     broker.run()
+    dataID_ = broker.submit(42, 999)
+    while broker.data[dataID_].result is None:
+        pass
+    print(999, broker.data[dataID_].result)

@@ -3,10 +3,16 @@ import cv2
 from datatype import ApplicationUserSide
 
 
+class TestApp(ApplicationUserSide):
+
+    def process(self, inputData):
+        return inputData * 2
+
+
 class FaceDetection(ApplicationUserSide):
 
     def __init__(self, appID: int):
-        super().__init__(appID)
+        super().__init__(appID, 'FaceDetection')
         self.face_cascade = cv2.CascadeClassifier('./cascade/haar-face.xml')
 
     def process(self, inputData):
@@ -21,7 +27,7 @@ class FaceDetection(ApplicationUserSide):
 class FaceAndEyeDetection(ApplicationUserSide):
 
     def __init__(self, appID: int):
-        super().__init__(appID)
+        super().__init__(appID, 'FaceAndEyeDetection')
         self.face_cascade = cv2.CascadeClassifier('./cascade/haar-face.xml')
         self.eye_cascade = cv2.CascadeClassifier('./cascade/haar-eye.xml')
 
@@ -73,4 +79,4 @@ class ColorTracking(ApplicationUserSide):
         return FGmaskComp, frame
 
 
-appList = [FaceDetection(0), FaceAndEyeDetection(1), ColorTracking(2)]
+appList = [FaceDetection(0, ), FaceAndEyeDetection(1), ColorTracking(2)]

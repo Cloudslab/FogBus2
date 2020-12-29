@@ -65,9 +65,3 @@ class ApplicationUserSide:
     def run(self):
         pass
 
-
-class DataFrame:
-
-    def __init__(self, data, result):
-        self.data = data
-        self.result = result

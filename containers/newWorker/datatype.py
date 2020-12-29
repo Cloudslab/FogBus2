@@ -48,8 +48,9 @@ from abc import abstractmethod
 
 class ApplicationUserSide:
 
-    def __init__(self, appID: int):
+    def __init__(self, appID: int, appName: str = 'UNNAMED'):
         self.appID = appID
+        self.appName = appName
 
     @abstractmethod
     def process(self, inputData):

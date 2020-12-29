@@ -18,7 +18,7 @@ class Registry:
         self.__currentUserID: int = 0
         self.__lockCurrentUserID: Lock = Lock()
         self.users: dict[int, User] = {}
-        self.usersBySocketID: dict[int, User] = {}
+        self.clientBySocketID: dict[int, Client] = {}
         self.waitingWorkers: Queue[Worker] = Queue()
 
         self.workersQueueByAppID: dict[int, Queue[Worker]] = defaultdict(Queue[Worker])
@@ -46,6 +46,7 @@ class Registry:
             specs=nodeSpecs
         )
         self.workers[workerID] = worker
+        self.clientBySocketID[client.socketID] = worker
         self.workerWait(worker, appIDs=message['appIDs'])
         self.logger.info("Worker-%d added. %s", workerID, worker.specs.info())
         return worker
@@ -69,7 +70,6 @@ class Registry:
         self.workers[workerID].active = False
 
     def __addUser(self, client: Client) -> User:
-        registrySocketID = client.socketID
         self.__lockCurrentUserID.acquire()
         self.__currentUserID += 1
         userID = self.__currentUserID
@@ -80,7 +80,7 @@ class Registry:
                     sendingQueue=client.sendingQueue,
                     userID=userID)
         self.users[userID] = user
-        self.usersBySocketID[registrySocketID] = user
+        self.clientBySocketID[client.socketID] = user
         self.logger.info("User-%d added.", userID)
         return user
 

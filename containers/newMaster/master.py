@@ -39,10 +39,16 @@ class FogMaster:
         messageDecrypted = Message.decrypt(message)
         if messageDecrypted['type'] == 'register':
             self.__handleRegistration(client, messageDecrypted)
-        elif messageDecrypted['type'] == 'submitTask':
-            self.__handleTask(client, messageDecrypted)
-        elif messageDecrypted['type'] == 'submitResult':
-            self.__handleResult(client, messageDecrypted)
+        elif messageDecrypted['type'] == 'submitData' \
+                and client.socketID in self.registry.clientBySocketID:
+            user = self.registry.clientBySocketID[client.socketID]
+            if isinstance(user, User):
+                self.__handleData(user, messageDecrypted)
+        elif messageDecrypted['type'] == 'submitResult' \
+                and client.socketID in self.registry.clientBySocketID:
+            worker = self.registry.clientBySocketID[client.socketID]
+            if isinstance(worker, Worker):
+                self.__handleResult(worker, messageDecrypted)
 
     def __handleRegistration(self, client: Client, message: dict):
         client = self.registry.register(client, message)
@@ -52,23 +58,26 @@ class FogMaster:
             message = {'type': 'workerID', 'workerID': client.workerID}
         self.dataManager.writeData(client, Message.encrypt(message))
 
-    def __handleTask(self, client: Client, message: dict):
+    def __handleData(self, user: User, message: dict):
         appID = message['appID']
         try:
             worker = self.registry.workerWork(appID)
+            message['type'] = 'data'
+            message['userID'] = user.userID
             self.dataManager.writeData(worker, Message.encrypt(message))
+            self.logger.debug('Sent message from userID-%d with appID-%d to workerID-%d', user.userID, appID,
+                              worker.workerID)
         except Empty:
             self.logger.debug('no worker for appID-%d', appID)
 
-    def __handleResult(self, client: Client, message: dict):
+    def __handleResult(self, worker: Worker, message: dict):
         # TODO: use socket id to check the ownership of this task
         userID = message['userID']
         if userID in self.registry.users:
             user = self.registry.users[userID]
+            message['type'] = 'result'
             self.dataManager.writeData(user, Message.encrypt(message))
-        workerID = message['workerID']
         appID = message['appID']
-        worker = self.registry.workers[workerID]
         self.registry.workerWait(worker=worker, appID=appID)
 
 
