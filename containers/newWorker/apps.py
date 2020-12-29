@@ -4,6 +4,8 @@ from datatype import ApplicationUserSide
 
 
 class TestApp(ApplicationUserSide):
+    def __init__(self, appID: int):
+        super().__init__(appID, 'TestApp')
 
     def process(self, inputData):
         return inputData * 2
@@ -77,6 +79,3 @@ class ColorTracking(ApplicationUserSide):
                 cv2.rectangle(frame, (x, y), (x + w, y + h), (255, 0, 0), 3)
 
         return FGmaskComp, frame
-
-
-appList = [FaceDetection(0, ), FaceAndEyeDetection(1), ColorTracking(2)]

@@ -1,6 +1,10 @@
 import cv2
+import threading
 from abc import abstractmethod
 from broker import Broker
+from typing import Any
+from queue import Queue
+from collections import defaultdict
 
 
 class NodeSpecs:
@@ -60,8 +64,20 @@ class ApplicationUserSide:
         self.broker: Broker = broker
         self.capture = cv2.VideoCapture(0) if videoPath is None \
             else cv2.VideoCapture(videoPath)
+        self.lockData: threading.Lock = threading.Lock()
+        self.dataID = -1
+        self.data: dict[int, Any] = {}
+        self.result: dict[int, Queue] = defaultdict(Queue)
+        self.dataIDSubmittedQueue = Queue()
+
+    def createDataFrame(self, data: Any) -> (int, Any):
+        self.lockData.acquire()
+        self.dataID += 1
+        dataID = self.dataID
+        self.lockData.release()
+        self.data[dataID] = data
+        return dataID, data
 
     @abstractmethod
     def run(self):
         pass
-

@@ -1,14 +1,12 @@
 import logging
-from apps import appList
+from apps import *
 from broker import Broker
 
 if __name__ == '__main__':
+    apps = [TestApp(0), FaceDetection(1)]
     broker = Broker(
-        serverHost='http://127.0.0.1',
-        serverPort=5000,
-        dataHost='127.0.0.1',
-        portSending=5001,
-        portReceiving=5002,
-        appList=appList,
+        host='127.0.0.1',
+        port=5000,
+        apps=apps,
         logLevel=logging.DEBUG)
     broker.run()

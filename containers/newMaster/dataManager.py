@@ -16,6 +16,7 @@ class DataManager:
         self.__currentSocketID = 0
         self.__lockSocketID: threading.Lock = threading.Lock()
         self.__sockets: dict[int, Client] = {}
+        self.unregisteredClients: Queue[Client] = Queue()
         self.__serverSocket: socket.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.logger = get_logger('Master-MainService', logLevel)
 
@@ -39,11 +40,13 @@ class DataManager:
             receivingQueue: Queue[bytes] = Queue()
             sendingQueue: Queue[bytes] = Queue()
             socketID = self.__newSocketID()
-            self.__sockets[socketID] = Client(
+            client = Client(
                 socketID=socketID,
                 socket_=clientSocket,
                 receivingQueue=receivingQueue,
                 sendingQueue=sendingQueue)
+            self.__sockets[socketID] = client
+            self.unregisteredClients.put(client)
             threading.Thread(target=self.__receiveData,
                              args=(clientSocket, receivingQueue
                                    )).start()
@@ -51,16 +54,8 @@ class DataManager:
                              args=(clientSocket, sendingQueue
                                    )).start()
 
-    def getActiveClients(self) -> [Client]:
-        result = []
-        for i in range(len(self.__sockets)):
-            socketID = i + 1
-            if self.__sockets[socketID].active:
-                result.append(self.__sockets[socketID])
-        return result
-
     def readData(self, client: Client) -> bytes:
-        return self.__sockets[client.socketID].receivingQueue.get(block=False)
+        return self.__sockets[client.socketID].receivingQueue.get()
 
     def writeData(self, client: Client, data: bytes) -> NoReturn:
         self.__sockets[client.socketID].sendingQueue.put(data)

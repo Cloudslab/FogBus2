@@ -8,6 +8,7 @@ from message import Message
 from typing import NoReturn, Any, List
 from datatype import ApplicationUserSide
 from collections import defaultdict
+from time import time
 
 
 class Broker:
@@ -34,7 +35,7 @@ class Broker:
         threading.Thread(target=self.__receivedMessageHandler).start()
         self.__register()
         for app in self.apps:
-            self.__runApp(app)
+            threading.Thread(target=self.__runApp, args=(app,)).start()
 
     def __register(self) -> NoReturn:
         appIDs = []
@@ -67,11 +68,8 @@ class Broker:
     def __runApp(self, app: ApplicationUserSide):
         self.logger.info('[*] AppID-%d-{%s} is serving ...', app.appID, app.appName)
         while True:
-            try:
-                message = self.messageByAppID[app.appID].get(block=False)
-                threading.Thread(target=self.__executeApp, args=(app, message)).start()
-            except Empty:
-                continue
+            message = self.messageByAppID[app.appID].get()
+            self.__executeApp(app, message)
 
     def __executeApp(self, app: ApplicationUserSide, message) -> Any:
         self.logger.debug('Executing appID-%d ...', app.appID)
@@ -80,6 +78,9 @@ class Broker:
         message['result'] = result
         message['type'] = 'submitResult'
         message['workerID'] = self.workerID
+        t = time() - message['time'][0]
+        print('From sending data to execute app', t)
+        message['time'].append(t)
         self.__send(message)
         self.logger.debug('Executed appID-%d and returned the result', app.appID)
 
@@ -87,7 +88,7 @@ class Broker:
 if __name__ == '__main__':
     from apps import TestApp
 
-    apps = [TestApp(appID=42, appName='Test Application')]
+    apps = [TestApp(appID=42)]
     broker = Broker(
         host='127.0.0.1',
         port=5000,

@@ -8,6 +8,7 @@ from dataManager import DataManager
 from message import Message
 from queue import Empty
 from datatype import Client, Worker, User
+from time import time
 
 
 class FogMaster:
@@ -22,53 +23,64 @@ class FogMaster:
 
     def run(self):
         self.dataManager.run()
-        threading.Thread(target=self.__loopClients).start()
+        threading.Thread(target=self.__serveUnregisteredClients).start()
 
-    def __loopClients(self):
-        self.logger.info('[*] Handling clients messages.')
+    def __serveUnregisteredClients(self):
+        self.logger.info('[*] Handling unregistered clients.')
         while True:
-            activeClients = self.dataManager.getActiveClients()
-            for client in activeClients:
-                try:
-                    message = self.dataManager.readData(client)
-                    threading.Thread(target=self.__messageHandler, args=(client, message)).start()
-                except Empty:
-                    continue
+            client = self.dataManager.unregisteredClients.get()
+            threading.Thread(target=self.__recogniseClient, args=(client,)).start()
 
-    def __messageHandler(self, client: Client, message: bytes):
+    def __recogniseClient(self, client: Client):
+        message = self.dataManager.readData(client)
         messageDecrypted = Message.decrypt(message)
         if messageDecrypted['type'] == 'register':
             self.__handleRegistration(client, messageDecrypted)
-        elif messageDecrypted['type'] == 'submitData' \
-                and client.socketID in self.registry.clientBySocketID:
-            user = self.registry.clientBySocketID[client.socketID]
-            if isinstance(user, User):
-                self.__handleData(user, messageDecrypted)
-        elif messageDecrypted['type'] == 'submitResult' \
-                and client.socketID in self.registry.clientBySocketID:
-            worker = self.registry.clientBySocketID[client.socketID]
+
+    def __serveUser(self, user: User):
+        message = {'type': 'userID', 'userID': user.userID}
+        self.dataManager.writeData(user, Message.encrypt(message))
+        while True:
+            messageEncrypted = self.dataManager.readData(user)
+            threading.Thread(target=self.__handleUserMessage, args=(user, messageEncrypted,)).start()
+
+    def __handleUserMessage(self, user: User, message: bytes):
+        messageDecrypted = Message.decrypt(message)
+        if messageDecrypted['type'] == 'submitData':
+            self.__handleData(user, messageDecrypted)
+
+    def __serveWorker(self, worker: Worker):
+        message = {'type': 'workerID', 'workerID': worker.workerID}
+        self.dataManager.writeData(worker, Message.encrypt(message))
+        while True:
+            messageEncrypted = self.dataManager.readData(worker)
+            threading.Thread(target=self.__handleWorkerMessage, args=(worker, messageEncrypted,)).start()
+
+    def __handleWorkerMessage(self, worker: Worker, message: bytes):
+        messageDecrypted = Message.decrypt(message)
+        if messageDecrypted['type'] == 'submitResult' \
+                and worker.socketID in self.registry.clientBySocketID:
+            worker = self.registry.clientBySocketID[worker.socketID]
             if isinstance(worker, Worker):
                 self.__handleResult(worker, messageDecrypted)
 
     def __handleRegistration(self, client: Client, message: dict):
         client = self.registry.register(client, message)
         if isinstance(client, User):
-            message = {'type': 'userID', 'userID': client.userID}
+            self.__serveUser(client)
         elif isinstance(client, Worker):
-            message = {'type': 'workerID', 'workerID': client.workerID}
-        self.dataManager.writeData(client, Message.encrypt(message))
+            self.__serveWorker(client)
 
     def __handleData(self, user: User, message: dict):
         appID = message['appID']
-        try:
-            worker = self.registry.workerWork(appID)
-            message['type'] = 'data'
-            message['userID'] = user.userID
-            self.dataManager.writeData(worker, Message.encrypt(message))
-            self.logger.debug('Sent message from userID-%d with appID-%d to workerID-%d', user.userID, appID,
-                              worker.workerID)
-        except Empty:
-            self.logger.debug('no worker for appID-%d', appID)
+        worker = self.registry.workerWork(appID)
+        message['type'] = 'data'
+        message['userID'] = user.userID
+        message['time'].append(time() - message['time'][0])
+        print('sending handling', time())
+        self.dataManager.writeData(worker, Message.encrypt(message))
+        self.logger.debug('Sent message from userID-%d with appID-%d to workerID-%d', user.userID, appID,
+                          worker.workerID)
 
     def __handleResult(self, worker: Worker, message: dict):
         # TODO: use socket id to check the ownership of this task

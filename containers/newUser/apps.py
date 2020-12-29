@@ -1,9 +1,9 @@
 import cv2
+import threading
 import numpy as np
 from datatype import ApplicationUserSide
 
 
-# every application is the child
 class FaceDetection(ApplicationUserSide):
 
     # this is method
@@ -11,23 +11,46 @@ class FaceDetection(ApplicationUserSide):
         self.appName = 'FaceDetection'
         self.broker.run()
 
+        threading.Thread(target=self.__sendData).start()
+        threading.Thread(target=self.__receiveResult).start()
+        threading.Thread(target=self.__handleResult).start()
+
+    def __sendData(self):
+
         while True:
             ret, frame = self.capture.read()
             if not ret:
                 break
+            if self.dataIDSubmittedQueue.qsize() > 10:
+                continue
             width = frame.shape[1]
             height = frame.shape[0]
             targetWidth = int(width * 640 / height)
             frame = cv2.resize(frame, (targetWidth, 640))
-            dataID = self.broker.submit(self.appID, frame)
-            result = self.broker.data[dataID].result
-            while result is None:
-                pass
-
+            dataID, data = self.createDataFrame(frame)
+            self.broker.submit(self.appID, data=data, dataID=dataID)
+            result = self.result[dataID].get()
+            del self.data[dataID]
             cv2.imshow("App-%d %s" % (self.appID, self.appName), result)
             if cv2.waitKey(1) == ord('q'):
                 break
+            # self.dataIDSubmittedQueue.put(dataID)
+
         self.capture.release()
+
+    def __receiveResult(self):
+        while True:
+            message = self.broker.resultQueue.get()
+            self.result[message['dataID']].put(message['result'])
+
+    def __handleResult(self):
+        while True:
+            dataID = self.dataIDSubmittedQueue.get()
+            result = self.result[dataID].get()
+            del self.data[dataID]
+            cv2.imshow("App-%d %s" % (self.appID, self.appName), result)
+            if cv2.waitKey(1) == ord('q'):
+                break
 
 
 class FaceAndEyeDetection(ApplicationUserSide):

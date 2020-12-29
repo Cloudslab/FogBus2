@@ -5,6 +5,7 @@ import socket
 
 from logger import get_logger
 from queue import Queue
+from time import time
 
 
 class DataManager:
@@ -22,20 +23,19 @@ class DataManager:
     def run(self):
         self.clientSocket.connect((self.host, self.port))
 
-        threading.Thread(target=self.__readData,
-                         args=(self.receivingQueue,)).start()
-        threading.Thread(target=self.__writeData,
-                         args=(self.sendingQueue,)).start()
+        threading.Thread(target=self.__readData).start()
+        threading.Thread(target=self.__writeData).start()
         self.logger.info("[*] Connected to %s:%d over tcp.", self.host, self.port)
 
-    def __readData(self, receivingQueue: Queue):
+    def __readData(self):
         while True:
             data = self.__receivePackage(self.clientSocket)
-            receivingQueue.put(data)
+            self.receivingQueue.put(data)
 
-    def __writeData(self, sendingQueue: Queue):
+    def __writeData(self):
         while True:
-            data = sendingQueue.get()
+            data = self.sendingQueue.get()
+            print('sending', time())
             self.__sendPackage(self.clientSocket, data)
 
     @staticmethod
@@ -58,6 +58,7 @@ class DataManager:
     @staticmethod
     def __sendPackage(clientSocket: socket.socket, data: bytes):
         clientSocket.sendall(struct.pack(">L", len(data)) + data)
+        print('sent', time())
 
 
 if __name__ == '__main__':

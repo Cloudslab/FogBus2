@@ -24,7 +24,7 @@ class Registry:
         self.workersQueueByAppID: dict[int, Queue[Worker]] = defaultdict(Queue[Worker])
         self.logger = get_logger('Master-Registry', logLevel)
 
-    def register(self, client: Client, message: dict) -> Client:
+    def register(self, client: Client, message: dict) -> User or Worker:
         role = message['role']
         if role == 'user':
             return self.__addUser(client)
@@ -54,17 +54,16 @@ class Registry:
     def workerWait(self, worker: Worker, appID: int = None, appIDs: dict = None) -> NoReturn:
         if appID is not None:
             self.workersQueueByAppID[appID].put(worker)
-        else:
-            for appID in appIDs:
-                self.workersQueueByAppID[appID].put(worker)
+            return
+        for appID in appIDs:
+            self.workersQueueByAppID[appID].put(worker)
 
     def workerWork(self, appID: int) -> Worker:
         while True:
-            worker = self.workersQueueByAppID[appID].get(block=False)
+            worker = self.workersQueueByAppID[appID].get()
             if not worker.active:
                 continue
-            else:
-                return worker
+            return worker
 
     def removeWorker(self, workerID) -> NoReturn:
         self.workers[workerID].active = False
