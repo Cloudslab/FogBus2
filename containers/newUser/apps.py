@@ -3,8 +3,10 @@ import numpy as np
 from datatype import ApplicationUserSide
 
 
+# every application is the child
 class FaceDetection(ApplicationUserSide):
 
+    # this is method
     def run(self):
         self.appName = 'FaceDetection'
         self.broker.run()
@@ -17,10 +19,12 @@ class FaceDetection(ApplicationUserSide):
             height = frame.shape[0]
             targetWidth = int(width * 640 / height)
             frame = cv2.resize(frame, (targetWidth, 640))
-            resultFrame = self.broker.submit(self.appID, frame)
-            while resultFrame is None:
-                resultFrame = self.broker.submit(self.appID, frame)
-            cv2.imshow("App-%d %s" % (self.appID, self.appName), resultFrame)
+            dataID = self.broker.submit(self.appID, frame)
+            result = self.broker.data[dataID].result
+            while result is None:
+                pass
+
+            cv2.imshow("App-%d %s" % (self.appID, self.appName), result)
             if cv2.waitKey(1) == ord('q'):
                 break
         self.capture.release()

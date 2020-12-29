@@ -57,10 +57,17 @@ class ApplicationUserSide:
     def __init__(self, appID: int, broker: Broker, videoPath=None):
         self.appID = appID
         self.appName = None
-        self.broker = broker
+        self.broker: Broker = broker
         self.capture = cv2.VideoCapture(0) if videoPath is None \
             else cv2.VideoCapture(videoPath)
 
     @abstractmethod
     def run(self):
         pass
+
+
+class DataFrame:
+
+    def __init__(self, data, result):
+        self.data = data
+        self.result = result

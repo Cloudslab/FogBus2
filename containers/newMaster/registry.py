@@ -5,9 +5,9 @@ from queue import Queue
 from logger import get_logger
 from datatype import Worker, User, NodeSpecs
 from typing import NoReturn
-from typing import List
 from datatype import Client
 from collections import defaultdict
+
 
 class Registry:
 

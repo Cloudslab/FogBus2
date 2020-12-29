@@ -3,7 +3,9 @@ import threading
 from logger import get_logger
 from dataManager import DataManager
 from message import Message
-from typing import NoReturn, Any
+from typing import NoReturn
+from datatype import DataFrame
+from collections import defaultdict
 
 
 class Broker:
@@ -17,7 +19,9 @@ class Broker:
         self.host = host
         self.port = port
         self.userID = None
-        self.data: dict[int, Any] = {}
+        self.lockData: threading.Lock = threading.Lock()
+        self.dataID = -1
+        self.data: dict[int, DataFrame] = defaultdict(DataFrame)
         self.dataManager: DataManager = DataManager(
             host=self.host,
             port=self.port,
@@ -49,6 +53,20 @@ class Broker:
             elif message['type'] == 'result':
                 dataID = message['dataID']
                 self.data[dataID] = message['data']
+
+    def newDataID(self, data) -> int:
+        self.lockData.acquire()
+        self.dataID += 1
+        dataID = self.dataID
+        self.lockData.release()
+        self.data[dataID] = DataFrame(data=data, dataID=dataID)
+        return dataID
+
+    def submit(self, appID: int, data) -> int:
+        dataID = self.newDataID(data)
+        message = {'appID': appID, 'data': data, dataID: 'dataID'}
+        self.dataManager.sendingQueue.put(Message.encrypt(message))
+        return dataID
 
 
 if __name__ == '__main__':
