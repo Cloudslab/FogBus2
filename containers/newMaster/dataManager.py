@@ -4,9 +4,8 @@ import struct
 import socket
 from logger import get_logger
 from queue import Queue
-from typing import NoReturn, List
+from typing import NoReturn
 from datatype import Client
-from message import Message
 
 
 class DataManager:
@@ -52,35 +51,50 @@ class DataManager:
                              args=(client,)).start()
 
     def readData(self, client: Client) -> bytes:
-        return self.__sockets[client.socketID].receivingQueue.get()
+        return self.__sockets[client.socketID].receivingQueue.get(timeout=1)
 
     def writeData(self, client: Client, data: bytes) -> NoReturn:
         self.__sockets[client.socketID].sendingQueue.put(data)
 
-    def __receiver(self, client: Client):
+    def discard(self, client: Client):
+        client.active = False
+        client.socket.shutdown(socket.SHUT_RDWR)
+        del self.__sockets[client.socketID]
+
+    @staticmethod
+    def __receiver(client: Client):
         buffer = b''
         payloadSize = struct.calcsize('>L')
 
         while True:
-            while len(buffer) < payloadSize:
-                buffer += client.socket.recv(4096)
+            try:
+                while len(buffer) < payloadSize:
+                    buffer += client.socket.recv(4096)
 
-            packedDataSize = buffer[:payloadSize]
-            buffer = buffer[payloadSize:]
-            dataSize = struct.unpack('>L', packedDataSize)[0]
+                packedDataSize = buffer[:payloadSize]
+                buffer = buffer[payloadSize:]
+                dataSize = struct.unpack('>L', packedDataSize)[0]
 
-            while len(buffer) < dataSize:
-                buffer += client.socket.recv(4096)
+                while len(buffer) < dataSize:
+                    buffer += client.socket.recv(4096)
 
-            data = buffer[:dataSize]
-            buffer = buffer[dataSize:]
-            client.receivingQueue.put(data)
+                data = buffer[:dataSize]
+                buffer = buffer[dataSize:]
+                client.receivingQueue.put(data)
+            except OSError:
+                client.active = False
+                break
 
     @staticmethod
     def __sender(client: Client):
         while True:
-            data = client.sendingQueue.get()
-            client.socket.sendall(struct.pack(">L", len(data)) + data)
+
+            try:
+                data = client.sendingQueue.get()
+                client.socket.sendall(struct.pack(">L", len(data)) + data)
+            except OSError:
+                client.active = False
+                break
 
 
 if __name__ == '__main__':

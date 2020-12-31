@@ -1,5 +1,6 @@
 import logging
 import threading
+import os
 
 from time import time
 from logger import get_logger
@@ -57,11 +58,15 @@ class Broker:
                 self.resultQueue.put(message)
                 message['time'].append(time() - message['time'][0])
                 print(message['time'])
+            elif message['type'] == 'refused':
+                self.logger.warning(message['reason'])
+                os._exit(0)
 
-    def submit(self, appID: int, data: Any, dataID: int) -> NoReturn:
+    def submit(self, data: Any, dataID: int, mode: str, appIDs: List[int]) -> NoReturn:
         message = {'time': [time()],
                    'type': 'submitData',
-                   'appID': appID,
+                   'mode': mode,
+                   'appIDs': appIDs,
                    'data': data,
                    'dataID': dataID}
         # print('submit', time())

@@ -2,11 +2,11 @@ import cv2
 import threading
 import numpy as np
 from datatype import ApplicationUserSide
+from queue import Queue
 
 
 class FaceDetection(ApplicationUserSide):
 
-    # this is method
     def run(self):
         self.appName = 'FaceDetection'
         self.broker.run()
@@ -16,27 +16,23 @@ class FaceDetection(ApplicationUserSide):
         threading.Thread(target=self.__handleResult).start()
 
     def __sendData(self):
-
+        self.dataIDSubmittedQueue = Queue(1)
         while True:
             ret, frame = self.capture.read()
             if not ret:
                 break
-            if self.dataIDSubmittedQueue.qsize() > 10:
-                continue
             width = frame.shape[1]
             height = frame.shape[0]
             targetWidth = int(width * 640 / height)
             frame = cv2.resize(frame, (targetWidth, 640))
             dataID, data = self.createDataFrame(frame)
-            self.broker.submit(self.appID, data=data, dataID=dataID)
-            # result = self.result[dataID].get()
-            # del self.data[dataID]
-            # cv2.imshow("App-%d %s" % (self.appID, self.appName), result)
-            # if cv2.waitKey(1) == ord('q'):
-            #     break
+            self.broker.submit(data=data,
+                               dataID=dataID,
+                               mode='sequential',
+                               appIDs=[1])
             self.dataIDSubmittedQueue.put(dataID)
 
-        self.capture.release()
+        self.capture.discard()
 
     def __receiveResult(self):
         while True:
@@ -46,18 +42,29 @@ class FaceDetection(ApplicationUserSide):
     def __handleResult(self):
         while True:
             dataID = self.dataIDSubmittedQueue.get()
-            result = self.result[dataID].get()
+            faces = self.result[dataID].get()
+            frame = self.data[dataID]
+            for (x, y, w, h, roi_gray) in faces:
+                cv2.rectangle(frame, (x, y), (x + w, y + h), (255, 0, 0), 2)
+
+            cv2.imshow("App-%d %s" % (self.appID, self.appName), frame)
             del self.data[dataID]
-            cv2.imshow("App-%d %s" % (self.appID, self.appName), result)
+
             if cv2.waitKey(1) == ord('q'):
                 break
 
 
 class FaceAndEyeDetection(ApplicationUserSide):
     def run(self):
-        self.appName = 'FaceAndEyeDetection'
+        self.appName = 'EyeDetection'
         self.broker.run()
 
+        threading.Thread(target=self.__sendData).start()
+        threading.Thread(target=self.__receiveResult).start()
+        threading.Thread(target=self.__handleResult).start()
+
+    def __sendData(self):
+        self.dataIDSubmittedQueue = Queue(1)
         while True:
             ret, frame = self.capture.read()
             if not ret:
@@ -66,13 +73,37 @@ class FaceAndEyeDetection(ApplicationUserSide):
             height = frame.shape[0]
             targetWidth = int(width * 640 / height)
             frame = cv2.resize(frame, (targetWidth, 640))
-            resultFrame = self.broker.submit(self.appID, frame)
-            while resultFrame is None:
-                resultFrame = self.broker.submit(self.appID, frame)
-            cv2.imshow("App-%d %s" % (self.appID, self.appName), resultFrame)
+            dataID, data = self.createDataFrame(frame)
+            self.broker.submit(data=data,
+                               dataID=dataID,
+                               mode='sequential',
+                               appIDs=[1, 2])
+            self.dataIDSubmittedQueue.put(dataID)
+
+        self.capture.discard()
+
+    def __receiveResult(self):
+        while True:
+            message = self.broker.resultQueue.get()
+            self.result[message['dataID']].put(message['result'])
+
+    def __handleResult(self):
+        while True:
+            dataID = self.dataIDSubmittedQueue.get()
+            faces = self.result[dataID].get()
+            frame = self.data[dataID]
+            for (x, y, w, h, eyes) in faces:
+                roi_color = frame[y:y + h, x:x + w]
+                cv2.rectangle(frame, (x, y), (x + w, y + h), (255, 0, 0), 2)
+                for (x, y, w, h) in eyes:
+                    cv2.rectangle(roi_color, (x, y),
+                                  (x + w, y + h), (0, 0, 255), 2)
+                    cv2.circle(roi_color, (int(x + w / 2), int(y + h / 2)),
+                               3, (0, 255, 0), 1)
+            cv2.imshow("App-%d %s" % (self.appID, self.appName), frame)
+            del self.data[dataID]
             if cv2.waitKey(1) == ord('q'):
                 break
-        self.capture.release()
 
 
 class ColorTracking(ApplicationUserSide):
@@ -144,5 +175,5 @@ class ColorTracking(ApplicationUserSide):
 
             if cv2.waitKey(1) == ord('q'):
                 break
-        self.capture.release()
+        self.capture.discard()
         cv2.destroyAllWindows()

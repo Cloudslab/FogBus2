@@ -55,16 +55,15 @@ class Registry:
 
     def workerWait(self, worker: Worker, appID: int = None, appIDs: dict = None) -> NoReturn:
         if appID is not None:
-            if appID in worker.userByAppID:
-                del worker.userByAppID[appID]
             self.workersQueueByAppID[appID].put(worker)
             return
         else:
             for appID in appIDs:
-                if appID in worker.userByAppID:
-                    if appID in worker.userByAppID:
-                        del worker.userByAppID[appID]
                 self.workersQueueByAppID[appID].put(worker)
+
+    def __workerFree(self):
+        # TODO
+        pass
 
     def __workerWork(self, appID: int, user: User):
         try:

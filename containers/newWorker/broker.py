@@ -62,7 +62,7 @@ class Broker:
             if message['type'] == 'workerID':
                 self.workerID = message['workerID']
             elif message['type'] == 'data':
-                appID = message['appID']
+                appID = message['appIDs'][0]
                 self.messageByAppID[appID].put(message)
 
     def __runApp(self, app: ApplicationUserSide):
@@ -71,16 +71,23 @@ class Broker:
             message = self.messageByAppID[app.appID].get()
             self.__executeApp(app, message)
 
-    def __executeApp(self, app: ApplicationUserSide, message) -> Any:
+    def __executeApp(self, app: ApplicationUserSide, message) -> NoReturn:
         self.logger.debug('Executing appID-%d ...', app.appID)
         data = message['data']
         result = app.process(data)
-        message['result'] = result
         message['type'] = 'submitResult'
         message['workerID'] = self.workerID
+        message['appID'] = app.appID
+        message['appIDs'] = message['appIDs'][1:]
+
         t = time() - message['time'][0]
         print('From sending data to execute app', t)
         message['time'].append(t)
+
+        if len(message['appIDs']):
+            message['data'] = result
+        else:
+            message['result'] = result
         self.__send(message)
         self.logger.debug('Executed appID-%d and returned the result', app.appID)
 
