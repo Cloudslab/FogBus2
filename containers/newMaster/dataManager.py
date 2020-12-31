@@ -4,8 +4,9 @@ import struct
 import socket
 from logger import get_logger
 from queue import Queue
-from typing import NoReturn
+from typing import NoReturn, List
 from datatype import Client
+from message import Message
 
 
 class DataManager:
@@ -37,22 +38,18 @@ class DataManager:
         while True:
             clientSocket, _ = self.__serverSocket.accept()
 
-            receivingQueue: Queue[bytes] = Queue()
-            sendingQueue: Queue[bytes] = Queue()
             socketID = self.__newSocketID()
             client = Client(
                 socketID=socketID,
                 socket_=clientSocket,
-                receivingQueue=receivingQueue,
-                sendingQueue=sendingQueue)
+                receivingQueue=Queue(),
+                sendingQueue=Queue())
             self.__sockets[socketID] = client
             self.unregisteredClients.put(client)
-            threading.Thread(target=self.__receiveData,
-                             args=(clientSocket, receivingQueue
-                                   )).start()
-            threading.Thread(target=self.__sendData,
-                             args=(clientSocket, sendingQueue
-                                   )).start()
+            threading.Thread(target=self.__receiver,
+                             args=(client,)).start()
+            threading.Thread(target=self.__sender,
+                             args=(client,)).start()
 
     def readData(self, client: Client) -> bytes:
         return self.__sockets[client.socketID].receivingQueue.get()
@@ -60,42 +57,30 @@ class DataManager:
     def writeData(self, client: Client, data: bytes) -> NoReturn:
         self.__sockets[client.socketID].sendingQueue.put(data)
 
-    def __receiveData(
-            self,
-            clientSocket: socket.socket,
-            receivingQueue: Queue):
-        while True:
-            data = self.__receivePackage(clientSocket)
-            receivingQueue.put(data)
+    def __receiver(self, client: Client):
+        buffer = b''
+        payloadSize = struct.calcsize('>L')
 
-    def __sendData(
-            self,
-            clientSocket: socket.socket,
-            sendingQueue: Queue):
         while True:
-            data = sendingQueue.get()
-            self.__sendPackage(clientSocket, data)
+            while len(buffer) < payloadSize:
+                buffer += client.socket.recv(4096)
+
+            packedDataSize = buffer[:payloadSize]
+            buffer = buffer[payloadSize:]
+            dataSize = struct.unpack('>L', packedDataSize)[0]
+
+            while len(buffer) < dataSize:
+                buffer += client.socket.recv(4096)
+
+            data = buffer[:dataSize]
+            buffer = buffer[dataSize:]
+            client.receivingQueue.put(data)
 
     @staticmethod
-    def __receivePackage(clientSocket: socket.socket) -> bytes:
-        data = b''
-        payloadSize = struct.calcsize(">L")
-        while len(data) < payloadSize:
-            data += clientSocket.recv(4096)
-
-        packedDataSize = data[:payloadSize]
-        data = data[payloadSize:]
-        dataSize = struct.unpack(">L", packedDataSize)[0]
-
-        while len(data) < dataSize:
-            data += clientSocket.recv(4096)
-
-        data = data[:dataSize]
-        return data
-
-    @staticmethod
-    def __sendPackage(clientSocket: socket.socket, data: bytes):
-        clientSocket.sendall(struct.pack(">L", len(data)) + data)
+    def __sender(client: Client):
+        while True:
+            data = client.sendingQueue.get()
+            client.socket.sendall(struct.pack(">L", len(data)) + data)
 
 
 if __name__ == '__main__':

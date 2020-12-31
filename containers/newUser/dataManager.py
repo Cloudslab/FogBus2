@@ -5,7 +5,7 @@ import socket
 
 from logger import get_logger
 from queue import Queue
-from time import time
+from message import Message
 
 
 class DataManager:
@@ -23,42 +23,33 @@ class DataManager:
     def run(self):
         self.clientSocket.connect((self.host, self.port))
 
-        threading.Thread(target=self.__readData).start()
-        threading.Thread(target=self.__writeData).start()
+        threading.Thread(target=self.__receiver).start()
+        threading.Thread(target=self.__sender).start()
         self.logger.info("[*] Connected to %s:%d over tcp.", self.host, self.port)
 
-    def __readData(self):
+    def __receiver(self):
+        buffer = b''
+        payloadSize = struct.calcsize('>L')
+
         while True:
-            data = self.__receivePackage(self.clientSocket)
+            while len(buffer) < payloadSize:
+                buffer += self.clientSocket.recv(4096)
+
+            packedDataSize = buffer[:payloadSize]
+            buffer = buffer[payloadSize:]
+            dataSize = struct.unpack('>L', packedDataSize)[0]
+
+            while len(buffer) < dataSize:
+                buffer += self.clientSocket.recv(4096)
+
+            data = buffer[:dataSize]
+            buffer = buffer[dataSize:]
             self.receivingQueue.put(data)
 
-    def __writeData(self):
+    def __sender(self):
         while True:
             data = self.sendingQueue.get()
-            print('sending', time())
-            self.__sendPackage(self.clientSocket, data)
-
-    @staticmethod
-    def __receivePackage(clientSocket: socket.socket) -> bytes:
-        data = b''
-        payloadSize = struct.calcsize(">L")
-        while len(data) < payloadSize:
-            data += clientSocket.recv(4096)
-
-        packedDataSize = data[:payloadSize]
-        data = data[payloadSize:]
-        dataSize = struct.unpack(">L", packedDataSize)[0]
-
-        while len(data) < dataSize:
-            data += clientSocket.recv(4096)
-
-        data = data[:dataSize]
-        return data
-
-    @staticmethod
-    def __sendPackage(clientSocket: socket.socket, data: bytes):
-        clientSocket.sendall(struct.pack(">L", len(data)) + data)
-        print('sent', time())
+            self.clientSocket.sendall(struct.pack(">L", len(data)) + data)
 
 
 if __name__ == '__main__':

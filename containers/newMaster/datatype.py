@@ -1,5 +1,7 @@
 import socket
 from queue import Queue
+from typing import List
+from abc import abstractmethod
 
 
 class NodeSpecs:
@@ -11,6 +13,17 @@ class NodeSpecs:
 
     def info(self):
         return "Cores: %d\tRam: %d GB\tDisk: %d GB\tNetwork: %d Mbps" % (self.cores, self.ram, self.disk, self.network)
+
+
+class ApplicationUserSide:
+
+    def __init__(self, appID: int, appName: str = 'UNNAMED'):
+        self.appID = appID
+        self.appName = appName
+
+    @abstractmethod
+    def process(self, inputData):
+        pass
 
 
 class Client:
@@ -40,15 +53,18 @@ class Worker(Client):
             sendingQueue: Queue[bytes],
             receivingQueue: Queue[bytes],
             workerID: int,
-            specs: NodeSpecs):
+            specs: NodeSpecs,
+            userByAppID: dict[int, Client] = None):
         super(Worker, self).__init__(
             socketID=socketID,
             socket_=socket_,
             sendingQueue=sendingQueue,
             receivingQueue=receivingQueue)
 
-        self.workerID = workerID
-        self.specs = specs
+        self.workerID: int = workerID
+        self.specs: NodeSpecs = specs
+        if userByAppID is None:
+            self.userByAppID: dict[int, User] = {}
 
 
 class User(Client):
@@ -59,13 +75,16 @@ class User(Client):
             socket_: socket.socket,
             sendingQueue: Queue[bytes],
             receivingQueue: Queue[bytes],
-            userID: int):
+            userID: int,
+            workerByAppID: dict[int, Worker] = None):
         super(User, self).__init__(
             socketID=socketID,
             socket_=socket_,
             sendingQueue=sendingQueue,
             receivingQueue=receivingQueue)
         self.userID = userID
+        if workerByAppID is None:
+            self.workerByAppID: dict[int, Worker] = {}
 
 
 class Task:

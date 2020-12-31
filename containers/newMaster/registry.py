@@ -7,6 +7,8 @@ from datatype import Worker, User, NodeSpecs
 from typing import NoReturn
 from datatype import Client
 from collections import defaultdict
+from queue import Empty
+from exceptions import *
 
 
 class Registry:
@@ -27,7 +29,7 @@ class Registry:
     def register(self, client: Client, message: dict) -> User or Worker:
         role = message['role']
         if role == 'user':
-            return self.__addUser(client)
+            return self.__addUser(client, message)
         elif role == 'worker':
             return self.__addWorker(client, message)
 
@@ -53,22 +55,35 @@ class Registry:
 
     def workerWait(self, worker: Worker, appID: int = None, appIDs: dict = None) -> NoReturn:
         if appID is not None:
+            if appID in worker.userByAppID:
+                del worker.userByAppID[appID]
             self.workersQueueByAppID[appID].put(worker)
             return
-        for appID in appIDs:
-            self.workersQueueByAppID[appID].put(worker)
+        else:
+            for appID in appIDs:
+                if appID in worker.userByAppID:
+                    if appID in worker.userByAppID:
+                        del worker.userByAppID[appID]
+                self.workersQueueByAppID[appID].put(worker)
 
-    def workerWork(self, appID: int) -> Worker:
-        while True:
-            worker = self.workersQueueByAppID[appID].get()
-            if not worker.active:
-                continue
-            return worker
+    def __workerWork(self, appID: int, user: User):
+        try:
+            while True:
+                worker = self.workersQueueByAppID[appID].get(block=False)
+                if not worker.active:
+                    continue
+                worker.userByAppID[appID] = user
+                user.workerByAppID[appID] = worker
+                break
+        except Empty:
+            for _, worker in user.workerByAppID.items():
+                del worker.userByAppID[appID]
+            raise NoWorkerAvailableException
 
     def removeWorker(self, workerID) -> NoReturn:
         self.workers[workerID].active = False
 
-    def __addUser(self, client: Client) -> User:
+    def __addUser(self, client: Client, message: dict) -> User:
         self.__lockCurrentUserID.acquire()
         self.__currentUserID += 1
         userID = self.__currentUserID
@@ -78,6 +93,9 @@ class Registry:
                     receivingQueue=client.receivingQueue,
                     sendingQueue=client.sendingQueue,
                     userID=userID)
+        appIDs = message['appIDs']
+        for appID in appIDs:
+            self.__workerWork(appID, user)
         self.users[userID] = user
         self.clientBySocketID[client.socketID] = user
         self.logger.info("User-%d added.", userID)

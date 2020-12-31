@@ -29,12 +29,12 @@ class FaceDetection(ApplicationUserSide):
             frame = cv2.resize(frame, (targetWidth, 640))
             dataID, data = self.createDataFrame(frame)
             self.broker.submit(self.appID, data=data, dataID=dataID)
-            result = self.result[dataID].get()
-            del self.data[dataID]
-            cv2.imshow("App-%d %s" % (self.appID, self.appName), result)
-            if cv2.waitKey(1) == ord('q'):
-                break
-            # self.dataIDSubmittedQueue.put(dataID)
+            # result = self.result[dataID].get()
+            # del self.data[dataID]
+            # cv2.imshow("App-%d %s" % (self.appID, self.appName), result)
+            # if cv2.waitKey(1) == ord('q'):
+            #     break
+            self.dataIDSubmittedQueue.put(dataID)
 
         self.capture.release()
 

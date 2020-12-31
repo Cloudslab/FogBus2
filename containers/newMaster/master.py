@@ -9,6 +9,7 @@ from message import Message
 from queue import Empty
 from datatype import Client, Worker, User
 from time import time
+from exceptions import *
 
 
 class FogMaster:
@@ -42,6 +43,7 @@ class FogMaster:
         self.dataManager.writeData(user, Message.encrypt(message))
         while True:
             messageEncrypted = self.dataManager.readData(user)
+
             threading.Thread(target=self.__handleUserMessage, args=(user, messageEncrypted,)).start()
 
     def __handleUserMessage(self, user: User, message: bytes):
@@ -65,19 +67,24 @@ class FogMaster:
                 self.__handleResult(worker, messageDecrypted)
 
     def __handleRegistration(self, client: Client, message: dict):
+
         client = self.registry.register(client, message)
         if isinstance(client, User):
-            self.__serveUser(client)
+            try:
+                self.__serveUser(client)
+            except NoWorkerAvailableException as e:
+                message = {'type': 'refused', 'reason': e}
+                self.dataManager.writeData(client, Message.encrypt(message))
         elif isinstance(client, Worker):
             self.__serveWorker(client)
 
     def __handleData(self, user: User, message: dict):
         appID = message['appID']
-        worker = self.registry.workerWork(appID)
         message['type'] = 'data'
         message['userID'] = user.userID
         message['time'].append(time() - message['time'][0])
         print('sending handling', time())
+        worker = user.workerByAppID[appID]
         self.dataManager.writeData(worker, Message.encrypt(message))
         self.logger.debug('Sent message from userID-%d with appID-%d to workerID-%d', user.userID, appID,
                           worker.workerID)

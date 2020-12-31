@@ -7,7 +7,7 @@ from dataManager import DataManager
 from message import Message
 from typing import NoReturn
 from queue import Queue
-from typing import Any
+from typing import Any, List
 
 
 class Broker:
@@ -16,11 +16,13 @@ class Broker:
             self,
             host: str,
             port: int,
+            appIDs: List[int],
             logLevel=logging.DEBUG):
         self.logger = get_logger('User-Broker', logLevel)
         self.host = host
         self.port = port
         self.userID = None
+        self.appIDs = appIDs
 
         self.resultQueue: Queue = Queue()
         self.dataManager: DataManager = DataManager(
@@ -34,7 +36,7 @@ class Broker:
         self.register()
 
     def register(self) -> NoReturn:
-        message = {'type': 'register', 'role': 'user'}
+        message = {'type': 'register', 'role': 'user', 'appIDs': self.appIDs}
         self.__send(message)
         self.logger.info("[*] Registering ...")
         while self.userID is None:

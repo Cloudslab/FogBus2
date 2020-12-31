@@ -5,6 +5,7 @@ import socket
 
 from logger import get_logger
 from queue import Queue
+from message import Message
 
 
 class DataManager:
@@ -22,42 +23,35 @@ class DataManager:
     def run(self):
         self.clientSocket.connect((self.host, self.port))
 
-        threading.Thread(target=self.__readData,
+        threading.Thread(target=self.__receiver,
                          args=(self.receivingQueue,)).start()
-        threading.Thread(target=self.__writeData,
+        threading.Thread(target=self.__sender,
                          args=(self.sendingQueue,)).start()
         self.logger.info("[*] Connected to %s:%d over tcp.", self.host, self.port)
 
-    def __readData(self, receivingQueue: Queue):
-        while True:
-            data = self.__receivePackage(self.clientSocket)
-            receivingQueue.put(data)
+    def __receiver(self, receivingQueue: Queue):
+        buffer = b''
+        payloadSize = struct.calcsize('>L')
 
-    def __writeData(self, sendingQueue: Queue):
+        while True:
+            while len(buffer) < payloadSize:
+                buffer += self.clientSocket.recv(4096)
+
+            packedDataSize = buffer[:payloadSize]
+            buffer = buffer[payloadSize:]
+            dataSize = struct.unpack('>L', packedDataSize)[0]
+
+            while len(buffer) < dataSize:
+                buffer += self.clientSocket.recv(4096)
+
+            data = buffer[:dataSize]
+            buffer = buffer[dataSize:]
+            self.receivingQueue.put(data)
+
+    def __sender(self, sendingQueue: Queue):
         while True:
             data = sendingQueue.get()
-            self.__sendPackage(self.clientSocket, data)
-
-    @staticmethod
-    def __receivePackage(clientSocket: socket.socket) -> bytes:
-        data = b''
-        payloadSize = struct.calcsize(">L")
-        while len(data) < payloadSize:
-            data += clientSocket.recv(4096)
-
-        packedDataSize = data[:payloadSize]
-        data = data[payloadSize:]
-        dataSize = struct.unpack(">L", packedDataSize)[0]
-
-        while len(data) < dataSize:
-            data += clientSocket.recv(4096)
-
-        data = data[:dataSize]
-        return data
-
-    @staticmethod
-    def __sendPackage(clientSocket: socket.socket, data: bytes):
-        clientSocket.sendall(struct.pack(">L", len(data)) + data)
+            self.clientSocket.sendall(struct.pack(">L", len(data)) + data)
 
 
 if __name__ == '__main__':
