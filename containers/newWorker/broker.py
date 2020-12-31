@@ -87,6 +87,7 @@ class Broker:
         if len(message['appIDs']):
             message['data'] = result
         else:
+            del message['data']
             message['result'] = result
         self.__send(message)
         self.logger.debug('Executed appID-%d and returned the result', app.appID)
