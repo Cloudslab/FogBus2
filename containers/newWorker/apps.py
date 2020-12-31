@@ -43,6 +43,8 @@ class EyeDetection(ApplicationUserSide):
 
 
 class ColorTracking(ApplicationUserSide):
+    def __init__(self, appID: int):
+        super().__init__(appID, 'ColorTracking')
 
     def process(self, inputData):
 

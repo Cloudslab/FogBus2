@@ -76,7 +76,7 @@ class ApplicationUserSide:
         dataID = self.dataID
         self.lockData.release()
         self.data[dataID] = data
-        return dataID, data
+        return dataID
 
     @abstractmethod
     def run(self):

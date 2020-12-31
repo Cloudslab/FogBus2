@@ -81,7 +81,6 @@ class Broker:
         message['appIDs'] = message['appIDs'][1:]
 
         t = time() - message['time'][0]
-        print('From sending data to execute app', t)
         message['time'].append(t)
 
         if len(message['appIDs']):
