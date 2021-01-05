@@ -56,7 +56,6 @@ class Registry:
     def workerWait(self, worker: Worker, appID: int = None, appIDs: dict = None) -> NoReturn:
         if appID is not None:
             self.workersQueueByAppID[appID].put(worker)
-            return
         else:
             for appID in appIDs:
                 self.workersQueueByAppID[appID].put(worker)

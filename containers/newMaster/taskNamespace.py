@@ -2,7 +2,7 @@ import logging
 import socketio
 
 from logger import get_logger
-from registry import Registry
+from masterSideRegistry import Registry
 from message import Message
 from taskManager import TaskManager
 from datatype import Task

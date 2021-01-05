@@ -1,10 +1,12 @@
 import cv2
 import threading
+import socket
 from abc import abstractmethod
 from broker import Broker
 from typing import Any
 from queue import Queue
 from collections import defaultdict
+from dataManagerClient import DataManagerClient
 
 
 class NodeSpecs:
@@ -24,18 +26,42 @@ class NodeSpecs:
 
 class Master:
 
-    def __init__(self, host: str, port: int, masterID: int = 0):
-        self.host = host
-        self.port = port
-        self.masterID = masterID
+    def __init__(self, masterID: int = 0, dataManager: DataManagerClient = None):
+        self.masterID: int = masterID
+        self.dataManager: DataManagerClient = dataManager
 
 
-class Worker:
+class Client:
 
-    def __init__(self, workerID: int, socketID: str, specs: NodeSpecs):
-        self.workerID = workerID
-        self.socketID = socketID
-        self.specs = specs
+    def __init__(self, socketID: int, socket_: socket.socket, sendingQueue: Queue[bytes], receivingQueue: Queue[bytes]):
+        self.socketID: int = socketID
+        self.socket: socket.socket = socket_
+        self.sendingQueue: Queue[bytes] = sendingQueue
+        self.receivingQueue: Queue[bytes] = receivingQueue
+        self.active = True
+
+
+class Worker(Client):
+
+    def __init__(
+            self,
+            socketID: int,
+            socket_: socket.socket,
+            sendingQueue: Queue[bytes],
+            receivingQueue: Queue[bytes],
+            workerID: int,
+            specs: NodeSpecs,
+            userByAppID: dict[int, Client] = None):
+        super(Worker, self).__init__(
+            socketID=socketID,
+            socket_=socket_,
+            sendingQueue=sendingQueue,
+            receivingQueue=receivingQueue)
+
+        self.workerID: int = workerID
+        self.specs: NodeSpecs = specs
+        if userByAppID is None:
+            self.userByAppID: dict[int, User] = {}
 
 
 class User:

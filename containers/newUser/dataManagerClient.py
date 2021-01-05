@@ -4,13 +4,14 @@ import struct
 import socket
 
 from logger import get_logger
-from queue import Queue
-from message import Message
+from queue import Queue, Empty
+from typing import NoReturn, Any
 
 
-class DataManager:
+class DataManagerClient:
 
-    def __init__(self, host: str, port: int, logLevel=logging.DEBUG):
+    def __init__(self, name: str, host: str, port: int, logLevel=logging.DEBUG):
+        self.name = name
         self.dataID = 0
         self.host: str = host
         self.port: int = port
@@ -18,18 +19,26 @@ class DataManager:
         self.sendingQueue: Queue[bytes] = Queue()
         self.clientSocket: socket.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
-        self.logger = get_logger('User-DataManager', logLevel)
+        self.logger = get_logger('User-%s-DataManager' % self.name, logLevel)
 
-    def run(self):
+    def connect(self):
         self.clientSocket.connect((self.host, self.port))
+        threading.Thread(target=self.__receiver).start()
+        threading.Thread(target=self.__sender).start()
+        self.logger.info("[*] %s connected to %s:%d over tcp.", self.name, self.host, self.port)
 
-        threading.Thread(target=self.__receiver,
-                         args=(self.receivingQueue,)).start()
-        threading.Thread(target=self.__sender,
-                         args=(self.sendingQueue,)).start()
-        self.logger.info("[*] Connected to %s:%d over tcp.", self.host, self.port)
+    def read(self) -> Any:
+        data = None
+        try:
+            data = self.receivingQueue.get(block=False)
+        except Empty:
+            pass
+        return data
 
-    def __receiver(self, receivingQueue: Queue):
+    def write(self, data) -> NoReturn:
+        self.sendingQueue.put(data)
+
+    def __receiver(self):
         buffer = b''
         payloadSize = struct.calcsize('>L')
 
@@ -48,14 +57,14 @@ class DataManager:
             buffer = buffer[dataSize:]
             self.receivingQueue.put(data)
 
-    def __sender(self, sendingQueue: Queue):
+    def __sender(self):
         while True:
-            data = sendingQueue.get()
+            data = self.sendingQueue.get()
             self.clientSocket.sendall(struct.pack(">L", len(data)) + data)
 
 
 if __name__ == '__main__':
-    dataManager = DataManager(host='0.0.0.0',
-                              port=5000,
-                              logLevel=logging.DEBUG)
-    dataManager.run()
+    dataManager = DataManagerClient(host='0.0.0.0',
+                                    port=5000,
+                                    logLevel=logging.DEBUG)
+    dataManager.connect()

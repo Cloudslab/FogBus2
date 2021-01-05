@@ -8,7 +8,7 @@ from typing import NoReturn
 from datatype import Client
 
 
-class DataManager:
+class DataManagerServer:
 
     def __init__(self, host: str, port: int, logLevel=logging.DEBUG):
         self.host: str = host
@@ -18,7 +18,7 @@ class DataManager:
         self.__sockets: dict[int, Client] = {}
         self.unregisteredClients: Queue[Client] = Queue()
         self.__serverSocket: socket.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.logger = get_logger('Master-MainService', logLevel)
+        self.logger = get_logger('User-DataManagerServer', logLevel)
 
     def run(self):
         threading.Thread(target=self.__serve).start()
@@ -98,7 +98,7 @@ class DataManager:
 
 
 if __name__ == '__main__':
-    dataManager = DataManager(host='0.0.0.0',
-                              port=5000,
-                              logLevel=logging.DEBUG)
+    dataManager = DataManagerServer(host='0.0.0.0',
+                                    port=5000,
+                                    logLevel=logging.DEBUG)
     dataManager.run()

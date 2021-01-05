@@ -2,9 +2,9 @@ import logging
 import threading
 
 from logger import get_logger
-from registry import Registry
+from masterSideRegistry import Registry
 from taskManager import TaskManager
-from dataManager import DataManager
+from dataManagerServer import DataManagerServer
 from message import Message
 from queue import Empty
 from datatype import Client, Worker, User
@@ -18,7 +18,7 @@ class FogMaster:
         self.logger = get_logger('Master', logLevel)
         self.host = host
         self.port = port
-        self.dataManager = DataManager(self.host, self.port, self.logger.level)
+        self.dataManager = DataManagerServer(self.host, self.port, self.logger.level)
         self.taskManager: TaskManager = TaskManager(logLevel=logLevel)
         self.registry: Registry = Registry(logLevel=logLevel)
 

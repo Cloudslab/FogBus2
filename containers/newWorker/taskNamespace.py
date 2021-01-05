@@ -2,7 +2,7 @@ import logging
 import socketio
 from logger import get_logger
 from message import Message
-from dataManager import DataManager
+from dataManagerClient import DataManagerClient
 from typing import List
 from datatype import ApplicationUserSide
 
@@ -12,7 +12,7 @@ class TaskNamespace(socketio.ClientNamespace):
             self,
             namespace=None,
             appList=None,
-            dataManager: DataManager = None,
+            dataManager: DataManagerClient = None,
             logLevel=logging.DEBUG):
         super(TaskNamespace, self).__init__(namespace=namespace)
         if appList is None:

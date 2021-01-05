@@ -11,16 +11,16 @@ if __name__ == "__main__":
 
     if appID == 1:
         broker = Broker(
-            host='127.0.0.1',
-            port=5000,
+            masterIP='127.0.0.1',
+            masterPort=5000,
             appIDs=[1],
             logLevel=logging.DEBUG)
         app = FaceDetection(1, broker, videoPath)
         app.run()
     elif appID == 2:
         broker = Broker(
-            host='127.0.0.1',
-            port=5000,
+            masterIP='127.0.0.1',
+            masterPort=5000,
             appIDs=[1, 2],
             logLevel=logging.DEBUG)
         app = FaceAndEyeDetection(2, broker, videoPath)
@@ -28,8 +28,8 @@ if __name__ == "__main__":
     elif appID == 3:
 
         broker = Broker(
-            host='127.0.0.1',
-            port=5000,
+            masterIP='127.0.0.1',
+            masterPort=5000,
             appIDs=[3],
             logLevel=logging.DEBUG)
         app = ColorTracking(3, broker, videoPath)

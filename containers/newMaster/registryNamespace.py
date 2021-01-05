@@ -3,7 +3,7 @@ import socketio
 
 from logger import get_logger
 from message import Message
-from registry import Registry
+from masterSideRegistry import Registry
 
 
 class RegistryNamespace(socketio.Namespace):
