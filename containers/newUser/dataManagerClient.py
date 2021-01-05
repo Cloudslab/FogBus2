@@ -2,11 +2,12 @@ import logging
 import threading
 import struct
 import socket
+import os
 
 from logger import get_logger
 from queue import Queue, Empty
 from typing import NoReturn, Any
-from time import time
+from time import time, sleep
 
 
 class DataManagerClient:
@@ -24,6 +25,7 @@ class DataManagerClient:
         self.dataID = 0
         self.host: str = host
         self.port: int = port
+        self.isConnected = False
 
         if receivingQueue is None:
             self.receivingQueue: Queue[bytes] = Queue()
@@ -48,6 +50,9 @@ class DataManagerClient:
 
             threading.Thread(target=self.__receiver).start()
             threading.Thread(target=self.__sender).start()
+            threading.Thread(target=self.__keepAlive).start()
+            self.isConnected = True
+            self.activeTime = time()
 
             self.logger.info("[*] %s linked to %s:%d over tcp.", self.name, self.host, self.port)
         else:
@@ -64,12 +69,17 @@ class DataManagerClient:
     def write(self, data) -> NoReturn:
         self.sendingQueue.put(data)
 
-    def __keepAlive(self, ):
+    def __keepAlive(self):
         while True:
             self.sendingQueue.put(b'alive')
-            if time() - self.activeTime > 1:
-                self.socket.shutdown(socket.SHUT_RDWR)
-                self.logger.warning("Shutdown socket")
+            if time() - self.activeTime > 2:
+                self.socket.close()
+                self.isConnected = False
+                self.logger.warning("Socket disconnected")
+                break
+            sleep(1)
+        self.logger.warning("Master disconnected.")
+        os._exit(0)
 
     def __receiver(self):
         buffer = b''
@@ -90,7 +100,6 @@ class DataManagerClient:
                 data = buffer[:dataSize]
                 buffer = buffer[dataSize:]
                 self.activeTime = time()
-
                 if not data == b'alive':
                     self.receivingQueue.put(data)
         except OSError:

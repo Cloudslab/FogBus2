@@ -7,7 +7,7 @@ from taskManager import TaskManager
 from dataManagerServer import DataManagerServer
 from message import Message
 from queue import Empty
-from datatype import Client, Worker, User
+from datatype import Client, Worker, User, NodeSpecs
 from time import time
 from exceptions import *
 
@@ -33,25 +33,27 @@ class FogMaster:
             threading.Thread(target=self.__recogniseClient, args=(client,)).start()
 
     def __recogniseClient(self, client: Client):
-        try:
-            message = self.dataManager.readData(client)
-            messageDecrypted = Message.decrypt(message)
-            if messageDecrypted['type'] == 'register':
-                self.__handleRegistration(client, messageDecrypted)
-        except Empty:
-            self.dataManager.discard(client)
+        while True:
+            try:
+                message = self.dataManager.readData(client)
+                messageDecrypted = Message.decrypt(message)
+                if messageDecrypted['type'] == 'register':
+                    self.__handleRegistration(client, messageDecrypted)
+            except (Empty, KeyError):
+                self.dataManager.discard(client)
 
     def __serveUser(self, user: User):
         message = {'type': 'userID', 'userID': user.userID}
         self.dataManager.writeData(user, Message.encrypt(message))
-        while True:
+        while self.dataManager.hasClient(user):
             try:
                 messageEncrypted = self.dataManager.readData(user)
                 threading.Thread(target=self.__handleUserMessage, args=(user, messageEncrypted,)).start()
             except Empty:
-                if user.active:
-                    continue
-                self.__discardUser(user)
+                continue
+            except (OSError, KeyError):
+                break
+        self.__discardUser(user)
 
     def __discardUser(self, user: User):
         for _, appID in user.workerByAppID.keys():
@@ -76,14 +78,15 @@ class FogMaster:
     def __serveWorker(self, worker: Worker):
         message = {'type': 'workerID', 'workerID': worker.workerID}
         self.dataManager.writeData(worker, Message.encrypt(message))
-        while True:
+        while self.dataManager.hasClient(worker):
             try:
                 messageEncrypted = self.dataManager.readData(worker)
                 threading.Thread(target=self.__handleWorkerMessage, args=(worker, messageEncrypted,)).start()
             except Empty:
-                if worker.active:
-                    continue
-                self.__discardWorker(worker)
+                continue
+            except (OSError, KeyError):
+                break
+        self.__discardWorker(worker)
 
     def __handleWorkerMessage(self, worker: Worker, message: bytes):
         messageDecrypted = Message.decrypt(message)

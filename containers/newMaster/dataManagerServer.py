@@ -7,7 +7,7 @@ from queue import Queue
 from typing import NoReturn
 from datatype import Client
 from message import Message
-from time import time
+from time import time, sleep
 
 
 class DataManagerServer:
@@ -54,6 +54,9 @@ class DataManagerServer:
             threading.Thread(target=self.__keepAlive,
                              args=(client,)).start()
 
+    def hasClient(self, client: Client):
+        return client.socketID in self.__sockets
+
     def readData(self, client: Client) -> bytes:
         return self.__sockets[client.socketID].receivingQueue.get(timeout=1)
 
@@ -61,16 +64,19 @@ class DataManagerServer:
         self.__sockets[client.socketID].sendingQueue.put(data)
 
     def discard(self, client: Client):
-        client.active = False
-        client.socket.shutdown(socket.SHUT_RDWR)
-        del self.__sockets[client.socketID]
+        if self.hasClient(client):
+            self.__sockets[client.socketID].active = False
+            self.__sockets[client.socketID].socket.close()
+            del self.__sockets[client.socketID]
 
     def __keepAlive(self, client: Client):
         while True:
             client.sendingQueue.put(b'alive')
-            if time() - client.activeTime > 1:
+            if time() - client.activeTime > 2:
                 self.logger.debug("Discard client")
                 self.discard(client)
+                break
+            sleep(1)
 
     @staticmethod
     def __receiver(client: Client):
@@ -95,7 +101,6 @@ class DataManagerServer:
                     client.receivingQueue.put(data)
         except OSError:
             client.active = False
-            print("Receiver ended")
 
     @staticmethod
     def __sender(client: Client):
@@ -106,8 +111,6 @@ class DataManagerServer:
                 client.socket.sendall(struct.pack(">L", len(data)) + data)
             except OSError:
                 client.active = False
-
-                print("Sender ended")
                 break
 
 
