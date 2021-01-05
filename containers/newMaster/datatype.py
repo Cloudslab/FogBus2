@@ -2,6 +2,7 @@ import socket
 from queue import Queue
 from typing import List
 from abc import abstractmethod
+from time import time
 
 
 class NodeSpecs:
@@ -34,6 +35,10 @@ class Client:
         self.sendingQueue: Queue[bytes] = sendingQueue
         self.receivingQueue: Queue[bytes] = receivingQueue
         self.active = True
+        self.activeTime = time()
+
+    def updateActiveTime(self):
+        self.activeTime = time()
 
 
 class Master:

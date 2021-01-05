@@ -6,6 +6,7 @@ import socket
 from logger import get_logger
 from queue import Queue, Empty
 from typing import NoReturn, Any
+from time import time
 
 
 class DataManagerClient:
@@ -36,6 +37,7 @@ class DataManagerClient:
 
         self.socket = socket_
         self.logger = get_logger('User-%s-DataManager' % self.name, logLevel)
+        self.activeTime = time()
 
     def link(self):
         if self.socket is None \
@@ -62,29 +64,46 @@ class DataManagerClient:
     def write(self, data) -> NoReturn:
         self.sendingQueue.put(data)
 
+    def __keepAlive(self, ):
+        while True:
+            self.sendingQueue.put(b'alive')
+            if time() - self.activeTime > 1:
+                self.socket.shutdown(socket.SHUT_RDWR)
+                self.logger.warning("Shutdown socket")
+
     def __receiver(self):
         buffer = b''
         payloadSize = struct.calcsize('>L')
 
-        while True:
-            while len(buffer) < payloadSize:
-                buffer += self.socket.recv(4096)
+        try:
+            while True:
+                while len(buffer) < payloadSize:
+                    buffer += self.socket.recv(4096)
 
-            packedDataSize = buffer[:payloadSize]
-            buffer = buffer[payloadSize:]
-            dataSize = struct.unpack('>L', packedDataSize)[0]
+                packedDataSize = buffer[:payloadSize]
+                buffer = buffer[payloadSize:]
+                dataSize = struct.unpack('>L', packedDataSize)[0]
 
-            while len(buffer) < dataSize:
-                buffer += self.socket.recv(4096)
+                while len(buffer) < dataSize:
+                    buffer += self.socket.recv(4096)
 
-            data = buffer[:dataSize]
-            buffer = buffer[dataSize:]
-            self.receivingQueue.put(data)
+                data = buffer[:dataSize]
+                buffer = buffer[dataSize:]
+                self.activeTime = time()
+
+                if not data == b'alive':
+                    self.receivingQueue.put(data)
+        except OSError:
+            self.logger.warning("Receiver disconnected.")
 
     def __sender(self):
-        while True:
-            data = self.sendingQueue.get()
-            self.socket.sendall(struct.pack(">L", len(data)) + data)
+
+        try:
+            while True:
+                data = self.sendingQueue.get()
+                self.socket.sendall(struct.pack(">L", len(data)) + data)
+        except OSError:
+            self.logger.warning("Sender disconnected.")
 
 
 if __name__ == '__main__':

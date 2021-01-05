@@ -6,6 +6,8 @@ from logger import get_logger
 from queue import Queue
 from typing import NoReturn
 from datatype import Client
+from message import Message
+from time import time
 
 
 class DataManagerServer:
@@ -49,6 +51,8 @@ class DataManagerServer:
                              args=(client,)).start()
             threading.Thread(target=self.__sender,
                              args=(client,)).start()
+            threading.Thread(target=self.__keepAlive,
+                             args=(client,)).start()
 
     def readData(self, client: Client) -> bytes:
         return self.__sockets[client.socketID].receivingQueue.get(timeout=1)
@@ -61,13 +65,19 @@ class DataManagerServer:
         client.socket.shutdown(socket.SHUT_RDWR)
         del self.__sockets[client.socketID]
 
+    def __keepAlive(self, client: Client):
+        while True:
+            client.sendingQueue.put(b'alive')
+            if time() - client.activeTime > 1:
+                self.logger.debug("Discard client")
+                self.discard(client)
+
     @staticmethod
     def __receiver(client: Client):
         buffer = b''
         payloadSize = struct.calcsize('>L')
-
-        while True:
-            try:
+        try:
+            while True:
                 while len(buffer) < payloadSize:
                     buffer += client.socket.recv(4096)
 
@@ -80,10 +90,12 @@ class DataManagerServer:
 
                 data = buffer[:dataSize]
                 buffer = buffer[dataSize:]
-                client.receivingQueue.put(data)
-            except OSError:
-                client.active = False
-                break
+                client.updateActiveTime()
+                if not data == b'alive':
+                    client.receivingQueue.put(data)
+        except OSError:
+            client.active = False
+            print("Receiver ended")
 
     @staticmethod
     def __sender(client: Client):
@@ -94,6 +106,8 @@ class DataManagerServer:
                 client.socket.sendall(struct.pack(">L", len(data)) + data)
             except OSError:
                 client.active = False
+
+                print("Sender ended")
                 break
 
 
