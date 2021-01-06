@@ -1,7 +1,7 @@
 import logging
 import sys
 
-from broker import Broker
+from datatype import Broker
 from apps import FaceDetection, FaceAndEyeDetection, ColorTracking
 
 if __name__ == "__main__":

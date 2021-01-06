@@ -83,13 +83,17 @@ class Broker:
             logLevel=self.logger.level
         )
 
-    def run(self):
+    def run(self, mode: str):
         self.master.link()
         threading.Thread(target=self.__receivedMessageHandler).start()
-        self.register()
+        self.register(mode=mode)
 
-    def register(self) -> NoReturn:
-        message = {'type': 'register', 'role': 'user', 'appIDs': self.appIDs}
+    def register(self, mode: str) -> NoReturn:
+        message = {
+            'type': 'register',
+            'role': 'user',
+            'mode': mode,
+            'appIDs': self.appIDs}
         self.__send(message)
         self.logger.info("[*] Registering ...")
         while self.userID is None:

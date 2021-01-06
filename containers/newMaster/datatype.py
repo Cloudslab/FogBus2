@@ -81,6 +81,8 @@ class User(Client):
             sendingQueue: Queue[bytes],
             receivingQueue: Queue[bytes],
             userID: int,
+            appRunMode: str,
+            appIDs: List[int],
             workerByAppID: dict[int, Worker] = None):
         super(User, self).__init__(
             socketID=socketID,
@@ -88,8 +90,21 @@ class User(Client):
             sendingQueue=sendingQueue,
             receivingQueue=receivingQueue)
         self.userID = userID
+        self.appRunMode = appRunMode
+        self.appIDs = appIDs
+        self.isReady = False
+        self.appIDTokenMap = {}
         if workerByAppID is None:
             self.workerByAppID: dict[int, Worker] = {}
+
+    def verifyWorker(self, appID: int, token: str, worker: Worker) -> bool:
+        if appID in self.appIDTokenMap \
+                and self.appIDTokenMap[appID] == token:
+            self.workerByAppID[appID] = worker
+            if len(self.appIDTokenMap) == len(self.workerByAppID):
+                self.isReady = True
+            return True
+        return False
 
 
 class Task:

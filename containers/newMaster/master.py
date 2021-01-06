@@ -2,6 +2,7 @@ import logging
 import threading
 
 from logger import get_logger
+from concurrent.futures import ThreadPoolExecutor
 from masterSideRegistry import Registry
 from taskManager import TaskManager
 from dataManagerServer import DataManagerServer
@@ -10,6 +11,7 @@ from queue import Empty
 from datatype import Client, Worker, User, NodeSpecs
 from time import time
 from exceptions import *
+from queue import Queue
 
 
 class FogMaster:
@@ -18,7 +20,10 @@ class FogMaster:
         self.logger = get_logger('Master', logLevel)
         self.host = host
         self.port = port
-        self.dataManager = DataManagerServer(self.host, self.port, self.logger.level)
+        self.dataManager = DataManagerServer(
+            self.host,
+            self.port,
+            self.logger.level)
         self.taskManager: TaskManager = TaskManager(logLevel=logLevel)
         self.registry: Registry = Registry(logLevel=logLevel)
 
@@ -30,82 +35,79 @@ class FogMaster:
         self.logger.info('[*] Handling unregistered clients.')
         while True:
             client = self.dataManager.unregisteredClients.get()
-            threading.Thread(target=self.__recogniseClient, args=(client,)).start()
+            threading.Thread(
+                target=self.__recogniseClient,
+                args=(client,)).start()
 
     def __recogniseClient(self, client: Client):
         while True:
             try:
-                message = self.dataManager.readData(client)
+                message = client.receivingQueue.get(timeout=2)
                 messageDecrypted = Message.decrypt(message)
                 if messageDecrypted['type'] == 'register':
-                    self.__handleRegistration(client, messageDecrypted)
+                    client = self.registry.register(
+                        client,
+                        messageDecrypted)
+                    self.__serveClient(
+                        client,
+                        messageDecrypted)
+                    break
             except (Empty, KeyError):
                 self.dataManager.discard(client)
+                break
+            except NoWorkerAvailableException:
+                break
+            except WorkerCredentialNotValid:
+                break
 
-    def __serveUser(self, user: User):
-        message = {'type': 'userID', 'userID': user.userID}
-        self.dataManager.writeData(user, Message.encrypt(message))
-        while self.dataManager.hasClient(user):
+    def __serveClient(self, client: Client, message: dict):
+        message = None
+        if isinstance(client, Worker):
+            message = {'type': 'workerID', 'workerID': client.workerID}
+        elif isinstance(client, User):
+            message = {'type': 'userID', 'userID': client.userID}
+
+        self.dataManager.writeData(client, Message.encrypt(message))
+        while self.dataManager.hasClient(client):
             try:
-                messageEncrypted = self.dataManager.readData(user)
-                threading.Thread(target=self.__handleUserMessage, args=(user, messageEncrypted,)).start()
+                messageEncrypted = self.dataManager.readData(client)
+                threading.Thread(
+                    target=self.__handleMessage(
+                        client,
+                        messageEncrypted),
+                    args=(client, messageEncrypted,)).start()
             except Empty:
                 continue
             except (OSError, KeyError):
                 break
-        self.__discardUser(user)
+        self.__discardClient(client)
 
-    def __discardUser(self, user: User):
-        for _, appID in user.workerByAppID.keys():
-            worker = user.workerByAppID[appID]
-            del worker.userByAppID[appID]
-            self.registry.workerWait(worker, appID)
-        self.dataManager.discard(user)
-        self.logger.debug("UserID-%d disconnected", user.userID)
+    def __discardClient(self, client: Client):
+        if isinstance(client, User):
+            for _, appID in client.workerByAppID.keys():
+                worker = client.workerByAppID[appID]
+                self.registry.removeClient(worker, reason='Disconnected')
+            self.dataManager.discard(client)
+            self.logger.debug("UserID-%d disconnected", client.userID)
+        if isinstance(client, Worker):
+            for _, appID in client.userByAppID.keys():
+                user = client.userByAppID[appID]
+                self.registry.removeClient(user, reason='Disconnected')
+            self.dataManager.discard(client)
+            self.logger.debug("WorkerID-%d disconnected", client.workerID)
 
-    def __handleUserMessage(self, user: User, message: bytes):
-        messageDecrypted = Message.decrypt(message)
-        if messageDecrypted['type'] == 'submitData':
-            self.__handleData(user, messageDecrypted)
+    def __handleMessage(self, client: Client, message: bytes):
+        message = Message.decrypt(message)
 
-    def __discardWorker(self, worker: Worker):
-        for _, appID in worker.userByAppID.keys():
-            user = worker.userByAppID[appID]
-            del user.workerByAppID[appID]
-        self.dataManager.discard(worker)
-        self.logger.debug("WorkerID-%d disconnected", worker.workerID)
-
-    def __serveWorker(self, worker: Worker):
-        message = {'type': 'workerID', 'workerID': worker.workerID}
-        self.dataManager.writeData(worker, Message.encrypt(message))
-        while self.dataManager.hasClient(worker):
-            try:
-                messageEncrypted = self.dataManager.readData(worker)
-                threading.Thread(target=self.__handleWorkerMessage, args=(worker, messageEncrypted,)).start()
-            except Empty:
-                continue
-            except (OSError, KeyError):
-                break
-        self.__discardWorker(worker)
-
-    def __handleWorkerMessage(self, worker: Worker, message: bytes):
-        messageDecrypted = Message.decrypt(message)
-        if messageDecrypted['type'] == 'submitResult' \
-                and worker.socketID in self.registry.clientBySocketID:
-            worker = self.registry.clientBySocketID[worker.socketID]
-            if isinstance(worker, Worker):
-                self.__handleResult(worker, messageDecrypted)
-
-    def __handleRegistration(self, client: Client, message: dict):
-        try:
-            client = self.registry.register(client, message)
-            if isinstance(client, User):
-                self.__serveUser(client)
-            elif isinstance(client, Worker):
-                self.__serveWorker(client)
-        except NoWorkerAvailableException as e:
-            message = {'type': 'refused', 'reason': str(e)}
-            self.dataManager.writeData(client, Message.encrypt(message))
+        if isinstance(client, User):
+            if message['type'] == 'submitData':
+                self.__handleData(client, message)
+        elif isinstance(client, Worker):
+            if message['type'] == 'submitResult' \
+                    and client.socketID in self.registry.clientBySocketID:
+                worker = self.registry.clientBySocketID[client.socketID]
+                if isinstance(worker, Worker):
+                    self.__handleResult(worker, message)
 
     def __handleData(self, user: User, message: dict):
 

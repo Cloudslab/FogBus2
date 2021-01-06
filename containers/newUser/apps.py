@@ -56,8 +56,8 @@ class FaceDetection(ApplicationUserSide):
 
 class FaceAndEyeDetection(ApplicationUserSide):
     def run(self):
-        self.appName = 'EyeDetection'
-        self.broker.run()
+        self.appName = 'FaceAndEyeDetection'
+        self.broker.run(mode='sequential')
 
         threading.Thread(target=self.__sendData).start()
         threading.Thread(target=self.__receiveResult).start()

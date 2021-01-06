@@ -11,7 +11,7 @@ from message import Message
 from typing import NoReturn, Any, List
 from collections import defaultdict
 from time import time
-
+from secrets import token_urlsafe
 from queue import Queue
 from abc import abstractmethod
 
@@ -287,14 +287,20 @@ class Broker:
             masterPort: int,
             thisIP: str,
             thisPort: int,
-            appIDs: List[ApplicationUserSide],
+            app: ApplicationUserSide = None,
+            userID: int = None,
+            appID: int = None,
+            token: str = None,
             logLevel=logging.DEBUG):
         self.logger = get_logger('Worker-Broker', logLevel)
         self.masterIP = masterIP
         self.masterPort = masterPort
         self.thisIP = thisIP
         self.thisPort = thisPort
-        self.appIDs: List[ApplicationUserSide] = appIDs
+        self.app: ApplicationUserSide = app
+        self.token: str = token
+        self.userID: int = userID
+        self.appID: int = appID
         self.workerID = None
         self.messageByAppID: dict[int, Queue] = defaultdict(Queue)
         self.master: Master = Master(
@@ -310,7 +316,9 @@ class Broker:
             port=thisPort)
 
     def run(self):
-        self.service.run()
+        if self.app is not None:
+            self.service.run()
+
         self.master.link()
         threading.Thread(target=self.__receivedMessageHandler).start()
         self.__register()
@@ -326,15 +334,14 @@ class Broker:
             self.workers[workerID] = worker
 
     def __register(self) -> NoReturn:
-        appIDs = []
-        for app in self.appIDs:
-            appIDs.append(app.appID)
         message = {'type': 'register',
                    'role': 'worker',
                    'ip': self.thisIP,
                    'port': self.thisPort,
-                   'nodeSpecs': NodeSpecs(1, 2, 3, 4),
-                   'appIDs': appIDs}
+                   'userID': self.userID,
+                   'appID': self.appID,
+                   'token': self.token,
+                   'nodeSpecs': NodeSpecs(1, 2, 3, 4)}
         self.__sendTo(self.master, message)
         self.logger.info("[*] Registering ...")
         while self.workerID is None:
@@ -352,9 +359,21 @@ class Broker:
             message = Message.decrypt(messageEncrypted)
             if message['type'] == 'workerID':
                 self.workerID = message['workerID']
+            elif message['type'] == 'runWorker':
+                userID = message['userID']
+                appID = message['appID']
+                token = message['token']
+                self.__runWorker(
+                    userID=userID,
+                    appID=appID,
+                    token=token)
             elif message['type'] == 'data':
                 appID = message['appIDs'][0]
                 self.messageByAppID[appID].put(message)
+
+    @staticmethod
+    def __runWorker(userID: int, appID: int, token: str):
+        os.system("python worker.py %d %d %s > /dev/null 2>&1 &" % (userID, appID, token))
 
     def __runApp(self, app: ApplicationUserSide):
         self.logger.info('[*] AppID-%d-{%s} is serving ...', app.appID, app.appName)

@@ -65,6 +65,11 @@ class DataManagerServer:
 
     def discard(self, client: Client):
         if self.hasClient(client):
+            message = {
+                'type': 'refused',
+                'reason': 'timeout'
+            }
+            client.sendingQueue.put(Message.encrypt(message))
             self.__sockets[client.socketID].active = False
             self.__sockets[client.socketID].socket.close()
             del self.__sockets[client.socketID]
@@ -73,7 +78,7 @@ class DataManagerServer:
         while True:
             client.sendingQueue.put(b'alive')
             if time() - client.activeTime > 2:
-                self.logger.debug("Discard client")
+                self.logger.debug("Lost heartbeat. Discard client")
                 self.discard(client)
                 break
             sleep(1)
