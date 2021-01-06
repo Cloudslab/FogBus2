@@ -48,9 +48,7 @@ class FogMaster:
                     client = self.registry.register(
                         client,
                         messageDecrypted)
-                    self.__serveClient(
-                        client,
-                        messageDecrypted)
+                    self.__serveClient(client)
                     break
             except (Empty, KeyError):
                 self.dataManager.discard(client)
@@ -60,7 +58,7 @@ class FogMaster:
             except WorkerCredentialNotValid:
                 break
 
-    def __serveClient(self, client: Client, message: dict):
+    def __serveClient(self, client: Client):
         message = None
         if isinstance(client, Worker):
             message = {'type': 'workerID', 'workerID': client.workerID}
@@ -102,12 +100,26 @@ class FogMaster:
         if isinstance(client, User):
             if message['type'] == 'submitData':
                 self.__handleData(client, message)
-        elif isinstance(client, Worker):
+            return
+        if isinstance(client, Worker):
             if message['type'] == 'submitResult' \
                     and client.socketID in self.registry.clientBySocketID:
                 worker = self.registry.clientBySocketID[client.socketID]
                 if isinstance(worker, Worker):
                     self.__handleResult(worker, message)
+                return
+            if message['type'] == 'lookup':
+                token = message['token']
+                if token in self.registry.workerByToken:
+                    worker = self.registry.workerByToken[token]
+                    message = {'type': 'workerInfo',
+                               'id': worker.workerID,
+                               'ip': worker.ip,
+                               'port': worker.port}
+                    client.sendingQueue.put(Message.encrypt(message))
+                    return
+
+                self.__discardClient(client)
 
     def __handleData(self, user: User, message: dict):
 

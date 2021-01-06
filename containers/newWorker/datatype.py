@@ -156,7 +156,7 @@ class Worker(DataManagerClient):
 
 class DataManagerServer:
 
-    def __init__(self, host: str, port: int, logLevel=logging.DEBUG):
+    def __init__(self, host: str, port: int = None, logLevel=logging.DEBUG):
         self.host: str = host
         self.port: int = port
         self.__currentSocketID = 0
@@ -176,7 +176,11 @@ class DataManagerServer:
         return socketID
 
     def __serve(self):
-        self.__serverSocket.bind((self.host, self.port))
+        if self.port is None:
+            self.__serverSocket.bind((self.host, 0))
+            self.port = self.__serverSocket.getsockname()[1]
+        else:
+            self.__serverSocket.bind((self.host, self.port))
         self.__serverSocket.listen()
         self.logger.info('[*] Serves at %s:%d over tcp.', self.host, self.port)
         while True:
@@ -286,19 +290,19 @@ class Broker:
             masterIP: str,
             masterPort: int,
             thisIP: str,
-            thisPort: int,
             app: ApplicationUserSide = None,
             userID: int = None,
             appID: int = None,
             token: str = None,
+            nextWorkerToken: str = None,
             logLevel=logging.DEBUG):
         self.logger = get_logger('Worker-Broker', logLevel)
         self.masterIP = masterIP
         self.masterPort = masterPort
         self.thisIP = thisIP
-        self.thisPort = thisPort
         self.app: ApplicationUserSide = app
         self.token: str = token
+        self.nextWorkerToken: str = nextWorkerToken
         self.userID: int = userID
         self.appID: int = appID
         self.workerID = None
@@ -309,11 +313,11 @@ class Broker:
             port=self.masterPort,
             logLevel=self.logger.level
         )
-
+        self.nexWorker = None
         self.workers: List[Worker] = []
         self.service: DataManagerServer = DataManagerServer(
-            host=self.thisIP,
-            port=thisPort)
+            host=self.thisIP)
+        self.thisPort = self.service.port
 
     def run(self):
         if self.app is not None:
@@ -346,6 +350,10 @@ class Broker:
         self.logger.info("[*] Registering ...")
         while self.workerID is None:
             pass
+        if self.nextWorkerToken is not None:
+            message = {'type': 'lookup',
+                       'token': self.nextWorkerToken}
+            self.master.sendingQueue.put(Message.encrypt(message))
         self.logger.info("[*] Registered with workerID-%d", self.workerID)
 
     @staticmethod
@@ -360,20 +368,39 @@ class Broker:
             if message['type'] == 'workerID':
                 self.workerID = message['workerID']
             elif message['type'] == 'runWorker':
+                print(message)
                 userID = message['userID']
                 appID = message['appID']
                 token = message['token']
+                nextWorkerToken = message['nextWorkerToken']
                 self.__runWorker(
                     userID=userID,
                     appID=appID,
-                    token=token)
+                    token=token,
+                    nextWorkerToken=nextWorkerToken,
+                )
             elif message['type'] == 'data':
                 appID = message['appIDs'][0]
                 self.messageByAppID[appID].put(message)
 
+            elif message['type'] == 'workerInfo':
+                nextWorkerID = message['id']
+                nextWorkerIP = message['ip']
+                nextWorkerPort = message['port']
+                self.nextWorkerToken = DataManagerClient(
+                    name='nextWorkerIP-WorkerID-%d' % nextWorkerID,
+                    host=nextWorkerIP,
+                    port=nextWorkerPort
+                )
+                self.nextWorkerToken.link()
+
     @staticmethod
-    def __runWorker(userID: int, appID: int, token: str):
-        os.system("python worker.py %d %d %s > /dev/null 2>&1 &" % (userID, appID, token))
+    def __runWorker(userID: int, appID: int, token: str, nextWorkerToken: str):
+        threading.Thread(
+            target=os.system,
+            args=("python worker.py %d %d %s %s" % (userID, appID, token, nextWorkerToken),)
+        ).start()
+        # os.system("python worker.py %d %d %s %s" % (userID, appID, token, nextWorkerToken))
 
     def __runApp(self, app: ApplicationUserSide):
         self.logger.info('[*] AppID-%d-{%s} is serving ...', app.appID, app.appName)

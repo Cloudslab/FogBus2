@@ -68,6 +68,9 @@ class Worker(Client):
 
         self.workerID: int = workerID
         self.specs: NodeSpecs = specs
+        self.token = None
+        self.ip = None
+        self.port = None
         if userByAppID is None:
             self.userByAppID: dict[int, User] = {}
 

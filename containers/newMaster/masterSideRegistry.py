@@ -25,6 +25,7 @@ class Registry:
         self.users: dict[int, User] = {}
         self.clientBySocketID: dict[int, Client] = {}
         self.workerBrokerQueue: Queue[Worker] = Queue()
+        self.workerByToken: dict[str, Worker] = {}
 
         self.workersQueueByAppID: dict[int, Queue[Worker]] = defaultdict(Queue[Worker])
         self.logger = get_logger('Master-Registry', logLevel)
@@ -68,6 +69,10 @@ class Registry:
                     worker,
                     reason='credential is not valid')
                 raise WorkerCredentialNotValid
+            worker.ip = message['ip']
+            worker.port = message['port']
+            worker.token = token
+            self.workerByToken[worker.token] = worker
             self.logger.info("Worker-%d added. %s", workerID, worker.specs.info())
         else:
             self.workerBrokerQueue.put(worker)
@@ -130,14 +135,20 @@ class Registry:
 
     def __assignWorkerForUser(self, user: User):
         for appID in user.appIDs:
-            worker = self.workerBrokerQueue.get(timeout=1)
             token = token_urlsafe(16)
             user.appIDTokenMap[appID] = token
+
+        for i, appID in enumerate(user.appIDs):
+            worker = self.workerBrokerQueue.get(timeout=1)
+            token = user.appIDTokenMap[appID]
+            nextWorkerToken = None if i + 1 == len(user.appIDs) \
+                else user.appIDTokenMap[user.appIDs[i + 1]]
             message = {
                 'type': 'runWorker',
                 'userID': user.userID,
                 'appID': appID,
-                'token': token}
+                'token': token,
+                'nextWorkerToken': nextWorkerToken}
             print(message)
             worker.sendingQueue.put(Message.encrypt(message))
             self.workerBrokerQueue.put(worker)
@@ -171,7 +182,10 @@ class Registry:
             del self.users[client.userID]
         elif isinstance(client, Worker) \
                 and client.workerID in self.workers:
-            del self.users[client.workerID]
+            del self.workers[client.workerID]
+            if client.token is not None \
+                    and client.token in self.workerByToken:
+                del self.workerByToken[client.token]
         if client.socketID in self.clientBySocketID:
             del self.clientBySocketID[client.socketID]
         sleep(1)

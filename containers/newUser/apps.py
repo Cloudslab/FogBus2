@@ -9,7 +9,7 @@ class FaceDetection(ApplicationUserSide):
 
     def run(self):
         self.appName = 'FaceDetection'
-        self.broker.run()
+        self.broker.run(mode='sequential')
 
         threading.Thread(target=self.__sendData).start()
         threading.Thread(target=self.__receiveResult).start()
