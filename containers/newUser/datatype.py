@@ -114,11 +114,16 @@ class Broker:
                 self.resultQueue.put(message)
                 message['time'].append(time() - message['time'][0])
                 print(message['time'])
-            elif message['type'] == 'refused':
+            elif message['type'] == 'close':
                 self.logger.warning(message['reason'])
                 os._exit(0)
 
-    def submit(self, data: Any, dataID: int, mode: str, appIDs: List[int]) -> NoReturn:
+    def submit(
+            self,
+            data: Any,
+            dataID: int,
+            mode: str,
+            appIDs: List[int]) -> NoReturn:
         message = {'time': [time()],
                    'type': 'submitData',
                    'mode': mode,

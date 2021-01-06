@@ -1,8 +1,7 @@
-import logging
 import threading
+import logging
 
 from logger import get_logger
-from concurrent.futures import ThreadPoolExecutor
 from masterSideRegistry import Registry
 from taskManager import TaskManager
 from dataManagerServer import DataManagerServer
@@ -11,7 +10,6 @@ from queue import Empty
 from datatype import Client, Worker, User, NodeSpecs
 from time import time
 from exceptions import *
-from queue import Queue
 
 
 class FogMaster:
@@ -82,17 +80,17 @@ class FogMaster:
 
     def __discardClient(self, client: Client):
         if isinstance(client, User):
-            for _, appID in client.workerByAppID.keys():
-                worker = client.workerByAppID[appID]
-                self.registry.removeClient(worker, reason='Disconnected')
-            self.dataManager.discard(client)
-            self.logger.debug("UserID-%d disconnected", client.userID)
-        if isinstance(client, Worker):
-            for _, appID in client.userByAppID.keys():
-                user = client.userByAppID[appID]
-                self.registry.removeClient(user, reason='Disconnected')
-            self.dataManager.discard(client)
-            self.logger.debug("WorkerID-%d disconnected", client.workerID)
+            for appID, worker in client.workerByAppID.items():
+                self.registry.removeClient(worker)
+            self.logger.debug(
+                "UserID-%d disconnected",
+                client.userID)
+        elif isinstance(client, Worker):
+            self.logger.debug(
+                "WorkerID-%d disconnected",
+                client.workerID)
+        self.registry.removeClient(client)
+        self.dataManager.discard(client)
 
     def __handleMessage(self, client: Client, message: bytes):
         message = Message.decrypt(message)
@@ -118,8 +116,6 @@ class FogMaster:
                                'port': worker.port}
                     client.sendingQueue.put(Message.encrypt(message))
                     return
-
-                self.__discardClient(client)
 
     def __handleData(self, user: User, message: dict):
 

@@ -67,9 +67,9 @@ class DataManagerClient:
             threading.Thread(target=self.__sender).start()
             threading.Thread(target=self.__keepAlive).start()
 
-            self.logger.info("[*] %s linked to %s:%d over tcp.", self.name, self.host, self.port)
+            self.logger.info("[*] Linked to %s at %s:%d over tcp.", self.name, self.host, self.port)
         else:
-            self.logger.info("[*] %s linked.", self.name)
+            self.logger.info("[*] Linked to %s.", self.name)
 
     def read(self) -> Any:
         data = None
@@ -313,7 +313,7 @@ class Broker:
             port=self.masterPort,
             logLevel=self.logger.level
         )
-        self.nexWorker = None
+        self.nextWorker = None
         self.workers: List[Worker] = []
         self.service: DataManagerServer = DataManagerServer(
             host=self.thisIP)
@@ -379,6 +379,11 @@ class Broker:
                     token=token,
                     nextWorkerToken=nextWorkerToken,
                 )
+            elif message['type'] == 'close':
+                self.logger.warning(
+                    'Master disconnected because %s',
+                    message['reason'])
+                os._exit(0)
             elif message['type'] == 'data':
                 appID = message['appIDs'][0]
                 self.messageByAppID[appID].put(message)
@@ -387,12 +392,12 @@ class Broker:
                 nextWorkerID = message['id']
                 nextWorkerIP = message['ip']
                 nextWorkerPort = message['port']
-                self.nextWorkerToken = DataManagerClient(
-                    name='nextWorkerIP-WorkerID-%d' % nextWorkerID,
+                self.nextWorker = DataManagerClient(
+                    name='nextWorker-WorkerID-%d' % nextWorkerID,
                     host=nextWorkerIP,
                     port=nextWorkerPort
                 )
-                self.nextWorkerToken.link()
+                self.nextWorker.link()
 
     @staticmethod
     def __runWorker(userID: int, appID: int, token: str, nextWorkerToken: str):

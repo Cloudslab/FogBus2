@@ -59,9 +59,9 @@ class FaceAndEyeDetection(ApplicationUserSide):
         self.appName = 'FaceAndEyeDetection'
         self.broker.run(mode='sequential')
 
-        threading.Thread(target=self.__sendData).start()
-        threading.Thread(target=self.__receiveResult).start()
-        threading.Thread(target=self.__handleResult).start()
+        # threading.Thread(target=self.__sendData).start()
+        # threading.Thread(target=self.__receiveResult).start()
+        # threading.Thread(target=self.__handleResult).start()
 
     def __sendData(self):
         self.dataIDSubmittedQueue = Queue(1)

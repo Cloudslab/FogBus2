@@ -58,8 +58,7 @@ class Worker(Client):
             sendingQueue: Queue[bytes],
             receivingQueue: Queue[bytes],
             workerID: int,
-            specs: NodeSpecs,
-            userByAppID: dict[int, Client] = None):
+            specs: NodeSpecs):
         super(Worker, self).__init__(
             socketID=socketID,
             socket_=socket_,
@@ -71,8 +70,6 @@ class Worker(Client):
         self.token = None
         self.ip = None
         self.port = None
-        if userByAppID is None:
-            self.userByAppID: dict[int, User] = {}
 
 
 class User(Client):

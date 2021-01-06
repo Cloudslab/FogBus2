@@ -5,7 +5,7 @@ import socket
 from logger import get_logger
 from queue import Queue
 from typing import NoReturn
-from datatype import Client
+from datatype import Client, User, Worker
 from message import Message
 from time import time, sleep
 
@@ -66,19 +66,22 @@ class DataManagerServer:
     def discard(self, client: Client):
         if self.hasClient(client):
             message = {
-                'type': 'refused',
-                'reason': 'timeout'
+                'type': 'close',
+                'reason': 'disconnect'
             }
             client.sendingQueue.put(Message.encrypt(message))
-            self.__sockets[client.socketID].active = False
-            self.__sockets[client.socketID].socket.close()
+            if isinstance(client, User):
+                for appID, worker in client.workerByAppID.items():
+                    self.discard(worker)
+            client.active = False
+            client.socket.close()
             del self.__sockets[client.socketID]
+            del client
 
     def __keepAlive(self, client: Client):
         while True:
             client.sendingQueue.put(b'alive')
             if time() - client.activeTime > 2:
-                self.logger.debug("Lost heartbeat. Discard client")
                 self.discard(client)
                 break
             sleep(1)
@@ -109,14 +112,12 @@ class DataManagerServer:
 
     @staticmethod
     def __sender(client: Client):
-        while True:
-
-            try:
+        try:
+            while True:
                 data = client.sendingQueue.get()
                 client.socket.sendall(struct.pack(">L", len(data)) + data)
-            except OSError:
-                client.active = False
-                break
+        except OSError:
+            client.active = False
 
 
 if __name__ == '__main__':

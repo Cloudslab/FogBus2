@@ -149,34 +149,25 @@ class Registry:
                 'appID': appID,
                 'token': token,
                 'nextWorkerToken': nextWorkerToken}
-            print(message)
             worker.sendingQueue.put(Message.encrypt(message))
             self.workerBrokerQueue.put(worker)
         self.logger.debug('Waiting for workers of userID-%d ...', user.userID)
         timestamp = time()
-        while time() - timestamp < 5:
+        while time() - timestamp < 5 and not user.isReady:
             sleep(0.1)
-        message = {}
         if user.isReady:
-            message['type'] = 'registration'
-            message['userID'] = user.userID
+            message = {
+                'type': 'registration',
+                'userID': user.userID}
             self.users[user.userID] = user
             self.clientBySocketID[user.socketID] = user
             user.sendingQueue.put(Message.encrypt(message))
             self.logger.info("User-%d added.", user.userID)
         else:
             self.logger.info("Cannot run workers for User-%d.", user.userID)
-            self.removeClient(user, reason='No Enough Available Workers')
+            self.removeClient(user)
 
-    def removeClient(self, client: Client, reason: str = None):
-        message = {
-            'type': 'refused',
-            'reason': reason
-        }
-
-        client.sendingQueue.put(Message.encrypt(message))
-        client.socket.close()
-
+    def removeClient(self, client: Client):
         if isinstance(client, User) \
                 and client.userID in self.users:
             del self.users[client.userID]
@@ -188,5 +179,3 @@ class Registry:
                 del self.workerByToken[client.token]
         if client.socketID in self.clientBySocketID:
             del self.clientBySocketID[client.socketID]
-        sleep(1)
-        del client
