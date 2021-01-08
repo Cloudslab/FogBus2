@@ -119,7 +119,7 @@ class ColorTracking(ApplicationUserSide):
 
     def run(self):
         self.appName = 'ColorTracking'
-        self.broker.run()
+        self.broker.run(mode='sequential')
         threading.Thread(target=self.__receiveResult).start()
 
         cv2.namedWindow('Trackbars')
