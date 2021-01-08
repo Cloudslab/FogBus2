@@ -67,9 +67,15 @@ class DataManagerClient:
         else:
             self.logger.info("[*] Linked to %s.", self.name)
 
-        threading.Thread(target=self.__receiver).start()
-        threading.Thread(target=self.__sender).start()
-        threading.Thread(target=self.__keepAlive).start()
+        sender = threading.Event()
+        receiver = threading.Event()
+        keepAlive = threading.Event()
+        threading.Thread(target=self.__receiver, args=(sender,)).start()
+        sender.wait()
+        threading.Thread(target=self.__sender, args=(receiver,)).start()
+        receiver.wait()
+        threading.Thread(target=self.__keepAlive, args=(keepAlive,)).start()
+        keepAlive.wait()
 
     def read(self) -> Any:
         data = None
@@ -85,7 +91,8 @@ class DataManagerClient:
     def updateActiveTime(self):
         self.activeTime = time()
 
-    def __keepAlive(self):
+    def __keepAlive(self, event: threading.Event):
+        event.set()
         while True:
             self.sendingQueue.put(b'alive')
             if time() - self.activeTime > 2:
@@ -96,7 +103,8 @@ class DataManagerClient:
         self.logger.warning("Master disconnected")
         os._exit(0)
 
-    def __receiver(self):
+    def __receiver(self, event: threading.Event):
+        event.set()
         buffer = b''
         payloadSize = struct.calcsize('>L')
         try:
@@ -119,7 +127,8 @@ class DataManagerClient:
         except OSError:
             self.logger.warning("Receiver disconnected.")
 
-    def __sender(self):
+    def __sender(self, event: threading.Event):
+        event.set()
         try:
             while True:
                 data = self.sendingQueue.get()
@@ -156,9 +165,10 @@ class Worker(DataManagerClient):
 
 class DataManagerServer:
 
-    def __init__(self, host: str, port: int = None, logLevel=logging.DEBUG):
+    def __init__(self, host: str, port: int = None, receivingQueue: Queue = Queue(), logLevel=logging.DEBUG):
         self.host: str = host
         self.port: int = port
+        self.receivingQueue: Queue = receivingQueue
         self.__currentSocketID = 0
         self.__lockSocketID: threading.Lock = threading.Lock()
         self.unregisteredClients: Queue[Worker] = Queue()
@@ -192,7 +202,7 @@ class DataManagerServer:
             worker = Worker(
                 socketID=socketID,
                 socket_=clientSocket,
-                receivingQueue=Queue(),
+                receivingQueue=self.receivingQueue,
                 sendingQueue=Queue())
             worker.link()
             self.unregisteredClients.put(worker)
@@ -318,7 +328,9 @@ class Broker:
         self.nextWorker = None
         self.workers: List[Worker] = []
         self.service: DataManagerServer = DataManagerServer(
-            host=self.thisIP)
+            host=self.thisIP,
+            receivingQueue=self.master.receivingQueue
+        )
         self.thisPort = self.service.port
 
     def run(self):
@@ -329,6 +341,11 @@ class Broker:
         self.master.link()
         threading.Thread(target=self.__receivedMessageHandler).start()
         self.__register()
+        if self.app is not None:
+            threading.Thread(
+                target=self.__runApp,
+                args=(self.app,)
+            ).start()
 
     def __handleClients(self):
 
@@ -371,7 +388,6 @@ class Broker:
             if message['type'] == 'workerID':
                 self.workerID = message['workerID']
             elif message['type'] == 'runWorker':
-                print(message)
                 userID = message['userID']
                 appID = message['appID']
                 token = message['token']
@@ -417,10 +433,10 @@ class Broker:
             self.__executeApp(app, message)
 
     def __executeApp(self, app: ApplicationUserSide, message) -> NoReturn:
+
         self.logger.debug('Executing appID-%d ...', app.appID)
         data = message['data']
         result = app.process(data)
-        message['type'] = 'submitResult'
         message['workerID'] = self.workerID
         message['appID'] = app.appID
         message['appIDs'] = message['appIDs'][1:]
@@ -428,13 +444,19 @@ class Broker:
         t = time() - message['time'][0]
         message['time'].append(t)
 
-        if len(message['appIDs']):
+        if self.nextWorker is not None:
+            message['type'] = 'data'
             message['data'] = result
+            message['info'] = 'forward'
+            self.__sendTo(self.nextWorker, message)
+            self.logger.debug('Executed appID-%d and send to next Worker', app.appID)
         else:
+            message['type'] = 'submitResult'
+
             del message['data']
             message['result'] = result
-        self.__sendTo(self.master, message)
-        self.logger.debug('Executed appID-%d and returned the result', app.appID)
+            self.__sendTo(self.master, message)
+            self.logger.debug('Executed appID-%d and returned the result', app.appID)
 
 
 if __name__ == '__main__':

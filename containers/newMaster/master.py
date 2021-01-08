@@ -142,15 +142,11 @@ class FogMaster:
     def __handleResult(self, worker: Worker, message: dict):
         # TODO: use socket id to check the ownership of this task
         appID = message['appID']
-        user = worker.userByAppID[appID]
-        if len(message['appIDs']):
-            message['type'] = 'data'
-            nextWorker = user.workerByAppID[message['appIDs'][0]]
-            self.dataManager.writeData(nextWorker, Message.encrypt(message))
-        else:
-            message['type'] = 'result'
-            self.dataManager.writeData(user, Message.encrypt(message))
-            self.registry.workerWait(worker, appID=appID)
+        userID = message['userID']
+        user = self.registry.users[userID]
+        message['type'] = 'result'
+        self.dataManager.writeData(user, Message.encrypt(message))
+        self.registry.workerWait(worker, appID=appID)
 
 
 if __name__ == '__main__':
