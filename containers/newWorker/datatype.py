@@ -63,13 +63,13 @@ class DataManagerClient:
             self.socket: socket.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self.socket.connect((self.host, self.port))
 
-            threading.Thread(target=self.__receiver).start()
-            threading.Thread(target=self.__sender).start()
-            threading.Thread(target=self.__keepAlive).start()
-
             self.logger.info("[*] Linked to %s at %s:%d over tcp.", self.name, self.host, self.port)
         else:
             self.logger.info("[*] Linked to %s.", self.name)
+
+        threading.Thread(target=self.__receiver).start()
+        threading.Thread(target=self.__sender).start()
+        threading.Thread(target=self.__keepAlive).start()
 
     def read(self) -> Any:
         data = None
@@ -167,6 +167,8 @@ class DataManagerServer:
 
     def run(self):
         threading.Thread(target=self.__serve).start()
+        while self.port is None:
+            pass
 
     def __newSocketID(self) -> int:
         self.__lockSocketID.acquire()
@@ -322,6 +324,7 @@ class Broker:
     def run(self):
         if self.app is not None:
             self.service.run()
+            self.thisPort = self.service.port
 
         self.master.link()
         threading.Thread(target=self.__receivedMessageHandler).start()
