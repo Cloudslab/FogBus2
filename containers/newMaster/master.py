@@ -3,7 +3,6 @@ import logging
 
 from logger import get_logger
 from masterSideRegistry import Registry
-from taskManager import TaskManager
 from dataManagerServer import DataManagerServer
 from message import Message
 from queue import Empty
@@ -22,7 +21,6 @@ class FogMaster:
             self.host,
             self.port,
             self.logger.level)
-        self.taskManager: TaskManager = TaskManager(logLevel=logLevel)
         self.registry: Registry = Registry(logLevel=logLevel)
 
     def run(self):
