@@ -229,7 +229,7 @@ class VideoOCR(ApplicationUserSide):
 
         result = self.broker.resultQueue.get()
 
-        print('[*] The text is:\r\n', result['result'])
+        print(result['result'], '\r\n [*] The text is at above.')
         os._exit(0)
 
     @staticmethod
