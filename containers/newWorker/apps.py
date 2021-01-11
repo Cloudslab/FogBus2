@@ -164,7 +164,6 @@ class OCR(ApplicationUserSide):
     def process(self, inputData):
         (frame, isLastFrame) = inputData
         if isLastFrame:
-            print(self.text)
             return self.text
         currText = pytesseract.image_to_string(frame)
         if self.preText is None:
