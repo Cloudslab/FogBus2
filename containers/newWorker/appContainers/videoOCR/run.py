@@ -18,7 +18,7 @@ def get_pHash(img):
     matrixOriginal[:hight, :width] = imgGray
 
     matrix = cv2.dct(cv2.dct(matrixOriginal))
-    matrix.resize(hashLen, hashLen)
+    matrix.__resize(hashLen, hashLen)
     matrixFlatten = matrix.flatten()
 
     averageValue = sum(matrixFlatten) * 1. / len(matrixFlatten)

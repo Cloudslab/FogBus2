@@ -94,8 +94,9 @@ class DataManagerClient:
     def __keepAlive(self, event: threading.Event):
         event.set()
         while True:
-            self.sendingQueue.put(b'alive')
-            if time() - self.activeTime > 2:
+            if not self.sendingQueue.qsize():
+                self.sendingQueue.put(b'alive')
+            if time() - self.activeTime > 5:
                 if isinstance(self.socket, socket.socket):
                     self.socket.close()
                 self.isConnected = False
@@ -343,6 +344,11 @@ class Broker:
         threading.Thread(target=self.__receivedMessageHandler).start()
         self.__register()
         if self.app is not None:
+            self.logger.info("Waiting for the next Worker")
+            while len(self.nextWorkerToken) > 10 \
+                    and self.nextWorker is None:
+                pass
+            self.logger.info("Connected to the next Worker")
             threading.Thread(
                 target=self.__runApp,
                 args=(self.app,)

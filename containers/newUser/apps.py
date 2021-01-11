@@ -1,4 +1,5 @@
 import cv2
+import os
 import threading
 import numpy as np
 from datatype import ApplicationUserSide
@@ -190,13 +191,27 @@ class ColorTracking(ApplicationUserSide):
 
 class VideoOCR(ApplicationUserSide):
 
-    def run(self):
-        self.appName = 'VideoOCR'
-        self.broker.run(mode='sequential')
-
+    def __preprocess(self, q: Queue):
         while True:
             ret, frame = self.capture.read()
             if not ret:
+                break
+            frame = self.__resize(frame)
+            q.put(frame)
+        q.put(None)
+
+    def run(self):
+        self.appName = 'VideoOCR'
+        self.broker.run(mode='sequential')
+        framesQueue = Queue()
+        threading.Thread(
+            target=self.__preprocess,
+            args=(framesQueue,)
+        ).start()
+        print("[*] Sending frames ...")
+        while True:
+            frame = framesQueue.get()
+            if frame is None:
                 break
             inputData = (frame, False)
             self.broker.submit(
@@ -204,7 +219,8 @@ class VideoOCR(ApplicationUserSide):
                 dataID=-1,
                 mode='sequential'
             )
-        inputData = (frame, True)
+        print("[*] Sent all the frames and waiting for result ...")
+        inputData = (None, True)
         self.broker.submit(
             inputData,
             dataID=-1,
@@ -212,4 +228,12 @@ class VideoOCR(ApplicationUserSide):
         )
 
         result = self.broker.resultQueue.get()
-        print(result)
+
+        print('[*] The text is:\r\n', result['result'])
+        os._exit(0)
+
+    @staticmethod
+    def __resize(img):
+        width = 540
+        factor = width / img.shape[1]
+        return cv2.resize(img, (width, round(img.shape[0] * factor)))

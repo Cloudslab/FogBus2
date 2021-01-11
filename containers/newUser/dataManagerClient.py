@@ -47,9 +47,21 @@ class DataManagerClient:
                 and self.port is not None:
             self.socket: socket.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self.socket.connect((self.host, self.port))
-            threading.Thread(target=self.__sender).start()
-            threading.Thread(target=self.__receiver).start()
-            threading.Thread(target=self.__keepAlive).start()
+            sender = threading.Event()
+            threading.Thread(
+                target=self.__sender,
+                args=(sender,)).start()
+            sender.wait()
+            receiver = threading.Event()
+            threading.Thread(
+                target=self.__receiver,
+                args=(receiver,)).start()
+            receiver.wait()
+            keepAlive = threading.Event()
+            threading.Thread(
+                target=self.__keepAlive,
+                args=(keepAlive,)).start()
+            keepAlive.wait()
             self.isConnected = True
             self.activeTime = time()
 
@@ -68,10 +80,12 @@ class DataManagerClient:
     def write(self, data) -> NoReturn:
         self.sendingQueue.put(data)
 
-    def __keepAlive(self):
+    def __keepAlive(self, event: threading.Event):
+        event.set()
         while True:
-            self.sendingQueue.put(b'alive')
-            if time() - self.activeTime > 2:
+            if not self.sendingQueue.qsize():
+                self.sendingQueue.put(b'alive')
+            if time() - self.activeTime > 5:
                 self.socket.close()
                 self.isConnected = False
                 self.logger.warning("Socket disconnected")
@@ -80,7 +94,8 @@ class DataManagerClient:
         self.logger.warning("Master disconnected.")
         os._exit(0)
 
-    def __receiver(self):
+    def __receiver(self, event: threading.Event):
+        event.set()
         buffer = b''
         payloadSize = struct.calcsize('>L')
 
@@ -104,8 +119,8 @@ class DataManagerClient:
         except OSError:
             self.logger.warning("Receiver disconnected.")
 
-    def __sender(self):
-
+    def __sender(self, event: threading.Event):
+        event.set()
         try:
             while True:
                 data = self.sendingQueue.get()

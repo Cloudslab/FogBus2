@@ -82,7 +82,6 @@ class BlurAndPHash(ApplicationUserSide):
         self.thresholdDiffStop = 120
         self.thresholdDiffPre = 25
         self.hashLen = 32
-        self.frames = []
         self.preStopPHash = None
         self.prePHash = None
         self.n = 0
@@ -93,14 +92,13 @@ class BlurAndPHash(ApplicationUserSide):
             return None, isLastFrame
 
         currPHash = self.getPHash(frame)
-        if len(self.frames) == 0:
+        if currPHash is None:
+            return None
+
+        if self.preStopPHash is None:
             self.preStopPHash = currPHash
             self.prePHash = currPHash
             return None
-
-        self.frames.append(
-            (frame, currPHash)
-        )
 
         diffStop = self.hamDistance(self.preStopPHash, currPHash)
         diffPre = self.hamDistance(self.prePHash, currPHash)
@@ -122,7 +120,6 @@ class BlurAndPHash(ApplicationUserSide):
         laplacian = cv2.Laplacian(img, cv2.CV_64F).var()
         if laplacian <= self.thresholdLaplacian:
             return pHash
-
         imgGray = cv2.resize(
             cv2.cvtColor(img, cv2.COLOR_RGB2GRAY),
             (self.hashLen, self.hashLen),
@@ -167,6 +164,7 @@ class OCR(ApplicationUserSide):
     def process(self, inputData):
         (frame, isLastFrame) = inputData
         if isLastFrame:
+            print(self.text)
             return self.text
         currText = pytesseract.image_to_string(frame)
         if self.preText is None:
@@ -177,6 +175,7 @@ class OCR(ApplicationUserSide):
         if editDistance <= self.thresholdEditDistance:
             return None
         self.text += currText
+        self.preText = currText
 
         return None
 

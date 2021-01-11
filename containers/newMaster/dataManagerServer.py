@@ -80,8 +80,10 @@ class DataManagerServer:
 
     def __keepAlive(self, client: Client):
         while True:
-            client.sendingQueue.put(b'alive')
-            if time() - client.activeTime > 2:
+
+            if not client.sendingQueue.qsize():
+                client.sendingQueue.put(b'alive')
+            if time() - client.activeTime > 5:
                 self.discard(client)
                 break
             sleep(1)
