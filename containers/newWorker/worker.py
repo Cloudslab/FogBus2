@@ -4,7 +4,6 @@ from apps import *
 from datatype import Broker
 
 if __name__ == '__main__':
-    apps = [TestApp(0), FaceDetection(1), EyeDetection(2), ColorTracking(3)]
     app = None
     userID = None
     appID = None
@@ -15,7 +14,19 @@ if __name__ == '__main__':
         appID = int(sys.argv[2])
         token = sys.argv[3]
         nextWorkerToken = sys.argv[4]
-        app = apps[appID]
+
+    if appID == 0:
+        app = TestApp(0)
+    elif appID == 1:
+        app = FaceDetection()
+    elif appID == 2:
+        app = EyeDetection()
+    elif appID == 3:
+        app = ColorTracking()
+    elif appID == 4:
+        app = BlurAndPHash()
+    elif appID == 5:
+        app = OCR()
 
     broker = Broker(
         masterIP='127.0.0.1',

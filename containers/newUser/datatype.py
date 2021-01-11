@@ -122,12 +122,11 @@ class Broker:
             self,
             data: Any,
             dataID: int,
-            mode: str,
-            appIDs: List[int]) -> NoReturn:
+            mode: str) -> NoReturn:
         message = {'time': [time()],
                    'type': 'submitData',
                    'mode': mode,
-                   'appIDs': appIDs,
+                   'appIDs': self.appIDs,
                    'data': data,
                    'dataID': dataID}
         # print('submit', time())

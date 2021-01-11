@@ -28,8 +28,7 @@ class FaceDetection(ApplicationUserSide):
             dataID = self.createDataFrame(frame)
             self.broker.submit(data=frame,
                                dataID=dataID,
-                               mode='sequential',
-                               appIDs=[1])
+                               mode='sequential')
             self.dataIDSubmittedQueue.put(dataID)
 
         self.capture.release()
@@ -76,8 +75,7 @@ class FaceAndEyeDetection(ApplicationUserSide):
             dataID = self.createDataFrame(frame)
             self.broker.submit(data=frame,
                                dataID=dataID,
-                               mode='sequential',
-                               appIDs=[1, 2])
+                               mode='sequential')
             self.dataIDSubmittedQueue.put(dataID)
 
         self.capture.release()
@@ -173,8 +171,7 @@ class ColorTracking(ApplicationUserSide):
             self.broker.submit(
                 inputData,
                 dataID,
-                mode='sequential',
-                appIDs=[3]
+                mode='sequential'
             )
             resultData = self.result[dataID].get()
             (FGmaskComp, frame) = resultData
@@ -189,3 +186,30 @@ class ColorTracking(ApplicationUserSide):
                 break
         self.capture.release()
         cv2.destroyAllWindows()
+
+
+class VideoOCR(ApplicationUserSide):
+
+    def run(self):
+        self.appName = 'VideoOCR'
+        self.broker.run(mode='sequential')
+
+        while True:
+            ret, frame = self.capture.read()
+            if not ret:
+                break
+            inputData = (frame, False)
+            self.broker.submit(
+                inputData,
+                dataID=-1,
+                mode='sequential'
+            )
+        inputData = (frame, True)
+        self.broker.submit(
+            inputData,
+            dataID=-1,
+            mode='sequential',
+        )
+
+        result = self.broker.resultQueue.get()
+        print(result)

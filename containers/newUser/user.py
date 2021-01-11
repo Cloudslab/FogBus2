@@ -2,7 +2,7 @@ import logging
 import sys
 
 from datatype import Broker
-from apps import FaceDetection, FaceAndEyeDetection, ColorTracking
+from apps import FaceDetection, FaceAndEyeDetection, ColorTracking, VideoOCR
 
 if __name__ == "__main__":
 
@@ -33,4 +33,13 @@ if __name__ == "__main__":
             appIDs=[3],
             logLevel=logging.DEBUG)
         app = ColorTracking(3, broker, videoPath)
+        app.run()
+    elif appID == 4:
+
+        broker = Broker(
+            masterIP='127.0.0.1',
+            masterPort=5000,
+            appIDs=[4, 5],
+            logLevel=logging.DEBUG)
+        app = VideoOCR(4, broker, videoPath)
         app.run()

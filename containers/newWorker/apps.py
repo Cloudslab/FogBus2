@@ -1,5 +1,7 @@
 import cv2
-
+import pytesseract
+import editdistance
+import numpy as np
 from datatype import ApplicationUserSide
 
 
@@ -13,8 +15,8 @@ class TestApp(ApplicationUserSide):
 
 class FaceDetection(ApplicationUserSide):
 
-    def __init__(self, appID: int):
-        super().__init__(appID, 'FaceDetection')
+    def __init__(self):
+        super().__init__(appID=1, appName='FaceDetection')
         self.face_cascade = cv2.CascadeClassifier('./cascade/haar-face.xml')
 
     def process(self, inputData):
@@ -30,8 +32,8 @@ class FaceDetection(ApplicationUserSide):
 
 class EyeDetection(ApplicationUserSide):
 
-    def __init__(self, appID: int):
-        super().__init__(appID, 'EyeDetection')
+    def __init__(self):
+        super().__init__(appID=2, appName='EyeDetection')
         self.eye_cascade = cv2.CascadeClassifier('./cascade/haar-eye.xml')
 
     def process(self, inputData):
@@ -43,8 +45,8 @@ class EyeDetection(ApplicationUserSide):
 
 
 class ColorTracking(ApplicationUserSide):
-    def __init__(self, appID: int):
-        super().__init__(appID, 'ColorTracking')
+    def __init__(self):
+        super().__init__(appID=3, appName='ColorTracking')
 
     def process(self, inputData):
 
@@ -71,3 +73,113 @@ class ColorTracking(ApplicationUserSide):
                 cv2.rectangle(frame, (x, y), (x + w, y + h), (255, 0, 0), 3)
 
         return FGmaskComp, frame
+
+
+class BlurAndPHash(ApplicationUserSide):
+    def __init__(self):
+        super().__init__(appID=4, appName='Blur')
+        self.thresholdLaplacian = 120
+        self.thresholdDiffStop = 120
+        self.thresholdDiffPre = 25
+        self.hashLen = 32
+        self.frames = []
+        self.preStopPHash = None
+        self.prePHash = None
+        self.n = 0
+
+    def process(self, inputData):
+        frame, isLastFrame = inputData
+        if isLastFrame:
+            return None, isLastFrame
+
+        currPHash = self.getPHash(frame)
+        if len(self.frames) == 0:
+            self.preStopPHash = currPHash
+            self.prePHash = currPHash
+            return None
+
+        self.frames.append(
+            (frame, currPHash)
+        )
+
+        diffStop = self.hamDistance(self.preStopPHash, currPHash)
+        diffPre = self.hamDistance(self.prePHash, currPHash)
+        self.prePHash = currPHash
+
+        if diffStop >= self.thresholdDiffStop \
+                or diffPre <= self.thresholdDiffPre:
+            return None
+
+        self.n += 1
+        if self.n <= 3:
+            return None
+        self.n = 0
+        self.preStopPHash = currPHash
+        return frame, isLastFrame
+
+    def getPHash(self, img):
+        pHash = None
+        laplacian = cv2.Laplacian(img, cv2.CV_64F).var()
+        if laplacian <= self.thresholdLaplacian:
+            return pHash
+
+        imgGray = cv2.resize(
+            cv2.cvtColor(img, cv2.COLOR_RGB2GRAY),
+            (self.hashLen, self.hashLen),
+            cv2.INTER_AREA)
+        height, width = imgGray.shape[:2]
+        matrixOriginal = np.zeros(
+            (height, width),
+            np.float32)
+        matrixOriginal[:height, :width] = imgGray
+
+        matrix = cv2.dct(cv2.dct(matrixOriginal))
+        matrix.resize(self.hashLen, self.hashLen)
+        matrixFlatten = matrix.flatten()
+
+        averageValue = sum(matrixFlatten) * 1. / len(matrixFlatten)
+        pHash = 0
+        for i in matrixFlatten:
+            pHash <<= 1
+            if i >= averageValue:
+                pHash += 1
+        return pHash
+
+    @staticmethod
+    def hamDistance(x, y):
+        tmp = x ^ y
+        distance = 0
+
+        while tmp > 0:
+            distance += tmp & 1
+            tmp >>= 1
+
+        return distance
+
+
+class OCR(ApplicationUserSide):
+    def __init__(self):
+        super().__init__(appID=5, appName='OCR')
+        self.text = ''
+        self.preText = None
+        self.thresholdEditDistance = 800
+
+    def process(self, inputData):
+        (frame, isLastFrame) = inputData
+        if isLastFrame:
+            return self.text
+        currText = pytesseract.image_to_string(frame)
+        if self.preText is None:
+            self.text = currText
+            self.preText = currText
+            return None
+        editDistance = self.editDistance(self.preText, currText)
+        if editDistance <= self.thresholdEditDistance:
+            return None
+        self.text += currText
+
+        return None
+
+    @staticmethod
+    def editDistance(textA, textB):
+        return editdistance.eval(textA, textB)

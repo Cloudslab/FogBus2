@@ -47,9 +47,8 @@ class DataManagerClient:
                 and self.port is not None:
             self.socket: socket.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self.socket.connect((self.host, self.port))
-
-            threading.Thread(target=self.__receiver).start()
             threading.Thread(target=self.__sender).start()
+            threading.Thread(target=self.__receiver).start()
             threading.Thread(target=self.__keepAlive).start()
             self.isConnected = True
             self.activeTime = time()

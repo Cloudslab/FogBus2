@@ -96,7 +96,8 @@ class DataManagerClient:
         while True:
             self.sendingQueue.put(b'alive')
             if time() - self.activeTime > 2:
-                self.socket.close()
+                if isinstance(self.socket, socket.socket):
+                    self.socket.close()
                 self.isConnected = False
                 break
             sleep(1)
@@ -437,6 +438,9 @@ class Broker:
         self.logger.debug('Executing appID-%d ...', app.appID)
         data = message['data']
         result = app.process(data)
+        if result is None:
+            return
+
         message['workerID'] = self.workerID
         message['appID'] = app.appID
         message['appIDs'] = message['appIDs'][1:]
