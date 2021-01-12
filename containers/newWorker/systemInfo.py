@@ -4,14 +4,18 @@ import platform
 import GPUtil
 import threading
 import numpy as np
+import os
+import csv
 from datetime import datetime
 from pprint import pformat
 from typing import Any
+from time import sleep
 
 
 class SystemInfoResult:
 
     def __init__(self,
+                 currentTimestamp=None,
                  bootTimeZone=None,
                  bootTimestamp=None,
                  bootTimeDate=None,
@@ -40,6 +44,7 @@ class SystemInfoResult:
                  diskTotalRead=None,
                  diskTotalWrite=None,
                  gpus=None):
+        self.currentTimestamp = currentTimestamp
         self.bootTimeZone = bootTimeZone
         self.bootTimestamp = bootTimestamp
         self.bootTimeDate = bootTimeDate
@@ -71,12 +76,14 @@ class SystemInfoResult:
         self.gpus = gpus
 
     def __str__(self):
+        self.currentTimestamp = datetime.now().timestamp()
         return pformat(vars(self))
 
     def keys(self):
         return list(dict(vars(self)).keys())
 
     def values(self):
+        self.currentTimestamp = datetime.now().timestamp()
         return list(dict(vars(self)).values())
 
 
@@ -134,7 +141,8 @@ class SystemInfo:
         return resOS
 
     def cpu(self, event: threading.Event = None):
-        coresCount = psutil.cpu_count(logical=False)
+        physicalCoresCount = psutil.cpu_count(logical=False)
+        totalCoresCount = psutil.cpu_count(logical=True)
         cpuFreq = psutil.cpu_freq()
         maxFreq = cpuFreq.max
         minFreq = cpuFreq.min
@@ -148,9 +156,10 @@ class SystemInfo:
         if event is not None:
             event.set()
 
-        resCPU = coresCount, maxFreq, minFreq, currFreq, coresPercentage, totalPercentage
+        resCPU = physicalCoresCount, totalCoresCount, maxFreq, minFreq, currFreq, coresPercentage, totalPercentage
 
-        self.res.totalCPUCores = coresCount
+        self.res.physicalCPUCores = physicalCoresCount
+        self.res.totalCPUCores = totalCoresCount
         self.res.maxCPUFrequency = maxFreq
         self.res.minCPUFrequency = minFreq
         self.res.currentCPUFrequency = currFreq
@@ -283,9 +292,38 @@ class SystemInfo:
 
         return self.res
 
+    def recordPerSeconds(self, seconds: float, logFilename: str):
+        threading.Thread(
+            target=self.__recordPerSeconds,
+            args=(seconds, logFilename)
+        ).start()
+
+    def __recordPerSeconds(self, seconds: float, logFilename: str):
+        if not os.path.exists(logFilename):
+            f = open(logFilename, 'w')
+            title = self.res.keys()
+            for name in title[:-1]:
+                f.write(name + ', ')
+
+            f.write(title[-1] + '\r\n')
+            f.close()
+
+        while True:
+            if self.res.physicalCPUCores is None:
+                sleep(1)
+                continue
+            values = self.res.values()
+            print(values)
+            with open(logFilename, 'a') as logFile:
+                writer = csv.writer(logFile, quoting=csv.QUOTE_ALL)
+                writer.writerow(values)
+                logFile.close()
+            sleep(seconds)
+
 
 if __name__ == '__main__':
     sysInfo = SystemInfo(formatSize=True)
+    sysInfo.recordPerSeconds(5, 'testLog.csv')
 
     print(sysInfo.getAll())
     print(sysInfo.res.keys())
