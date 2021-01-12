@@ -6,14 +6,23 @@ from masterSideRegistry import Registry
 from dataManagerServer import DataManagerServer
 from message import Message
 from queue import Empty
-from datatype import Client, Worker, User, NodeSpecs
-from time import time
+from datatype import Client, Worker, User, NodeSpecs, IO
+from time import time, sleep
 from exceptions import *
 from systemInfo import SystemInfo
 
 
 class MasterSysInfo(SystemInfo):
-    pass
+    def __init__(self, formatSize: bool):
+        super().__init__(formatSize)
+        self.res.receivedTasksCount = 0
+        self.res.receivedDataSize = 0
+        self.res.sentDataSize = 0
+        self.res.changing += [
+            'receivedTasksCount',
+            'receivedDataSize',
+            'sentDataSize'
+        ]
 
 
 class FogMaster:
@@ -24,15 +33,27 @@ class FogMaster:
         self.masterID = id_
         self.host = host
         self.port = port
+        self.__io = IO()
+
         self.dataManager = DataManagerServer(
-            self.host,
-            self.port,
-            self.logger.level)
+            host=self.host,
+            port=self.port,
+            io=self.__io,
+            logLevel=self.logger.level,
+        )
         self.registry: Registry = Registry(logLevel=logLevel)
+        self.__receivedTasksCount: int = 0
 
     def __nodeLogger(self):
         sysInfo = MasterSysInfo(formatSize=False)
-        sysInfo.recordPerSeconds(seconds=10, logFilename='Master-%d-log.csv' % self.masterID)
+        sleepTime = 10
+        sysInfo.recordPerSeconds(seconds=sleepTime, logFilename='Master-%d-log.csv' % self.masterID)
+
+        while True:
+            sysInfo.res.receivedTasksCount = self.__receivedTasksCount
+            sysInfo.res.receivedDataSize = self.__io.receivedSize
+            sysInfo.res.sentDataSize = self.__io.sentSize
+            sleep(sleepTime)
 
     def run(self):
         self.dataManager.run()
@@ -128,7 +149,7 @@ class FogMaster:
                     return
 
     def __handleData(self, user: User, message: dict):
-
+        self.__receivedTasksCount += 1
         message['type'] = 'data'
         message['userID'] = user.userID
         message['time'].append(time() - message['time'][0])

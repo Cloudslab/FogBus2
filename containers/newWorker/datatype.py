@@ -295,9 +295,6 @@ class WorkerSysInfo(SystemInfo):
             'sentDataSize',
         ]
 
-    def workerLog(self):
-        pass
-
 
 class Broker:
 

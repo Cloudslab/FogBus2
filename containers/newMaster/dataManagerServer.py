@@ -2,17 +2,24 @@ import logging
 import threading
 import struct
 import socket
+import sys
 from logger import get_logger
 from queue import Queue
 from typing import NoReturn
-from datatype import Client, User, Worker
+from datatype import Client, User, Worker, IO
 from message import Message
 from time import time, sleep
 
 
 class DataManagerServer:
 
-    def __init__(self, host: str, port: int, logLevel=logging.DEBUG):
+    def __init__(
+            self,
+            host: str,
+            port: int,
+            io: IO = IO(),
+            logLevel=logging.DEBUG):
+        self.__io = io
         self.host: str = host
         self.port: int = port
         self.__currentSocketID = 0
@@ -44,13 +51,14 @@ class DataManagerServer:
                 socketID=socketID,
                 socket_=clientSocket,
                 receivingQueue=Queue(),
-                sendingQueue=Queue())
+                sendingQueue=Queue()
+            )
             self.__sockets[socketID] = client
             self.unregisteredClients.put(client)
             threading.Thread(target=self.__receiver,
-                             args=(client,)).start()
+                             args=(client, self.__io)).start()
             threading.Thread(target=self.__sender,
-                             args=(client,)).start()
+                             args=(client, self.__io)).start()
             threading.Thread(target=self.__keepAlive,
                              args=(client,)).start()
 
@@ -89,7 +97,7 @@ class DataManagerServer:
             sleep(1)
 
     @staticmethod
-    def __receiver(client: Client):
+    def __receiver(client: Client, io: IO):
         buffer = b''
         payloadSize = struct.calcsize('>L')
         try:
@@ -109,15 +117,18 @@ class DataManagerServer:
                 client.updateActiveTime()
                 if not data == b'alive':
                     client.receivingQueue.put(data)
+                io.receivedSize += sys.getsizeof(data)
         except OSError:
             client.active = False
 
     @staticmethod
-    def __sender(client: Client):
+    def __sender(client: Client, io: IO):
         try:
             while True:
                 data = client.sendingQueue.get()
-                client.socket.sendall(struct.pack(">L", len(data)) + data)
+                data = struct.pack(">L", len(data)) + data
+                client.socket.sendall(data)
+                io.sentSize += sys.getsizeof(data)
         except OSError:
             client.active = False
 

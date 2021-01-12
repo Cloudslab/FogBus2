@@ -5,6 +5,12 @@ from abc import abstractmethod
 from time import time
 
 
+class IO:
+    def __init__(self):
+        self.receivedSize: int = 0
+        self.sentSize: int = 0
+
+
 class NodeSpecs:
     def __init__(self, cores, ram, disk, network):
         self.cores = cores
@@ -29,7 +35,13 @@ class ApplicationUserSide:
 
 class Client:
 
-    def __init__(self, socketID: int, socket_: socket.socket, sendingQueue: Queue[bytes], receivingQueue: Queue[bytes]):
+    def __init__(
+            self,
+            socketID: int,
+            socket_: socket.socket,
+            sendingQueue: Queue[bytes],
+            receivingQueue: Queue[bytes]
+    ):
         self.socketID: int = socketID
         self.socket: socket.socket = socket_
         self.sendingQueue: Queue[bytes] = sendingQueue
