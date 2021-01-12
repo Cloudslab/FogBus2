@@ -8,7 +8,6 @@ import os
 import csv
 from datetime import datetime
 from pprint import pformat
-from typing import Any
 from time import sleep
 
 
@@ -79,12 +78,80 @@ class SystemInfoResult:
         self.currentTimestamp = datetime.now().timestamp()
         return pformat(vars(self))
 
-    def keys(self):
-        return list(dict(vars(self)).keys())
-
-    def values(self):
+    def keys(self, changing=None):
         self.currentTimestamp = datetime.now().timestamp()
-        return list(dict(vars(self)).values())
+        if changing is None:
+            return list(dict(vars(self)).keys())
+        if not changing:
+            return [
+                'currentTimestamp',
+                'bootTimeZone',
+                'bootTimestamp',
+                'bootTimeDate',
+                'operatingSystemName',
+                'nodeName',
+                'operatingSystemReleaseName',
+                'operatingSystemVersion',
+                'operatingSystemArch',
+                'physicalCPUCores',
+                'totalCPUCores',
+                'maxCPUFrequency',
+                'minCPUFrequency',
+                'totalMemory',
+                'totalSwapMemory',
+            ]
+        if changing:
+            return [
+                'currentTimestamp',
+                'currentCPUFrequency',
+                'currentTotalCPUUsage',
+                'currentTotalCPUUsagePerCore',
+                'availableMemory',
+                'availableSwapMemory',
+                'networkTotalReceived',
+                'networkTotalSent',
+                'diskTotalRead',
+                'diskTotalWrite',
+                'gpus',
+            ]
+
+    def values(self, changing=None):
+        self.currentTimestamp = datetime.now().timestamp()
+        allProperties = vars(self)
+        if changing is None:
+            return list(dict(allProperties).values())
+        if not changing:
+            return [
+                allProperties['currentTimestamp'],
+                allProperties['bootTimeZone'],
+                allProperties['bootTimestamp'],
+                allProperties['bootTimeDate'],
+                allProperties['operatingSystemName'],
+                allProperties['nodeName'],
+                allProperties['operatingSystemReleaseName'],
+                allProperties['operatingSystemVersion'],
+                allProperties['operatingSystemArch'],
+                allProperties['physicalCPUCores'],
+                allProperties['totalCPUCores'],
+                allProperties['maxCPUFrequency'],
+                allProperties['minCPUFrequency'],
+                allProperties['totalMemory'],
+                allProperties['totalSwapMemory'],
+            ]
+        if changing:
+            return [
+                allProperties['currentTimestamp'],
+                allProperties['currentCPUFrequency'],
+                allProperties['currentTotalCPUUsage'],
+                allProperties['currentTotalCPUUsagePerCore'],
+                allProperties['availableMemory'],
+                allProperties['availableSwapMemory'],
+                allProperties['networkTotalReceived'],
+                allProperties['networkTotalSent'],
+                allProperties['diskTotalRead'],
+                allProperties['diskTotalWrite'],
+                allProperties['gpus'],
+            ]
 
 
 class SystemInfo:
@@ -299,9 +366,26 @@ class SystemInfo:
         ).start()
 
     def __recordPerSeconds(self, seconds: float, logFilename: str):
-        if not os.path.exists(logFilename):
-            f = open(logFilename, 'w')
-            title = self.res.keys()
+        unchangingLog = 'unchanging_' + logFilename
+        changingLog = 'changing_' + logFilename
+
+        if not os.path.exists(unchangingLog):
+            f = open(unchangingLog, 'w')
+            title = self.res.keys(changing=False)
+            for name in title[:-1]:
+                f.write(name + ', ')
+            f.write(title[-1] + '\r\n')
+            while self.res.physicalCPUCores is None:
+                sleep(1)
+            values = self.res.values(changing=False)
+            for value in values[:-1]:
+                f.write(str(value) + ', ')
+            f.write(values[-1] + '\r\n')
+            f.close()
+
+        if not os.path.exists(changingLog):
+            f = open(changingLog, 'w')
+            title = self.res.keys(changing=True)
             for name in title[:-1]:
                 f.write(name + ', ')
 
@@ -312,9 +396,9 @@ class SystemInfo:
             if self.res.physicalCPUCores is None:
                 sleep(1)
                 continue
-            values = self.res.values()
+            values = self.res.values(changing=True)
             print(values)
-            with open(logFilename, 'a') as logFile:
+            with open(changingLog, 'a') as logFile:
                 writer = csv.writer(logFile, quoting=csv.QUOTE_ALL)
                 writer.writerow(values)
                 logFile.close()
