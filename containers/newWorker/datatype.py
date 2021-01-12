@@ -129,8 +129,9 @@ class DataManagerClient:
                 buffer = buffer[dataSize:]
                 self.activeTime = time()
                 if not data == b'alive':
-                    self.receivedDataSize += sys.getsizeof(data)
                     self.receivingQueue.put(data)
+                self.receivedDataSize += sys.getsizeof(data)
+
         except OSError:
             self.logger.warning("Receiver disconnected.")
 
@@ -308,17 +309,19 @@ class WorkerSysInfo(SystemInfo):
 
     def __init__(
             self,
-            formatSize: bool,
-            receivedTasksCount,
-            totalProcessingTime,
-            receivedDataSize,
-            sentDataSize,
+            formatSize: bool
     ):
         super().__init__(formatSize)
-        self.receivedTasksCount = receivedTasksCount,
-        self.totalProcessingTime = totalProcessingTime,
-        self.receivedDataSize = receivedDataSize,
-        self.sentDataSize = sentDataSize,
+        self.res.receivedTasksCount = 0,
+        self.res.totalProcessingTime = 0.0,
+        self.res.receivedDataSize = 0,
+        self.res.sentDataSize = 0,
+        self.res.changing += [
+            'receivedTasksCount',
+            'totalProcessingTime',
+            'receivedDataSize',
+            'sentDataSize',
+        ]
 
     def workerLog(self):
         pass
@@ -366,13 +369,16 @@ class Broker:
 
     def __nodeLogger(self):
         sysInfo = WorkerSysInfo(
-            formatSize=False,
-            receivedTasksCount=self.__receivedTasksCount,
-            totalProcessingTime=self.__totalProcessingTime,
-            receivedDataSize=self.master.receivedDataSize,
-            sentDataSize=self.master.sentDataSize,
+            formatSize=False
         )
-        sysInfo.recordPerSeconds(seconds=10, logFilename='Worker-%d-log.csv' % self.workerID)
+        sleepTime = 10
+        sysInfo.recordPerSeconds(seconds=sleepTime, logFilename='Worker-%d-log.csv' % self.workerID)
+        while True:
+            sysInfo.res.receivedTasksCount = self.__receivedTasksCount
+            sysInfo.res.totalProcessingTime = self.__totalProcessingTime
+            sysInfo.res.receivedDataSize = self.master.receivedDataSize
+            sysInfo.res.sentDataSize = self.master.sentDataSize
+            sleep(sleepTime)
 
     def run(self):
         if self.app is not None:

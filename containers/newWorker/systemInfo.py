@@ -74,7 +74,7 @@ class SystemInfoResult:
         self.diskTotalWrite = diskTotalWrite
         self.gpus = gpus
 
-        self.changing = [
+        self.unchanging = [
             'currentTimestamp',
             'bootTimeZone',
             'bootTimestamp',
@@ -91,7 +91,7 @@ class SystemInfoResult:
             'totalMemory',
             'totalSwapMemory',
         ]
-        self.unchanging = [
+        self.changing = [
             'currentTimestamp',
             'currentCPUFrequency',
             'currentTotalCPUUsage',
@@ -117,9 +117,9 @@ class SystemInfoResult:
             del allProperties['unchanging']
             return list(dict(allProperties).keys())
         if not changing:
-            return self.changing
-        if changing:
             return self.unchanging
+        if changing:
+            return self.changing
 
     def values(self, changing=None):
         self.currentTimestamp = datetime.now().timestamp()
