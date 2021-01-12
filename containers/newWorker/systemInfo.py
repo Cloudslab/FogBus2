@@ -86,6 +86,15 @@ class SystemInfo:
         self.__formatSize = formatSize
         self.res: SystemInfoResult = SystemInfoResult()
 
+        self.threads = [self.cpu,
+                        self.bootTime,
+                        self.operatingSystem,
+                        self.memory,
+                        self.disk,
+                        self.network,
+                        self.gpu,
+                        ]
+
     def __getSize(self, bytes_, suffix="B"):
         if not self.__formatSize:
             return bytes_
@@ -259,43 +268,18 @@ class SystemInfo:
         return resGPU
 
     def getAll(self):
-        bootTimeEvent = threading.Event()
-        operatingSystemEvent = threading.Event()
-        memoryEvent = threading.Event()
-        diskEvent = threading.Event()
-        networkEvent = threading.Event()
-        gpuEvent = threading.Event()
-        cpuEvent = threading.Event()
 
-        threading.Thread(
-            target=self.cpu, args=(cpuEvent,)
-        ).start()
-        threading.Thread(
-            target=self.bootTime, args=(bootTimeEvent,)
-        ).start()
-        threading.Thread(
-            target=self.operatingSystem, args=(operatingSystemEvent,)
-        ).start()
-        threading.Thread(
-            target=self.memory, args=(memoryEvent,)
-        ).start()
-        threading.Thread(
-            target=self.disk, args=(diskEvent,)
-        ).start()
-        threading.Thread(
-            target=self.network, args=(networkEvent,)
-        ).start()
-        threading.Thread(
-            target=self.gpu, args=(gpuEvent,)
-        ).start()
+        events = []
+        for thread in self.threads:
+            event = threading.Event()
+            events.append(event)
+            threading.Thread(
+                target=thread,
+                args=(event,)
+            ).start()
 
-        cpuEvent.wait()
-        bootTimeEvent.wait()
-        operatingSystemEvent.wait()
-        memoryEvent.wait()
-        diskEvent.wait()
-        networkEvent.wait()
-        gpuEvent.wait()
+        for event in events:
+            event.wait()
 
         return self.res
 
