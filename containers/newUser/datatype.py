@@ -3,8 +3,9 @@ import socket
 import logging
 import threading
 import os
+import struct
 
-from time import time
+from time import time,sleep
 from logger import get_logger
 from message import Message
 from typing import NoReturn
@@ -73,10 +74,14 @@ class Broker:
             masterIP: str,
             masterPort: int,
             appIDs: List[int],
+            remoteLoggerHost: str = None,
+            remoteLoggerPort: int = None,
             logLevel=logging.DEBUG):
         self.logger = get_logger('User-Broker', logLevel)
         self.masterIP = masterIP
         self.masterPort = masterPort
+        self.remoteLoggerHost: str = remoteLoggerHost
+        self.remoteLoggerPort: int = remoteLoggerPort
         self.userID = None
         self.appIDs = appIDs
 
@@ -91,6 +96,48 @@ class Broker:
     def __nodeLogger(self):
         sysInfo = UserSysInfo(formatSize=False)
         sysInfo.recordPerSeconds(seconds=10, logFilename='User-%d-log.csv' % self.userID)
+        threading.Thread(
+            target=self.__sendLogToRemoteLogger,
+            args=(sysInfo,)
+        ).start()
+
+    def __sendLog(self, message):
+        serverSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        serverSocket.connect((self.remoteLoggerHost, self.remoteLoggerPort))
+
+        messageEncrypted = Message.encrypt(message)
+        serverSocket.sendall(struct.pack(">L", len(messageEncrypted)) + messageEncrypted)
+        serverSocket.close()
+
+    def __sendLogToRemoteLogger(self, sysInfo: UserSysInfo):
+        if self.remoteLoggerHost is None \
+                or self.remoteLoggerPort is None:
+            return
+
+        message = {
+            'logList': sysInfo.res.keys(changing=False),
+            'nodeName': "User-%d.csv" % self.userID,
+            'isChangingLog': False,
+            'isTitle': True
+        }
+        self.__sendLog(message)
+        message = {
+            'logList': sysInfo.res.keys(changing=True),
+            'nodeName': "User-%d.csv" % self.userID,
+            'isChangingLog': True,
+            'isTitle': True
+        }
+        self.__sendLog(message)
+        sleepTime = 10
+        while True:
+            sleep(sleepTime)
+            message = {
+                'logList': sysInfo.res.values(changing=True),
+                'nodeName': "User-%d.csv" % self.userID,
+                'isChangingLog': True,
+                'isTitle': False
+            }
+            self.__sendLog(message)
 
     def run(self, mode: str):
         self.master.link()
