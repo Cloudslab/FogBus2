@@ -366,6 +366,7 @@ class SystemInfo:
         ).start()
 
     def __recordPerSeconds(self, seconds: float, logFilename: str):
+        self.getAll()
         unchangingLog = 'unchanging_' + logFilename
         changingLog = 'changing_' + logFilename
 
@@ -380,7 +381,7 @@ class SystemInfo:
             values = self.res.values(changing=False)
             for value in values[:-1]:
                 f.write(str(value) + ', ')
-            f.write(values[-1] + '\r\n')
+            f.write(str(values[-1]) + '\r\n')
             f.close()
 
         if not os.path.exists(changingLog):
@@ -397,7 +398,6 @@ class SystemInfo:
                 sleep(1)
                 continue
             values = self.res.values(changing=True)
-            print(values)
             with open(changingLog, 'a') as logFile:
                 writer = csv.writer(logFile, quoting=csv.QUOTE_ALL)
                 writer.writerow(values)

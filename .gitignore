@@ -9,3 +9,4 @@
 src/nginx/nginx.conf
 **__pycache__
 .idea
+**.csv

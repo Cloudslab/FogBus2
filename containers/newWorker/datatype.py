@@ -14,6 +14,7 @@ from time import time
 from secrets import token_urlsafe
 from queue import Queue
 from abc import abstractmethod
+from systemInfo import SystemInfo
 
 
 class NodeSpecs:
@@ -297,6 +298,10 @@ class ApplicationUserSide:
         pass
 
 
+class WorkerSysInfo(SystemInfo):
+    pass
+
+
 class Broker:
 
     def __init__(
@@ -335,6 +340,10 @@ class Broker:
         )
         self.thisPort = self.service.port
 
+    def __nodeLogger(self):
+        sysInfo = WorkerSysInfo(formatSize=False)
+        sysInfo.recordPerSeconds(seconds=10, logFilename='Worker-%d-log.csv' % self.workerID)
+
     def run(self):
         if self.app is not None:
             self.service.run()
@@ -343,6 +352,8 @@ class Broker:
         self.master.link()
         threading.Thread(target=self.__receivedMessageHandler).start()
         self.__register()
+        threading.Thread(target=self.__nodeLogger).start()
+
         if self.app is not None:
             self.logger.info("Waiting for the next Worker")
             while len(self.nextWorkerToken) > 10 \
