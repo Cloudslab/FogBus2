@@ -402,6 +402,7 @@ class SystemInfo:
                 writer = csv.writer(logFile, quoting=csv.QUOTE_ALL)
                 writer.writerow(values)
                 logFile.close()
+            self.getAll()
             sleep(seconds)
 
 

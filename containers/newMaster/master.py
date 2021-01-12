@@ -9,12 +9,19 @@ from queue import Empty
 from datatype import Client, Worker, User, NodeSpecs
 from time import time
 from exceptions import *
+from systemInfo import SystemInfo
+
+
+class MasterSysInfo(SystemInfo):
+    pass
 
 
 class FogMaster:
 
-    def __init__(self, host: str, port: int, logLevel=logging.DEBUG):
+    def __init__(self, host: str, port: int, id_: int = 0, logLevel=logging.DEBUG):
+
         self.logger = get_logger('Master', logLevel)
+        self.masterID = id_
         self.host = host
         self.port = port
         self.dataManager = DataManagerServer(
@@ -23,9 +30,14 @@ class FogMaster:
             self.logger.level)
         self.registry: Registry = Registry(logLevel=logLevel)
 
+    def __nodeLogger(self):
+        sysInfo = MasterSysInfo(formatSize=False)
+        sysInfo.recordPerSeconds(seconds=10, logFilename='Master-%d-log.csv' % self.masterID)
+
     def run(self):
         self.dataManager.run()
         threading.Thread(target=self.__serveUnregisteredClients).start()
+        threading.Thread(target=self.__nodeLogger).start()
 
     def __serveUnregisteredClients(self):
         self.logger.info('[*] Handling unregistered clients.')
