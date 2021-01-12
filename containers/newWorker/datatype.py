@@ -3,6 +3,7 @@ import threading
 import struct
 import socket
 import os
+import sys
 
 from queue import Empty
 from time import sleep
@@ -43,6 +44,8 @@ class DataManagerClient:
         self.host: str = host
         self.port: int = port
         self.activeTime = time()
+        self.receivedDataSize: int = 0
+        self.sentDataSize: int = 0
 
         if receivingQueue is None:
             self.receivingQueue: Queue[bytes] = Queue()
@@ -126,6 +129,7 @@ class DataManagerClient:
                 buffer = buffer[dataSize:]
                 self.activeTime = time()
                 if not data == b'alive':
+                    self.receivedDataSize += sys.getsizeof(data)
                     self.receivingQueue.put(data)
         except OSError:
             self.logger.warning("Receiver disconnected.")
@@ -135,7 +139,9 @@ class DataManagerClient:
         try:
             while True:
                 data = self.sendingQueue.get()
-                self.socket.sendall(struct.pack(">L", len(data)) + data)
+                data = struct.pack(">L", len(data)) + data
+                self.socket.sendall(data)
+                self.sentDataSize += sys.getsizeof(data)
         except OSError:
             self.logger.warning("Sender disconnected.")
 
@@ -299,7 +305,23 @@ class ApplicationUserSide:
 
 
 class WorkerSysInfo(SystemInfo):
-    pass
+
+    def __init__(
+            self,
+            formatSize: bool,
+            receivedTasksCount,
+            totalProcessingTime,
+            receivedDataSize,
+            sentDataSize,
+    ):
+        super().__init__(formatSize)
+        self.receivedTasksCount = receivedTasksCount,
+        self.totalProcessingTime = totalProcessingTime,
+        self.receivedDataSize = receivedDataSize,
+        self.sentDataSize = sentDataSize,
+
+    def workerLog(self):
+        pass
 
 
 class Broker:
@@ -339,9 +361,17 @@ class Broker:
             receivingQueue=self.master.receivingQueue
         )
         self.thisPort = self.service.port
+        self.__receivedTasksCount: int = 0
+        self.__totalProcessingTime: float = 0
 
     def __nodeLogger(self):
-        sysInfo = WorkerSysInfo(formatSize=False)
+        sysInfo = WorkerSysInfo(
+            formatSize=False,
+            receivedTasksCount=self.__receivedTasksCount,
+            totalProcessingTime=self.__totalProcessingTime,
+            receivedDataSize=self.master.receivedDataSize,
+            sentDataSize=self.master.sentDataSize,
+        )
         sysInfo.recordPerSeconds(seconds=10, logFilename='Worker-%d-log.csv' % self.workerID)
 
     def run(self):
@@ -448,10 +478,11 @@ class Broker:
         self.logger.info('[*] AppID-%d-{%s} is serving ...', app.appID, app.appName)
         while True:
             message = self.messageByAppID[app.appID].get()
+            self.__receivedTasksCount += 1
             self.__executeApp(app, message)
 
     def __executeApp(self, app: ApplicationUserSide, message) -> NoReturn:
-
+        startTime = time()
         self.logger.debug('Executing appID-%d ...', app.appID)
         data = message['data']
         result = app.process(data)
@@ -478,6 +509,8 @@ class Broker:
             message['result'] = result
             self.__sendTo(self.master, message)
             self.logger.debug('Executed appID-%d and returned the result', app.appID)
+
+        self.__totalProcessingTime += time() - startTime
 
 
 if __name__ == '__main__':

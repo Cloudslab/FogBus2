@@ -74,6 +74,37 @@ class SystemInfoResult:
         self.diskTotalWrite = diskTotalWrite
         self.gpus = gpus
 
+        self.changing = [
+            'currentTimestamp',
+            'bootTimeZone',
+            'bootTimestamp',
+            'bootTimeDate',
+            'operatingSystemName',
+            'nodeName',
+            'operatingSystemReleaseName',
+            'operatingSystemVersion',
+            'operatingSystemArch',
+            'physicalCPUCores',
+            'totalCPUCores',
+            'maxCPUFrequency',
+            'minCPUFrequency',
+            'totalMemory',
+            'totalSwapMemory',
+        ]
+        self.unchanging = [
+            'currentTimestamp',
+            'currentCPUFrequency',
+            'currentTotalCPUUsage',
+            'currentTotalCPUUsagePerCore',
+            'availableMemory',
+            'availableSwapMemory',
+            'networkTotalReceived',
+            'networkTotalSent',
+            'diskTotalRead',
+            'diskTotalWrite',
+            'gpus',
+        ]
+
     def __str__(self):
         self.currentTimestamp = datetime.now().timestamp()
         return pformat(vars(self))
@@ -81,39 +112,14 @@ class SystemInfoResult:
     def keys(self, changing=None):
         self.currentTimestamp = datetime.now().timestamp()
         if changing is None:
-            return list(dict(vars(self)).keys())
+            allProperties = vars(self)
+            del allProperties['changing']
+            del allProperties['unchanging']
+            return list(dict(allProperties).keys())
         if not changing:
-            return [
-                'currentTimestamp',
-                'bootTimeZone',
-                'bootTimestamp',
-                'bootTimeDate',
-                'operatingSystemName',
-                'nodeName',
-                'operatingSystemReleaseName',
-                'operatingSystemVersion',
-                'operatingSystemArch',
-                'physicalCPUCores',
-                'totalCPUCores',
-                'maxCPUFrequency',
-                'minCPUFrequency',
-                'totalMemory',
-                'totalSwapMemory',
-            ]
+            return self.changing
         if changing:
-            return [
-                'currentTimestamp',
-                'currentCPUFrequency',
-                'currentTotalCPUUsage',
-                'currentTotalCPUUsagePerCore',
-                'availableMemory',
-                'availableSwapMemory',
-                'networkTotalReceived',
-                'networkTotalSent',
-                'diskTotalRead',
-                'diskTotalWrite',
-                'gpus',
-            ]
+            return self.unchanging
 
     def values(self, changing=None):
         self.currentTimestamp = datetime.now().timestamp()
@@ -121,37 +127,11 @@ class SystemInfoResult:
         if changing is None:
             return list(dict(allProperties).values())
         if not changing:
-            return [
-                allProperties['currentTimestamp'],
-                allProperties['bootTimeZone'],
-                allProperties['bootTimestamp'],
-                allProperties['bootTimeDate'],
-                allProperties['operatingSystemName'],
-                allProperties['nodeName'],
-                allProperties['operatingSystemReleaseName'],
-                allProperties['operatingSystemVersion'],
-                allProperties['operatingSystemArch'],
-                allProperties['physicalCPUCores'],
-                allProperties['totalCPUCores'],
-                allProperties['maxCPUFrequency'],
-                allProperties['minCPUFrequency'],
-                allProperties['totalMemory'],
-                allProperties['totalSwapMemory'],
-            ]
+            res = [allProperties[name] for name in self.unchanging]
+            return res
         if changing:
-            return [
-                allProperties['currentTimestamp'],
-                allProperties['currentCPUFrequency'],
-                allProperties['currentTotalCPUUsage'],
-                allProperties['currentTotalCPUUsagePerCore'],
-                allProperties['availableMemory'],
-                allProperties['availableSwapMemory'],
-                allProperties['networkTotalReceived'],
-                allProperties['networkTotalSent'],
-                allProperties['diskTotalRead'],
-                allProperties['diskTotalWrite'],
-                allProperties['gpus'],
-            ]
+            res = [allProperties[name] for name in self.changing]
+            return res
 
 
 class SystemInfo:
@@ -297,7 +277,7 @@ class SystemInfo:
         for interfaceName, interfaceAddresses in ifAddr.items():
             for address in interfaceAddresses:
                 if interfaceName not in resNetwork:
-                    resNetwork[interfaceName] = [None for i in range(6)]
+                    resNetwork[interfaceName] = [None for _ in range(6)]
                 if str(address.family) == 'AddressFamily.AF_INET':
                     resNetwork[interfaceName][0] = address.address
                     resNetwork[interfaceName][1] = address.netmask
