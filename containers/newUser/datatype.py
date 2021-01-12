@@ -15,6 +15,7 @@ from typing import Any
 from queue import Queue
 from collections import defaultdict
 from dataManagerClient import DataManagerClient
+from systemInfo import SystemInfo
 
 
 class NodeSpecs:
@@ -61,6 +62,10 @@ class Master(DataManagerClient):
         self.masterID = masterID
 
 
+class UserSysInfo(SystemInfo):
+    pass
+
+
 class Broker:
 
     def __init__(
@@ -83,6 +88,10 @@ class Broker:
             logLevel=self.logger.level
         )
 
+    def __nodeLogger(self):
+        sysInfo = UserSysInfo(formatSize=False)
+        sysInfo.recordPerSeconds(seconds=10, logFilename='User-%d-log.csv' % self.userID)
+
     def run(self, mode: str):
         self.master.link()
         threading.Thread(target=self.__receivedMessageHandler).start()
@@ -98,6 +107,7 @@ class Broker:
         self.logger.info("[*] Registering ...")
         while self.userID is None:
             pass
+        threading.Thread(target=self.__nodeLogger).start()
         self.logger.info("[*] Registered with userID-%d", self.userID)
 
     def __send(self, data) -> NoReturn:
