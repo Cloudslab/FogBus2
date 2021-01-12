@@ -1,5 +1,7 @@
 import threading
 import logging
+import socket
+import struct
 
 from logger import get_logger
 from masterSideRegistry import Registry
@@ -27,12 +29,21 @@ class MasterSysInfo(SystemInfo):
 
 class FogMaster:
 
-    def __init__(self, host: str, port: int, id_: int = 0, logLevel=logging.DEBUG):
+    def __init__(
+            self,
+            host: str,
+            port: int,
+            id_: int = 0,
+            remoteLoggerHost: str = None,
+            remoteLoggerPort: int = None,
+            logLevel=logging.DEBUG):
 
         self.logger = get_logger('Master', logLevel)
         self.masterID = id_
         self.host = host
         self.port = port
+        self.remoteLoggerHost: str = remoteLoggerHost
+        self.remoteLoggerPort: int = remoteLoggerPort
         self.__io = IO()
 
         self.dataManager = DataManagerServer(
@@ -48,12 +59,53 @@ class FogMaster:
         sysInfo = MasterSysInfo(formatSize=False)
         sleepTime = 10
         sysInfo.recordPerSeconds(seconds=sleepTime, logFilename='Master-%d-log.csv' % self.masterID)
-
+        threading.Thread(
+            target=self.__sendLogToRemoteLogger,
+            args=(sysInfo,)
+        ).start()
         while True:
             sysInfo.res.receivedTasksCount = self.__receivedTasksCount
             sysInfo.res.receivedDataSize = self.__io.receivedSize
             sysInfo.res.sentDataSize = self.__io.sentSize
             sleep(sleepTime)
+
+    def __sendLog(self, message):
+        serverSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        serverSocket.connect((self.remoteLoggerHost, self.remoteLoggerPort))
+
+        messageEncrypted = Message.encrypt(message)
+        serverSocket.sendall(struct.pack(">L", len(messageEncrypted)) + messageEncrypted)
+        serverSocket.close()
+
+    def __sendLogToRemoteLogger(self, sysInfo: MasterSysInfo):
+        if self.remoteLoggerHost is None \
+                or self.remoteLoggerPort is None:
+            return
+
+        message = {
+            'logList': sysInfo.res.keys(changing=False),
+            'nodeName': "Master-%d.csv" % self.masterID,
+            'isChangingLog': False,
+            'isTitle': True
+        }
+        self.__sendLog(message)
+        message = {
+            'logList': sysInfo.res.keys(changing=True),
+            'nodeName': "Master-%d.csv" % self.masterID,
+            'isChangingLog': True,
+            'isTitle': True
+        }
+        self.__sendLog(message)
+        sleepTime = 10
+        while True:
+            sleep(sleepTime)
+            message = {
+                'logList': sysInfo.res.values(changing=True),
+                'nodeName': "Master-%d.csv" % self.masterID,
+                'isChangingLog': True,
+                'isTitle': False
+            }
+            self.__sendLog(message)
 
     def run(self):
         self.dataManager.run()
@@ -183,5 +235,7 @@ class FogMaster:
 if __name__ == '__main__':
     master = FogMaster(host='0.0.0.0',
                        port=5000,
+                       remoteLoggerHost='0.0.0.0',
+                       remoteLoggerPort=5001,
                        logLevel=logging.DEBUG)
     master.run()
