@@ -31,6 +31,8 @@ if __name__ == '__main__':
     broker = Broker(
         masterIP='127.0.0.1',
         masterPort=5000,
+        remoteLoggerHost='127.0.0.1',
+        remoteLoggerPort=5001,
         thisIP='127.0.0.1',
         app=app,
         userID=userID,

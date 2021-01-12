@@ -303,6 +303,8 @@ class Broker:
             masterIP: str,
             masterPort: int,
             thisIP: str,
+            remoteLoggerHost: str = None,
+            remoteLoggerPort: int = None,
             app: ApplicationUserSide = None,
             userID: int = None,
             appID: int = None,
@@ -313,6 +315,8 @@ class Broker:
         self.masterIP = masterIP
         self.masterPort = masterPort
         self.thisIP = thisIP
+        self.remoteLoggerHost: str = remoteLoggerHost
+        self.remoteLoggerPort: int = remoteLoggerPort
         self.app: ApplicationUserSide = app
         self.token: str = token
         self.nextWorkerToken: str = nextWorkerToken
@@ -348,12 +352,54 @@ class Broker:
         )
         sleepTime = 10
         sysInfo.recordPerSeconds(seconds=sleepTime, logFilename='Worker-%d-log.csv' % self.workerID)
+        threading.Thread(
+            target=self.__sendLogToRemoteLogger,
+            args=(sysInfo,)
+        ).start()
         while True:
             sysInfo.res.receivedTasksCount = self.__receivedTasksCount
             sysInfo.res.totalProcessingTime = self.__totalProcessingTime
             sysInfo.res.receivedDataSize = self.__io.receivedSize
             sysInfo.res.sentDataSize = self.__io.sentSize
             sleep(sleepTime)
+
+    def __sendLog(self, message):
+        serverSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        serverSocket.connect((self.remoteLoggerHost, self.remoteLoggerPort))
+
+        messageEncrypted = Message.encrypt(message)
+        serverSocket.sendall(struct.pack(">L", len(messageEncrypted)) + messageEncrypted)
+        serverSocket.close()
+
+    def __sendLogToRemoteLogger(self, sysInfo: WorkerSysInfo):
+        if self.remoteLoggerHost is None \
+                or self.remoteLoggerPort is None:
+            return
+
+        message = {
+            'logList': sysInfo.res.keys(changing=False),
+            'nodeName': "Worker-%d.csv" % self.workerID,
+            'isChangingLog': False,
+            'isTitle': True
+        }
+        self.__sendLog(message)
+        message = {
+            'logList': sysInfo.res.keys(changing=True),
+            'nodeName': "Worker-%d.csv" % self.workerID,
+            'isChangingLog': True,
+            'isTitle': True
+        }
+        self.__sendLog(message)
+        sleepTime = 10
+        while True:
+            sleep(sleepTime)
+            message = {
+                'logList': sysInfo.res.values(changing=True),
+                'nodeName': "Worker-%d.csv" % self.workerID,
+                'isChangingLog': True,
+                'isTitle': False
+            }
+            self.__sendLog(message)
 
     def run(self):
         if self.app is not None:
