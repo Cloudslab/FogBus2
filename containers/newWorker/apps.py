@@ -2,6 +2,8 @@ import cv2
 import pytesseract
 import editdistance
 import numpy as np
+import csv
+import os
 from datatype import ApplicationUserSide
 
 
@@ -181,3 +183,29 @@ class OCR(ApplicationUserSide):
     @staticmethod
     def editDistance(textA, textB):
         return editdistance.eval(textA, textB)
+
+
+class RemoteLogger(ApplicationUserSide):
+    def __init__(self):
+        super().__init__(appID=6, appName='RemoteLogger')
+        if not os.path.exists('remoteLog'):
+            os.mkdir('remoteLog')
+
+    def process(self, inputData):
+        (logList, nodeName, isChangingLog, isTitle) = inputData
+        filename = 'changing_' if isChangingLog else \
+            'unchanging_' + nodeName
+        filename = './remoteLog/' + filename
+        if isTitle:
+            if os.path.exists(filename):
+                os.remove(filename)
+            f = open(filename, 'w')
+            for name in logList[:-1]:
+                f.write(str(name) + ', ')
+            f.write(str(logList[-1]) + '\r\n')
+        else:
+            with open(filename, 'a') as logFile:
+                writer = csv.writer(logFile, quoting=csv.QUOTE_ALL)
+                writer.writerow(logList)
+                logFile.close()
+        return None
