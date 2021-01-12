@@ -12,7 +12,6 @@ from message import Message
 from typing import NoReturn, Any, List
 from collections import defaultdict
 from time import time
-from secrets import token_urlsafe
 from queue import Queue
 from abc import abstractmethod
 from systemInfo import SystemInfo
@@ -29,6 +28,12 @@ class NodeSpecs:
         return "Cores: %d\tRam: %d GB\tDisk: %d GB\tNetwork: %d Mbps" % (self.cores, self.ram, self.disk, self.network)
 
 
+class IO:
+    def __init__(self):
+        self.receivedSize: int = 0
+        self.sentSize: int = 0
+
+
 class DataManagerClient:
 
     def __init__(
@@ -39,13 +44,13 @@ class DataManagerClient:
             socket_: socket.socket = None,
             receivingQueue: Queue = None,
             sendingQueue: Queue = None,
+            io: IO = IO(),
             logLevel=logging.DEBUG):
         self.name = name
         self.host: str = host
         self.port: int = port
         self.activeTime = time()
-        self.receivedDataSize: int = 0
-        self.sentDataSize: int = 0
+        self.__io = io
 
         if receivingQueue is None:
             self.receivingQueue: Queue[bytes] = Queue()
@@ -130,7 +135,7 @@ class DataManagerClient:
                 self.activeTime = time()
                 if not data == b'alive':
                     self.receivingQueue.put(data)
-                self.receivedDataSize += sys.getsizeof(data)
+                self.__io.receivedSize += sys.getsizeof(data)
 
         except OSError:
             self.logger.warning("Receiver disconnected.")
@@ -142,7 +147,7 @@ class DataManagerClient:
                 data = self.sendingQueue.get()
                 data = struct.pack(">L", len(data)) + data
                 self.socket.sendall(data)
-                self.sentDataSize += sys.getsizeof(data)
+                self.__io.sentSize += sys.getsizeof(data)
         except OSError:
             self.logger.warning("Sender disconnected.")
 
@@ -158,6 +163,7 @@ class Worker(DataManagerClient):
             sendingQueue: Queue = None,
             workerID: int = None,
             socketID: int = None,
+            io: IO = IO(),
             logLevel=logging.DEBUG):
         DataManagerClient.__init__(
             self,
@@ -167,6 +173,7 @@ class Worker(DataManagerClient):
             socket_=socket_,
             receivingQueue=receivingQueue,
             sendingQueue=sendingQueue,
+            io=io,
             logLevel=logLevel
         )
         self.workerID = workerID
@@ -175,7 +182,13 @@ class Worker(DataManagerClient):
 
 class DataManagerServer:
 
-    def __init__(self, host: str, port: int = None, receivingQueue: Queue = Queue(), logLevel=logging.DEBUG):
+    def __init__(
+            self,
+            host: str,
+            port: int = None,
+            receivingQueue: Queue = Queue(),
+            io: IO = IO(),
+            logLevel=logging.DEBUG):
         self.host: str = host
         self.port: int = port
         self.receivingQueue: Queue = receivingQueue
@@ -184,6 +197,7 @@ class DataManagerServer:
         self.unregisteredClients: Queue[Worker] = Queue()
         self.__serverSocket: socket.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.logger = get_logger('Worker-DataManagerServer', logLevel)
+        self.__io = io
 
     def run(self):
         threading.Thread(target=self.__serve).start()
@@ -213,55 +227,11 @@ class DataManagerServer:
                 socketID=socketID,
                 socket_=clientSocket,
                 receivingQueue=self.receivingQueue,
-                sendingQueue=Queue())
+                sendingQueue=Queue(),
+                io=self.__io
+            )
             worker.link()
             self.unregisteredClients.put(worker)
-
-    def __keepAlive(self, worker: Worker):
-        while True:
-            worker.sendingQueue.put(b'alive')
-            if time() - worker.activeTime > 2:
-                worker.socket.close()
-                break
-            sleep(1)
-        self.logger.debug("Discard worker")
-
-    @staticmethod
-    def __receiver(worker: Worker):
-        buffer = b''
-        payloadSize = struct.calcsize('>L')
-
-        while True:
-            try:
-                while len(buffer) < payloadSize:
-                    buffer += worker.socket.recv(4096)
-
-                packedDataSize = buffer[:payloadSize]
-                buffer = buffer[payloadSize:]
-                dataSize = struct.unpack('>L', packedDataSize)[0]
-
-                while len(buffer) < dataSize:
-                    buffer += worker.socket.recv(4096)
-
-                data = buffer[:dataSize]
-                buffer = buffer[dataSize:]
-                worker.updateActiveTime()
-                if not data == b'alive':
-                    worker.receivingQueue.put(data)
-            except OSError:
-                worker.active = False
-                break
-
-    @staticmethod
-    def __sender(worker: Worker):
-        while True:
-
-            try:
-                data = worker.sendingQueue.get()
-                worker.socket.sendall(struct.pack(">L", len(data)) + data)
-            except OSError:
-                worker.active = False
-                break
 
 
 class Node:
@@ -280,6 +250,7 @@ class Master(DataManagerClient):
             receivingQueue: Queue = None,
             sendingQueue: Queue = None,
             masterID: int = None,
+            io: IO = IO(),
             logLevel=logging.DEBUG):
         DataManagerClient.__init__(
             self,
@@ -289,6 +260,7 @@ class Master(DataManagerClient):
             socket_=socket_,
             receivingQueue=receivingQueue,
             sendingQueue=sendingQueue,
+            io=io,
             logLevel=logLevel
         )
         self.masterID = masterID
@@ -351,17 +323,23 @@ class Broker:
         self.appID: int = appID
         self.workerID = None
         self.messageByAppID: dict[int, Queue] = defaultdict(Queue)
+        self.__io = IO()
+
         self.master: Master = Master(
             name='Master',
             host=self.masterIP,
             port=self.masterPort,
-            logLevel=self.logger.level
+            logLevel=self.logger.level,
+            io=self.__io
         )
         self.nextWorker = None
         self.workers: List[Worker] = []
+
         self.service: DataManagerServer = DataManagerServer(
             host=self.thisIP,
-            receivingQueue=self.master.receivingQueue
+            receivingQueue=self.master.receivingQueue,
+            io=self.__io
+
         )
         self.thisPort = self.service.port
         self.__receivedTasksCount: int = 0
@@ -376,8 +354,8 @@ class Broker:
         while True:
             sysInfo.res.receivedTasksCount = self.__receivedTasksCount
             sysInfo.res.totalProcessingTime = self.__totalProcessingTime
-            sysInfo.res.receivedDataSize = self.master.receivedDataSize
-            sysInfo.res.sentDataSize = self.master.sentDataSize
+            sysInfo.res.receivedDataSize = self.__io.receivedSize
+            sysInfo.res.sentDataSize = self.__io.sentSize
             sleep(sleepTime)
 
     def run(self):
@@ -468,7 +446,8 @@ class Broker:
                 self.nextWorker = DataManagerClient(
                     name='nextWorker-WorkerID-%d' % nextWorkerID,
                     host=nextWorkerIP,
-                    port=nextWorkerPort
+                    port=nextWorkerPort,
+                    io=self.__io
                 )
                 self.nextWorker.link()
 
