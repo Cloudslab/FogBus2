@@ -15,7 +15,7 @@ if __name__ == "__main__":
             masterPort=5000,
             remoteLoggerHost='127.0.0.1',
             remoteLoggerPort=5001,
-            appIDs=[1],
+            taskIDs=[1],
             logLevel=logging.DEBUG)
         app = FaceDetection(1, broker, videoPath)
         app.run()
@@ -25,7 +25,7 @@ if __name__ == "__main__":
             masterPort=5000,
             remoteLoggerHost='127.0.0.1',
             remoteLoggerPort=5001,
-            appIDs=[1, 2],
+            taskIDs=[1, 2],
             logLevel=logging.DEBUG)
         app = FaceAndEyeDetection(2, broker, videoPath)
         app.run()
@@ -36,7 +36,7 @@ if __name__ == "__main__":
             masterPort=5000,
             remoteLoggerHost='127.0.0.1',
             remoteLoggerPort=5001,
-            appIDs=[3],
+            taskIDs=[3],
             logLevel=logging.DEBUG)
         app = ColorTracking(3, broker, videoPath)
         app.run()
@@ -47,7 +47,7 @@ if __name__ == "__main__":
             masterPort=5000,
             remoteLoggerHost='127.0.0.1',
             remoteLoggerPort=5001,
-            appIDs=[4, 5],
+            taskIDs=[4, 5],
             logLevel=logging.DEBUG)
         app = VideoOCR(4, broker, videoPath)
         app.run()

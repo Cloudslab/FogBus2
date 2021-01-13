@@ -4,10 +4,10 @@ import editdistance
 import numpy as np
 import csv
 import os
-from datatype import ApplicationUserSide
+from datatype import TasksWorkerSide
 
 
-class TestApp(ApplicationUserSide):
+class TestApp(TasksWorkerSide):
     def __init__(self, appID: int):
         super().__init__(appID, 'TestApp')
 
@@ -15,7 +15,7 @@ class TestApp(ApplicationUserSide):
         return inputData * 2
 
 
-class FaceDetection(ApplicationUserSide):
+class FaceDetection(TasksWorkerSide):
 
     def __init__(self):
         super().__init__(appID=1, appName='FaceDetection')
@@ -32,7 +32,7 @@ class FaceDetection(ApplicationUserSide):
         return result
 
 
-class EyeDetection(ApplicationUserSide):
+class EyeDetection(TasksWorkerSide):
 
     def __init__(self):
         super().__init__(appID=2, appName='EyeDetection')
@@ -46,7 +46,7 @@ class EyeDetection(ApplicationUserSide):
         return faces
 
 
-class ColorTracking(ApplicationUserSide):
+class ColorTracking(TasksWorkerSide):
     def __init__(self):
         super().__init__(appID=3, appName='ColorTracking')
 
@@ -77,7 +77,7 @@ class ColorTracking(ApplicationUserSide):
         return FGmaskComp, frame
 
 
-class BlurAndPHash(ApplicationUserSide):
+class BlurAndPHash(TasksWorkerSide):
     def __init__(self):
         super().__init__(appID=4, appName='Blur')
         self.thresholdLaplacian = 120
@@ -156,7 +156,7 @@ class BlurAndPHash(ApplicationUserSide):
         return distance
 
 
-class OCR(ApplicationUserSide):
+class OCR(TasksWorkerSide):
     def __init__(self):
         super().__init__(appID=5, appName='OCR')
         self.text = ''
@@ -183,29 +183,3 @@ class OCR(ApplicationUserSide):
     @staticmethod
     def editDistance(textA, textB):
         return editdistance.eval(textA, textB)
-
-
-class RemoteLogger(ApplicationUserSide):
-    def __init__(self):
-        super().__init__(appID=6, appName='RemoteLogger')
-        if not os.path.exists('remoteLog'):
-            os.mkdir('remoteLog')
-
-    def process(self, inputData):
-        (logList, nodeName, isChangingLog, isTitle) = inputData
-        filename = 'changing_' if isChangingLog else \
-            'unchanging_' + nodeName
-        filename = './remoteLog/' + filename
-        if isTitle:
-            if os.path.exists(filename):
-                os.remove(filename)
-            f = open(filename, 'w')
-            for name in logList[:-1]:
-                f.write(str(name) + ', ')
-            f.write(str(logList[-1]) + '\r\n')
-        else:
-            with open(filename, 'a') as logFile:
-                writer = csv.writer(logFile, quoting=csv.QUOTE_ALL)
-                writer.writerow(logList)
-                logFile.close()
-        return None

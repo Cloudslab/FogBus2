@@ -73,7 +73,7 @@ class Broker:
             self,
             masterIP: str,
             masterPort: int,
-            appIDs: List[int],
+            taskIDs: List[int],
             remoteLoggerHost: str = None,
             remoteLoggerPort: int = None,
             logLevel=logging.DEBUG):
@@ -83,7 +83,7 @@ class Broker:
         self.remoteLoggerHost: str = remoteLoggerHost
         self.remoteLoggerPort: int = remoteLoggerPort
         self.userID = None
-        self.appIDs = appIDs
+        self.taskIDs = taskIDs
 
         self.resultQueue: Queue = Queue()
         self.master: Master = Master(
@@ -149,7 +149,7 @@ class Broker:
             'type': 'register',
             'role': 'user',
             'mode': mode,
-            'appIDs': self.appIDs}
+            'appIDs': self.taskIDs}
         self.__send(message)
         self.logger.info("[*] Registering ...")
         while self.userID is None:
@@ -183,7 +183,7 @@ class Broker:
         message = {'time': [time()],
                    'type': 'submitData',
                    'mode': mode,
-                   'appIDs': self.appIDs,
+                   'appIDs': self.taskIDs,
                    'data': data,
                    'dataID': dataID}
         # print('submit', time())
@@ -221,6 +221,6 @@ if __name__ == '__main__':
     broker = Broker(
         masterIP='127.0.0.1',
         masterPort=5000,
-        appIDs=[]
+        taskIDs=[]
     )
     broker.run()
