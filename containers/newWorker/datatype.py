@@ -4,9 +4,8 @@ import struct
 import socket
 import os
 import sys
-import cProfile, pstats, io
+import cProfile, pstats
 
-from pstats import SortKey
 from queue import Empty
 from time import sleep
 from logger import get_logger
@@ -270,9 +269,9 @@ class Master(DataManagerClient):
 
 class TasksWorkerSide:
 
-    def __init__(self, appID: int, appName: str = 'UNNAMED'):
-        self.appID = appID
-        self.appName = appName
+    def __init__(self, taskID: int, taskName: str):
+        self.taskID = taskID
+        self.taskName = taskName
 
     @abstractmethod
     def process(self, inputData):
@@ -307,19 +306,27 @@ class Broker:
             thisIP: str,
             remoteLoggerHost: str = None,
             remoteLoggerPort: int = None,
-            app: TasksWorkerSide = None,
+            task: TasksWorkerSide = None,
             userID: int = None,
             appID: int = None,
             token: str = None,
             nextWorkerToken: str = None,
+            ownedBy: int = None,
             logLevel=logging.DEBUG):
-        self.logger = get_logger('Worker-Broker', logLevel)
+        self.ownedBy: int = ownedBy
+        self.task: TasksWorkerSide = task
+        self.name: str = 'None'
+
+        if self.ownedBy is None:
+            self.name = 'Worker-Broker'
+        else:
+            self.name = 'Worker-%d-Task-%d-%s' % (self.ownedBy, self.task.taskID, self.task.taskName)
+        self.logger = get_logger(self.name, logLevel)
         self.masterIP = masterIP
         self.masterPort = masterPort
         self.thisIP = thisIP
         self.remoteLoggerHost: str = remoteLoggerHost
         self.remoteLoggerPort: int = remoteLoggerPort
-        self.app: TasksWorkerSide = app
         self.token: str = token
         self.nextWorkerToken: str = nextWorkerToken
         self.userID: int = userID
@@ -354,7 +361,8 @@ class Broker:
     def __nodeLogger(self):
         sysInfo = self.sysInfo
         sleepTime = 10
-        sysInfo.recordPerSeconds(seconds=sleepTime, logFilename='Worker-%d-log.csv' % self.workerID)
+        sysInfo.recordPerSeconds(seconds=sleepTime,
+                                 logFilename='%s-log.csv' % self.name)
         threading.Thread(
             target=self.__sendLogToRemoteLogger,
             args=(sysInfo,)
@@ -405,7 +413,7 @@ class Broker:
             self.__sendLog(message)
 
     def run(self):
-        if self.app is not None:
+        if self.task is not None:
             self.service.run()
             self.thisPort = self.service.port
 
@@ -414,7 +422,7 @@ class Broker:
         self.__register()
         threading.Thread(target=self.__nodeLogger).start()
 
-        if self.app is not None:
+        if self.task is not None:
             self.logger.info("Waiting for the next Worker")
             while len(self.nextWorkerToken) > 10 \
                     and self.nextWorker is None:
@@ -422,7 +430,7 @@ class Broker:
             self.logger.info("Connected to the next Worker")
             threading.Thread(
                 target=self.__runApp,
-                args=(self.app,)
+                args=(self.task,)
             ).start()
 
     def __handleClients(self):
@@ -443,6 +451,8 @@ class Broker:
                    'userID': self.userID,
                    'appID': self.appID,
                    'token': self.token,
+                   'ownedBy': self.ownedBy,
+                   'taskName': None if self.task is None else self.task.taskName,
                    'nodeSpecs': NodeSpecs(1, 2, 3, 4)}
         self.__sendTo(self.master, message)
         self.logger.info("[*] Registering ...")
@@ -470,11 +480,13 @@ class Broker:
                 appID = message['appID']
                 token = message['token']
                 nextWorkerToken = message['nextWorkerToken']
+                ownedBy = self.workerID
                 self.__runWorker(
                     userID=userID,
                     appID=appID,
                     token=token,
                     nextWorkerToken=nextWorkerToken,
+                    ownedBy=ownedBy,
                 )
             elif message['type'] == 'close':
                 self.logger.warning(
@@ -506,17 +518,17 @@ class Broker:
                 self.master.sendingQueue.put(Message.encrypt(message))
 
     @staticmethod
-    def __runWorker(userID: int, appID: int, token: str, nextWorkerToken: str):
+    def __runWorker(userID: int, appID: int, token: str, nextWorkerToken: str, ownedBy: int):
         threading.Thread(
             target=os.system,
-            args=("python worker.py %d %d %s %s" % (userID, appID, token, nextWorkerToken),)
+            args=("python worker.py %d %d %s %s %d" % (userID, appID, token, nextWorkerToken, ownedBy),)
         ).start()
-        # os.system("python worker.py %d %d %s %s" % (userID, appID, token, nextWorkerToken))
+        # os.system("python worker.py %d %d %s %s %d" % (userID, appID, token, nextWorkerToken, ownedBy))
 
     def __runApp(self, app: TasksWorkerSide):
-        self.logger.info('[*] AppID-%d-{%s} is serving ...', app.appID, app.appName)
+        self.logger.info('[*] AppID-%d-{%s} is serving ...', app.taskID, app.taskName)
         while True:
-            message = self.messageByAppID[app.appID].get()
+            message = self.messageByAppID[app.taskID].get()
             self.__receivedTasksCount += 1
             profiler = cProfile.Profile()
             profiler.enable()
@@ -525,16 +537,16 @@ class Broker:
             profilerStats = pstats.Stats(profiler).sort_stats('ncalls')
             print(profilerStats.total_calls, profilerStats.total_tt)
 
-    def __executeApp(self, app: TasksWorkerSide, message) -> NoReturn:
+    def __executeApp(self, task: TasksWorkerSide, message) -> NoReturn:
         startTime = time()
-        self.logger.debug('Executing appID-%d ...', app.appID)
+        self.logger.debug('Executing %s ...', task.taskName)
         data = message['data']
-        result = app.process(data)
+        result = task.process(data)
         if result is None:
             return
 
         message['workerID'] = self.workerID
-        message['appID'] = app.appID
+        message['appID'] = task.taskID
         message['appIDs'] = message['appIDs'][1:]
 
         t = time() - message['time'][0]
@@ -545,14 +557,14 @@ class Broker:
             message['data'] = result
             message['info'] = 'forward'
             self.__sendTo(self.nextWorker, message)
-            self.logger.debug('Executed appID-%d and send to next Worker', app.appID)
+            self.logger.debug('Executed %s and send to next Worker', task.taskName)
         else:
             message['type'] = 'submitResult'
 
             del message['data']
             message['result'] = result
             self.__sendTo(self.master, message)
-            self.logger.debug('Executed appID-%d and returned the result', app.appID)
+            self.logger.debug('Executed %s and returned the result', task.taskName)
 
         self.__totalProcessingTime += time() - startTime
 

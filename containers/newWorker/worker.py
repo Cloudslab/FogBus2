@@ -9,11 +9,14 @@ if __name__ == '__main__':
     appID = None
     token = None
     nextWorkerToken = None
-    if len(sys.argv) > 3:
+    ownedBy = None
+    if len(sys.argv) > 4:
         userID = int(sys.argv[1])
         appID = int(sys.argv[2])
         token = sys.argv[3]
         nextWorkerToken = sys.argv[4]
+    if len(sys.argv) > 5:
+        ownedBy = int(sys.argv[5])
 
     if appID == 0:
         app = TestApp(0)
@@ -34,10 +37,11 @@ if __name__ == '__main__':
         remoteLoggerHost='127.0.0.1',
         remoteLoggerPort=5001,
         thisIP='127.0.0.1',
-        app=app,
+        task=app,
         userID=userID,
         appID=appID,
         token=token,
         nextWorkerToken=nextWorkerToken,
+        ownedBy=ownedBy,
         logLevel=logging.DEBUG)
     broker.run()

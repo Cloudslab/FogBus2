@@ -43,18 +43,21 @@ class Registry:
         self.__currentWorkerID += 1
         workerID = self.__currentWorkerID
         self.__lockCurrentWorkerID.release()
+
+        userID = message['userID']
+        appID = message['appID']
+        token = message['token']
+        ownedBy = message['ownedBy']
+
         worker = Worker(
             socketID=client.socketID,
             socket_=client.socket,
             sendingQueue=client.sendingQueue,
             receivingQueue=client.receivingQueue,
             workerID=workerID,
-            specs=nodeSpecs
+            specs=nodeSpecs,
+            ownedBy=ownedBy
         )
-
-        userID = message['userID']
-        appID = message['appID']
-        token = message['token']
 
         if userID is not None \
                 and userID in self.users:
@@ -66,16 +69,18 @@ class Registry:
             )
             if not isWorkerValid:
                 self.removeClient(
-                    worker,
-                    reason='credential is not valid')
+                    worker)
                 raise WorkerCredentialNotValid
             worker.ip = message['ip']
             worker.port = message['port']
             worker.token = token
             self.workerByToken[worker.token] = worker
-            self.logger.info("Worker-%d added. %s", workerID, worker.specs.info())
+            taskName = message['taskName']
+            worker.name = "Worker-%d-Task-%d-%s " % (workerID, ownedBy, taskName)
+            self.logger.info("%s added. %s", worker.name, worker.specs.info())
         else:
             self.workerBrokerQueue.put(worker)
+            worker.name = "Worker-%d-Broker" % workerID
             self.logger.info("Worker-%d-Broker added. %s", workerID, worker.specs.info())
 
         self.workers[workerID] = worker
@@ -85,27 +90,6 @@ class Registry:
 
     def workerWait(self, worker: Worker, appID: int = None) -> NoReturn:
         self.workersQueueByAppID[appID].put(worker)
-
-    def __workerFree(self):
-        # TODO
-        pass
-
-    def __workerWork(self, appID: int, user: User):
-        try:
-            while True:
-                worker = self.workersQueueByAppID[appID].get(block=False)
-                if not worker.active:
-                    continue
-                worker.userByAppID[appID] = user
-                user.workerByAppID[appID] = worker
-                break
-        except Empty:
-            for _, worker in user.workerByAppID.items():
-                del worker.userByAppID[appID]
-            raise NoWorkerAvailableException
-
-    def removeWorker(self, workerID) -> NoReturn:
-        self.workers[workerID].active = False
 
     def __newUserID(self):
         self.__lockCurrentUserID.acquire()
@@ -124,8 +108,10 @@ class Registry:
                     sendingQueue=client.sendingQueue,
                     userID=userID,
                     appRunMode=message['mode'],
-                    appIDs=appIDs
+                    appIDs=appIDs,
+
                     )
+        user.name = 'User-%d' % user.userID
         threading.Thread(
             target=self.__assignWorkerForUser,
             args=(user,)).start()

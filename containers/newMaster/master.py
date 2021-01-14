@@ -169,9 +169,14 @@ class FogMaster:
                 "UserID-%d disconnected",
                 client.userID)
         elif isinstance(client, Worker):
-            self.logger.debug(
-                "WorkerID-%d disconnected",
-                client.workerID)
+            if client.ownedBy is None:
+                self.logger.debug(
+                    "Worker-%d-Broker disconnected",
+                    client.workerID)
+            else:
+                self.logger.debug(
+                    "Worker-%d-Task-%d disconnected",
+                    client.workerID, client.ownedBy)
         self.registry.removeClient(client)
         self.dataManager.discard(client)
 
@@ -212,8 +217,8 @@ class FogMaster:
             nextAppID = appIDs[0]
             worker = user.workerByAppID[nextAppID]
             self.dataManager.writeData(worker, Message.encrypt(message))
-            self.logger.debug('Sent message from userID-%d with appID-%d to workerID-%d', user.userID, nextAppID,
-                              worker.workerID)
+            self.logger.debug('Sent message from %s with appID-%d to %s', user.name, nextAppID,
+                              worker.name)
         elif mode == 'parallel':
             for appID in appIDs:
                 message['appIDs'] = [appID]

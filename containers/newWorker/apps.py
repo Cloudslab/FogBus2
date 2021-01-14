@@ -16,7 +16,7 @@ class TestApp(TasksWorkerSide):
 class FaceDetection(TasksWorkerSide):
 
     def __init__(self):
-        super().__init__(appID=1, appName='FaceDetection')
+        super().__init__(taskID=1, taskName='FaceDetection')
         self.face_cascade = cv2.CascadeClassifier('./cascade/haar-face.xml')
 
     def process(self, inputData):
@@ -33,7 +33,7 @@ class FaceDetection(TasksWorkerSide):
 class EyeDetection(TasksWorkerSide):
 
     def __init__(self):
-        super().__init__(appID=2, appName='EyeDetection')
+        super().__init__(taskID=2, taskName='EyeDetection')
         self.eye_cascade = cv2.CascadeClassifier('./cascade/haar-eye.xml')
 
     def process(self, inputData):
@@ -46,7 +46,7 @@ class EyeDetection(TasksWorkerSide):
 
 class ColorTracking(TasksWorkerSide):
     def __init__(self):
-        super().__init__(appID=3, appName='ColorTracking')
+        super().__init__(taskID=3, taskName='ColorTracking')
 
     def process(self, inputData):
 
@@ -77,7 +77,7 @@ class ColorTracking(TasksWorkerSide):
 
 class BlurAndPHash(TasksWorkerSide):
     def __init__(self):
-        super().__init__(appID=4, appName='Blur')
+        super().__init__(taskID=4, taskName='BlurAndPHash')
         self.thresholdLaplacian = 120
         self.thresholdDiffStop = 120
         self.thresholdDiffPre = 25
@@ -156,7 +156,7 @@ class BlurAndPHash(TasksWorkerSide):
 
 class OCR(TasksWorkerSide):
     def __init__(self):
-        super().__init__(appID=5, appName='OCR')
+        super().__init__(taskID=5, taskName='OCR')
         self.text = ''
         self.preText = None
         self.thresholdEditDistance = 800

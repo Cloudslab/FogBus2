@@ -48,6 +48,7 @@ class Client:
         self.receivingQueue: Queue[bytes] = receivingQueue
         self.active = True
         self.activeTime = time()
+        self.name: str = 'None'
 
     def updateActiveTime(self):
         self.activeTime = time()
@@ -70,7 +71,9 @@ class Worker(Client):
             sendingQueue: Queue[bytes],
             receivingQueue: Queue[bytes],
             workerID: int,
-            specs: NodeSpecs):
+            specs: NodeSpecs,
+            ownedBy: int
+    ):
         super(Worker, self).__init__(
             socketID=socketID,
             socket_=socket_,
@@ -82,6 +85,7 @@ class Worker(Client):
         self.token = None
         self.ip = None
         self.port = None
+        self.ownedBy: int = ownedBy
 
 
 class User(Client):
