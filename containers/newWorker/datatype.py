@@ -221,7 +221,10 @@ class DataManagerClient:
 
     @staticmethod
     def writeFile(name, content):
-        f = open(name, 'w')
+        logPath = './log'
+        if not os.path.exists(logPath):
+            os.mkdir(logPath)
+        f = open('%s/%s' % (logPath, name), 'w')
         f.write(content)
         f.close()
 
@@ -634,8 +637,10 @@ class Broker:
             self.recordComputingWeight()
 
     def recordComputingWeight(self):
-
-        filename = 'computingWeight@%s.csv' % self.name
+        logPath = './log'
+        if not os.path.exists(logPath):
+            os.mkdir(logPath)
+        filename = '%s/computingWeight@%s.csv' % (logPath, self.name)
         fileContent = 'averageProcessingTime, averageCalls, CPUFrequency\r\n' \
                       '%f, %f, %f\r\n' % (
                           self.task.averageProcessingTime(),

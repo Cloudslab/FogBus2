@@ -27,7 +27,7 @@ class SystemInfoResult:
                  totalCPUCores=None,
                  maxCPUFrequency=None,
                  minCPUFrequency=None,
-                 currentCPUFrequency=None,
+                 currentCPUFrequency=0,
                  currentTotalCPUUsage=None,
                  currentTotalCPUUsagePerCore=None,
                  totalMemory=None,
@@ -347,8 +347,12 @@ class SystemInfo:
 
     def __recordPerSeconds(self, seconds: float, nodeName: str):
         self.getAll()
-        unchangingLog = 'log@unchanging@%s.csv' % nodeName
-        changingLog = 'log@changing@%s.csv' % nodeName
+        logPath = './log'
+        if not os.path.exists(logPath):
+            os.mkdir(logPath)
+
+        unchangingLog = '%s/log@unchanging@%s.csv' % (logPath, nodeName)
+        changingLog = '%s/log@changing@%s.csv' % (logPath, nodeName)
 
         if not os.path.exists(unchangingLog):
             f = open(unchangingLog, 'w')

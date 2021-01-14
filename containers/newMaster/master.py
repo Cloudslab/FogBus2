@@ -2,7 +2,7 @@ import threading
 import logging
 import socket
 import struct
-
+import os
 from logger import get_logger
 from masterSideRegistry import Registry
 from dataManagerServer import DataManagerServer
@@ -190,7 +190,10 @@ class FogMaster:
 
     @staticmethod
     def writeFile(name, content):
-        f = open(name, 'w')
+        logPath = './log'
+        if not os.path.exists(logPath):
+            os.mkdir(logPath)
+        f = open('%s/%s' % (logPath, name), 'w')
         f.write(content)
         f.close()
 
