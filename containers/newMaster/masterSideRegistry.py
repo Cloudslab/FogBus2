@@ -103,15 +103,16 @@ class Registry:
         userID = self.__newUserID()
         appIDs = message['appIDs']
         label = message['label']
-        user = User(socketID=client.socketID,
-                    socket_=client.socket,
-                    receivingQueue=client.receivingQueue,
-                    sendingQueue=client.sendingQueue,
-                    userID=userID,
-                    appRunMode=message['mode'],
-                    appIDs=appIDs,
-                    connectionIO=client.connectionIO
-                    )
+        user = User(
+            socketID=client.socketID,
+            socket_=client.socket,
+            receivingQueue=client.receivingQueue,
+            sendingQueue=client.sendingQueue,
+            userID=userID,
+            appRunMode=message['mode'],
+            appIDs=appIDs,
+            connectionIO=client.connectionIO
+        )
         user.name = '%s@User-%d' % (label, user.userID)
         threading.Thread(
             target=self.__assignWorkerForUser,

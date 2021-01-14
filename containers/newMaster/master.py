@@ -151,6 +151,7 @@ class FogMaster:
         while self.dataManager.hasClient(client):
             try:
                 messageEncrypted = self.dataManager.readData(client)
+                self.recordDataTransferring(client)
                 threading.Thread(
                     target=self.__handleMessage(
                         client,
@@ -199,7 +200,6 @@ class FogMaster:
 
     def __handleMessage(self, client: Client, message: bytes):
         message = Message.decrypt(message)
-        self.recordDataTransferring(client)
         if isinstance(client, User):
             if message['type'] == 'submitData':
                 self.__handleData(client, message)
@@ -236,6 +236,7 @@ class FogMaster:
             nextAppID = appIDs[0]
             worker = user.workerByAppID[nextAppID]
             self.dataManager.writeData(worker, Message.encrypt(message))
+            self.recordDataTransferring(worker)
             self.logger.debug('Got data from %s and assigned to %s', user.name,
                               worker.name)
         elif mode == 'parallel':

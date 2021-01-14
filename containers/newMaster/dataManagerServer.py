@@ -6,7 +6,7 @@ import sys
 from logger import get_logger
 from queue import Queue
 from typing import NoReturn
-from datatype import Client, User, Worker, IO
+from datatype import Client, User, Worker, IO, ConnectionIO
 from message import Message
 from time import time, sleep
 
@@ -51,7 +51,8 @@ class DataManagerServer:
                 socketID=socketID,
                 socket_=clientSocket,
                 receivingQueue=Queue(),
-                sendingQueue=Queue()
+                sendingQueue=Queue(),
+                connectionIO=ConnectionIO()
             )
             self.__sockets[socketID] = client
             self.unregisteredClients.put(client)
@@ -126,12 +127,12 @@ class DataManagerServer:
     def __sender(client: Client, nodeIO: IO):
         try:
             while True:
-                data = client.sendingQueue.get()
-                data = struct.pack(">L", len(data)) + data
+                data_ = client.sendingQueue.get()
+                data = struct.pack(">L", len(data_)) + data_
                 client.socket.sendall(data)
                 dataSize = sys.getsizeof(data)
                 nodeIO.sentSize += dataSize
-                if not data == b'alive':
+                if not data_ == b'alive':
                     client.connectionIO.sent(dataSize)
 
         except OSError:

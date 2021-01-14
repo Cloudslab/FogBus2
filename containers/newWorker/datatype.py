@@ -194,12 +194,12 @@ class DataManagerClient:
         event.set()
         try:
             while True:
-                data = self.sendingQueue.get()
-                data = struct.pack(">L", len(data)) + data
+                data_ = self.sendingQueue.get()
+                data = struct.pack(">L", len(data_)) + data_
                 self.socket.sendall(data)
                 dataSize = sys.getsizeof(data)
                 self.__io.sentSize += dataSize
-                if not data == b'alive':
+                if not data_ == b'alive':
                     self.connectionIO.sent(dataSize)
                     self.recordDataTransferring()
         except OSError:

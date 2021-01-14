@@ -85,7 +85,7 @@ class Client:
             socket_: socket.socket,
             sendingQueue: Queue[bytes],
             receivingQueue: Queue[bytes],
-            connectionIO: ConnectionIO = ConnectionIO()
+            connectionIO: ConnectionIO
     ):
         self.socketID: int = socketID
         self.socket: socket.socket = socket_
