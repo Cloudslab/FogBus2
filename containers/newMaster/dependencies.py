@@ -21,38 +21,38 @@ class Dependency:
 
 
 class Application:
-    def __init__(self, name: str, dependencies: Dict[int, Dependency]):
+    def __init__(self, name: str, dependencies: Dict[str, Dependency]):
         self.name: str = str(name)
-        self.dependencies: Dict[int, Dependency] = dependencies
+        self.dependencies: Dict[str, Dependency] = dependencies
 
 
 def loadDependencies():
     f = open('./dependencies.json')
     jsonData = json.loads(f.read())
-    tasks: Dict[int, Task] = {}
+    tasks: Dict[str, Task] = {}
 
-    for taskID, taskData in jsonData['tasks'].items():
-        task = Task(taskID=taskID, taskName=taskData['name'])
-        tasks[taskID] = task
+    for taskName, taskData in jsonData['tasks'].items():
+        task = Task(taskID=taskData['id'], taskName=taskName)
+        tasks[taskName] = task
 
-    applications: List[Application] = []
+    applications: Dict[str, Application] = {}
 
     for applicationID, applicationData in jsonData['applications'].items():
         dependenciesData = applicationData['dependencies']
-        dependencies: Dict[int, Dependency] = {}
-        for taskID, dependencyData in dependenciesData.items():
+        dependencies: Dict[str, Dependency] = {}
+        for taskName, dependencyData in dependenciesData.items():
             dependency = Dependency(
-                task=tasks[taskID],
+                task=tasks[taskName],
                 parentTasksList=dependencyData['parents'],
                 childTaskList=dependencyData['children']
             )
-            dependencies[taskID] = dependency
+            dependencies[taskName] = dependency
 
         application = Application(
             name=applicationData['name'],
             dependencies=dependencies
         )
-        applications.append(application)
+        applications[application.name] = application
     return tasks, applications
 
 

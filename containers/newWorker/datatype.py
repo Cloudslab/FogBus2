@@ -4,7 +4,9 @@ import struct
 import socket
 import os
 import sys
+import cProfile, pstats, io
 
+from pstats import SortKey
 from queue import Empty
 from time import sleep
 from logger import get_logger
@@ -516,7 +518,12 @@ class Broker:
         while True:
             message = self.messageByAppID[app.appID].get()
             self.__receivedTasksCount += 1
+            profiler = cProfile.Profile()
+            profiler.enable()
             self.__executeApp(app, message)
+            profiler.disable()
+            profilerStats = pstats.Stats(profiler).sort_stats('ncalls')
+            print(profilerStats.total_calls, profilerStats.total_tt)
 
     def __executeApp(self, app: TasksWorkerSide, message) -> NoReturn:
         startTime = time()

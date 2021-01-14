@@ -2,8 +2,6 @@ import cv2
 import pytesseract
 import editdistance
 import numpy as np
-import csv
-import os
 from datatype import TasksWorkerSide
 
 
