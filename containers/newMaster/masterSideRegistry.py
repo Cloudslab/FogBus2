@@ -56,7 +56,8 @@ class Registry:
             receivingQueue=client.receivingQueue,
             workerID=workerID,
             specs=nodeSpecs,
-            ownedBy=ownedBy
+            ownedBy=ownedBy,
+            connectionIO = client.io
         )
 
         if userID is not None \
@@ -76,7 +77,7 @@ class Registry:
             worker.token = token
             self.workerByToken[worker.token] = worker
             taskName = message['taskName']
-            worker.name = "Worker-%d-Task-%d-%s " % (workerID, ownedBy, taskName)
+            worker.name = "Worker-%d-Task-%d-%s" % (workerID, ownedBy, taskName)
             self.logger.info("%s added. %s", worker.name, worker.specs.info())
         else:
             self.workerBrokerQueue.put(worker)
@@ -109,7 +110,7 @@ class Registry:
                     userID=userID,
                     appRunMode=message['mode'],
                     appIDs=appIDs,
-
+                    connectionIO=client.io
                     )
         user.name = 'User-%d' % user.userID
         threading.Thread(

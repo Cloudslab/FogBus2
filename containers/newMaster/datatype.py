@@ -33,6 +33,34 @@ class ApplicationUserSide:
         pass
 
 
+class ConnectionIO:
+
+    def __init__(self):
+        self.__received: int = 0
+        self.__receivedCount: int = 0
+        self.__sent: int = 0
+        self.__sentCount: int = 0
+
+    def received(self, bytes_: int):
+        self.__received += bytes_
+        self.__receivedCount += 1
+
+    def sent(self, bytes_: int):
+        self.__sent += bytes_
+        self.__sentCount += 1
+
+    def averageReceived(self) -> float:
+        if self.__receivedCount == 0:
+            return 0
+        return self.__received / self.__receivedCount
+
+    def averageSent(self) -> float:
+
+        if self.__sentCount == 0:
+            return 0
+        return self.__sent / self.__sentCount
+
+
 class Client:
 
     def __init__(
@@ -49,6 +77,7 @@ class Client:
         self.active = True
         self.activeTime = time()
         self.name: str = 'None'
+        self.io: ConnectionIO = ConnectionIO()
 
     def updateActiveTime(self):
         self.activeTime = time()
@@ -72,7 +101,8 @@ class Worker(Client):
             receivingQueue: Queue[bytes],
             workerID: int,
             specs: NodeSpecs,
-            ownedBy: int
+            ownedBy: int,
+            connectionIO: ConnectionIO
     ):
         super(Worker, self).__init__(
             socketID=socketID,
@@ -86,6 +116,7 @@ class Worker(Client):
         self.ip = None
         self.port = None
         self.ownedBy: int = ownedBy
+        self.io = connectionIO
 
 
 class User(Client):
@@ -99,17 +130,21 @@ class User(Client):
             userID: int,
             appRunMode: str,
             appIDs: List[int],
-            workerByAppID: dict[int, Worker] = None):
+            connectionIO: ConnectionIO,
+            workerByAppID: dict[int, Worker] = None,
+    ):
         super(User, self).__init__(
             socketID=socketID,
             socket_=socket_,
             sendingQueue=sendingQueue,
-            receivingQueue=receivingQueue)
+            receivingQueue=receivingQueue,
+        )
         self.userID = userID
         self.appRunMode = appRunMode
         self.appIDs = appIDs
         self.isReady = False
         self.appIDTokenMap = {}
+        self.io = connectionIO
         if workerByAppID is None:
             self.workerByAppID: dict[int, Worker] = {}
 

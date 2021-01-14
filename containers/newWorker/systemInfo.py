@@ -27,7 +27,7 @@ class SystemInfoResult:
                  totalCPUCores=None,
                  maxCPUFrequency=None,
                  minCPUFrequency=None,
-                 currentCPUFrequency=None,
+                 currentCPUFrequency=0,
                  currentTotalCPUUsage=None,
                  currentTotalCPUUsagePerCore=None,
                  totalMemory=None,
@@ -339,16 +339,16 @@ class SystemInfo:
 
         return self.res
 
-    def recordPerSeconds(self, seconds: float, logFilename: str):
+    def recordPerSeconds(self, seconds: float, nodeName: str):
         threading.Thread(
             target=self.__recordPerSeconds,
-            args=(seconds, logFilename)
+            args=(seconds, nodeName)
         ).start()
 
-    def __recordPerSeconds(self, seconds: float, logFilename: str):
+    def __recordPerSeconds(self, seconds: float, nodeName: str):
         self.getAll()
-        unchangingLog = 'unchanging_' + logFilename
-        changingLog = 'changing_' + logFilename
+        unchangingLog = 'log@unchanging@%s.csv' % nodeName
+        changingLog = 'log@changing@%s.csv' % nodeName
 
         if not os.path.exists(unchangingLog):
             f = open(unchangingLog, 'w')

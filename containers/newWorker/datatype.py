@@ -4,7 +4,8 @@ import struct
 import socket
 import os
 import sys
-import cProfile, pstats
+import cProfile
+import pstats
 
 from queue import Empty
 from time import sleep
@@ -16,6 +17,34 @@ from time import time
 from queue import Queue
 from abc import abstractmethod
 from systemInfo import SystemInfo
+
+
+class ConnectionIO:
+
+    def __init__(self):
+        self.__received: int = 0
+        self.__receivedCount: int = 0
+        self.__sent: int = 0
+        self.__sentCount: int = 0
+
+    def received(self, bytes_: int):
+        self.__received += bytes_
+        self.__receivedCount += 1
+
+    def sent(self, bytes_: int):
+        self.__sent += bytes_
+        self.__sentCount += 1
+
+    def averageReceived(self) -> float:
+        if self.__receivedCount == 0:
+            return 0
+        return self.__received / self.__receivedCount
+
+    def averageSent(self) -> float:
+
+        if self.__sentCount == 0:
+            return 0
+        return self.__sent / self.__sentCount
 
 
 class NodeSpecs:
@@ -52,6 +81,7 @@ class DataManagerClient:
         self.port: int = port
         self.activeTime = time()
         self.__io = io
+        self.connectionIO = ConnectionIO()
 
         if receivingQueue is None:
             self.receivingQueue: Queue[bytes] = Queue()
@@ -135,7 +165,10 @@ class DataManagerClient:
                 buffer = buffer[dataSize:]
                 self.activeTime = time()
                 if not data == b'alive':
+                    self.connectionIO.sent(payloadSize + dataSize)
                     self.receivingQueue.put(data)
+                    self.recordDataTransferring()
+
                 self.__io.receivedSize += sys.getsizeof(data)
 
         except OSError:
@@ -148,9 +181,26 @@ class DataManagerClient:
                 data = self.sendingQueue.get()
                 data = struct.pack(">L", len(data)) + data
                 self.socket.sendall(data)
-                self.__io.sentSize += sys.getsizeof(data)
+                dataSize = sys.getsizeof(data)
+                self.__io.sentSize += dataSize
+                self.connectionIO.sent(dataSize)
+                self.recordDataTransferring()
         except OSError:
             self.logger.warning("Sender disconnected.")
+
+    def recordDataTransferring(self):
+        if self.name is None:
+            return
+        filename = 'AverageIO@%s.csv ' % self.name
+        fileContent = 'averageReceived, averageSent\r\n' \
+                      '%f, %f\r\n' % (self.connectionIO.averageReceived(), self.connectionIO.averageSent())
+        self.writeFile(filename, fileContent)
+
+    @staticmethod
+    def writeFile(name, content):
+        f = open(name, 'w')
+        f.write(content)
+        f.close()
 
 
 class Worker(DataManagerClient):
@@ -195,7 +245,6 @@ class DataManagerServer:
         self.receivingQueue: Queue = receivingQueue
         self.__currentSocketID = 0
         self.__lockSocketID: threading.Lock = threading.Lock()
-        self.unregisteredClients: Queue[Worker] = Queue()
         self.__serverSocket: socket.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.logger = get_logger('Worker-DataManagerServer', logLevel)
         self.__io = io
@@ -232,7 +281,6 @@ class DataManagerServer:
                 io=self.__io
             )
             worker.link()
-            self.unregisteredClients.put(worker)
 
 
 class Node:
@@ -272,10 +320,28 @@ class TasksWorkerSide:
     def __init__(self, taskID: int, taskName: str):
         self.taskID = taskID
         self.taskName = taskName
+        self.taskCalls = 0
+        self.processedTime = 0
+        self.processedCount = 0
 
     @abstractmethod
     def process(self, inputData):
         pass
+
+    def recordProcessed(self, time_, calls):
+        self.processedTime += time_
+        self.taskCalls += calls
+        self.processedCount += 1
+
+    def averageCalls(self):
+        if self.processedCount == 0:
+            return 0
+        return self.taskCalls / self.processedCount
+
+    def averageProcessingTime(self):
+        if self.processedCount == 0:
+            return 0
+        return self.processedTime / self.processedCount
 
 
 class WorkerSysInfo(SystemInfo):
@@ -336,7 +402,7 @@ class Broker:
         self.__io = IO()
 
         self.master: Master = Master(
-            name='Master',
+            name='%s@Master' % self.name,
             host=self.masterIP,
             port=self.masterPort,
             logLevel=self.logger.level,
@@ -361,8 +427,7 @@ class Broker:
     def __nodeLogger(self):
         sysInfo = self.sysInfo
         sleepTime = 10
-        sysInfo.recordPerSeconds(seconds=sleepTime,
-                                 logFilename='%s-log.csv' % self.name)
+        sysInfo.recordPerSeconds(seconds=sleepTime, nodeName=self.name)
         threading.Thread(
             target=self.__sendLogToRemoteLogger,
             args=(sysInfo,)
@@ -389,14 +454,14 @@ class Broker:
 
         message = {
             'logList': sysInfo.res.keys(changing=False),
-            'nodeName': "Worker-%d.csv" % self.workerID,
+            'nodeName': self.name,
             'isChangingLog': False,
             'isTitle': True
         }
         self.__sendLog(message)
         message = {
             'logList': sysInfo.res.keys(changing=True),
-            'nodeName': "Worker-%d.csv" % self.workerID,
+            'nodeName': self.name,
             'isChangingLog': True,
             'isTitle': True
         }
@@ -406,7 +471,7 @@ class Broker:
             sleep(sleepTime)
             message = {
                 'logList': sysInfo.res.values(changing=True),
-                'nodeName': "Worker-%d.csv" % self.workerID,
+                'nodeName': self.name,
                 'isChangingLog': True,
                 'isTitle': False
             }
@@ -432,16 +497,6 @@ class Broker:
                 target=self.__runApp,
                 args=(self.task,)
             ).start()
-
-    def __handleClients(self):
-
-        while True:
-            worker = self.service.unregisteredClients.get()
-            registrationInfo = worker.receivingQueue.get()
-            registrationInfo = Message.decrypt(registrationInfo)
-            workerID = registrationInfo['workerID']
-            worker.workerID = workerID
-            self.workers[workerID] = worker
 
     def __register(self) -> NoReturn:
         message = {'type': 'register',
@@ -498,11 +553,11 @@ class Broker:
                 self.messageByAppID[appID].put(message)
 
             elif message['type'] == 'workerInfo':
-                nextWorkerID = message['id']
                 nextWorkerIP = message['ip']
                 nextWorkerPort = message['port']
+                nextWorkerName = message['name']
                 self.nextWorker = DataManagerClient(
-                    name='nextWorker-WorkerID-%d' % nextWorkerID,
+                    name="%s@%s" % (self.name, nextWorkerName),
                     host=nextWorkerIP,
                     port=nextWorkerPort,
                     io=self.__io
@@ -527,6 +582,7 @@ class Broker:
 
     def __runApp(self, app: TasksWorkerSide):
         self.logger.info('[*] AppID-%d-{%s} is serving ...', app.taskID, app.taskName)
+
         while True:
             message = self.messageByAppID[app.taskID].get()
             self.__receivedTasksCount += 1
@@ -535,7 +591,25 @@ class Broker:
             self.__executeApp(app, message)
             profiler.disable()
             profilerStats = pstats.Stats(profiler).sort_stats('ncalls')
-            print(profilerStats.total_calls, profilerStats.total_tt)
+            self.task.recordProcessed(profilerStats.total_tt, profilerStats.total_calls)
+            self.recordComputingWeight()
+
+    def recordComputingWeight(self):
+
+        filename = 'computingWeight@%s.csv' % self.name
+        fileContent = 'averageProcessingTime, averageCalls, CPUFrequency\r\n' \
+                      '%f, %f, %f\r\n' % (
+                          self.task.averageProcessingTime(),
+                          self.task.averageCalls(),
+                          self.sysInfo.res.currentCPUFrequency
+                      )
+        self.writeFile(filename, fileContent)
+
+    @staticmethod
+    def writeFile(name, content):
+        f = open(name, 'w')
+        f.write(content)
+        f.close()
 
     def __executeApp(self, task: TasksWorkerSide, message) -> NoReturn:
         startTime = time()
@@ -577,7 +651,5 @@ if __name__ == '__main__':
         masterIP='127.0.0.1',
         masterPort=5000,
         thisIP='127.0.0.1',
-        thisPort=6000,
-        appIDs=apps,
         logLevel=logging.DEBUG)
     broker.run()

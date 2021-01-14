@@ -59,9 +59,10 @@ class RemoteLogger:
         isChangingLog = message['isChangingLog']
         isTitle = message['isTitle']
 
-        filename = 'changing_' if isChangingLog else \
-            'unchanging_'
-        filename += nodeName
+        filename = 'log@'
+        filename += 'changing@' if isChangingLog else \
+            'unchanging@'
+        filename += '%s.csv' % nodeName
         filename = './remoteLog/' + filename
         if isTitle:
             if os.path.exists(filename):

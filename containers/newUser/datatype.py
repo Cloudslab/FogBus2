@@ -5,7 +5,7 @@ import threading
 import os
 import struct
 
-from time import time,sleep
+from time import time, sleep
 from logger import get_logger
 from message import Message
 from typing import NoReturn
@@ -83,6 +83,7 @@ class Broker:
         self.remoteLoggerHost: str = remoteLoggerHost
         self.remoteLoggerPort: int = remoteLoggerPort
         self.userID = None
+        self.name = None
         self.taskIDs = taskIDs
 
         self.resultQueue: Queue = Queue()
@@ -95,7 +96,7 @@ class Broker:
 
     def __nodeLogger(self):
         sysInfo = UserSysInfo(formatSize=False)
-        sysInfo.recordPerSeconds(seconds=10, logFilename='User-%d-log.csv' % self.userID)
+        sysInfo.recordPerSeconds(seconds=10, nodeName=self.name)
         threading.Thread(
             target=self.__sendLogToRemoteLogger,
             args=(sysInfo,)
@@ -116,14 +117,14 @@ class Broker:
 
         message = {
             'logList': sysInfo.res.keys(changing=False),
-            'nodeName': "User-%d.csv" % self.userID,
+            'nodeName': self.name,
             'isChangingLog': False,
             'isTitle': True
         }
         self.__sendLog(message)
         message = {
             'logList': sysInfo.res.keys(changing=True),
-            'nodeName': "User-%d.csv" % self.userID,
+            'nodeName': self.name,
             'isChangingLog': True,
             'isTitle': True
         }
@@ -133,7 +134,7 @@ class Broker:
             sleep(sleepTime)
             message = {
                 'logList': sysInfo.res.values(changing=True),
-                'nodeName': "User-%d.csv" % self.userID,
+                'nodeName': self.name,
                 'isChangingLog': True,
                 'isTitle': False
             }
@@ -154,6 +155,7 @@ class Broker:
         self.logger.info("[*] Registering ...")
         while self.userID is None:
             pass
+        self.name = "User-%d" % self.userID
         threading.Thread(target=self.__nodeLogger).start()
         self.logger.info("[*] Registered with userID-%d", self.userID)
 

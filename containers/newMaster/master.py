@@ -40,6 +40,7 @@ class FogMaster:
 
         self.logger = get_logger('Master', logLevel)
         self.masterID = id_
+        self.name = 'Master-%d' % self.masterID
         self.host = host
         self.port = port
         self.remoteLoggerHost: str = remoteLoggerHost
@@ -58,7 +59,7 @@ class FogMaster:
     def __nodeLogger(self):
         sysInfo = MasterSysInfo(formatSize=False)
         sleepTime = 10
-        sysInfo.recordPerSeconds(seconds=sleepTime, logFilename='Master-%d-log.csv' % self.masterID)
+        sysInfo.recordPerSeconds(seconds=sleepTime, nodeName=self.name)
         threading.Thread(
             target=self.__sendLogToRemoteLogger,
             args=(sysInfo,)
@@ -165,24 +166,32 @@ class FogMaster:
         if isinstance(client, User):
             for appID, worker in client.workerByAppID.items():
                 self.registry.removeClient(worker)
-            self.logger.debug(
-                "UserID-%d disconnected",
-                client.userID)
-        elif isinstance(client, Worker):
-            if client.ownedBy is None:
-                self.logger.debug(
-                    "Worker-%d-Broker disconnected",
-                    client.workerID)
-            else:
-                self.logger.debug(
-                    "Worker-%d-Task-%d disconnected",
-                    client.workerID, client.ownedBy)
         self.registry.removeClient(client)
         self.dataManager.discard(client)
+        self.logger.debug(
+            "%s disconnected, average IO: %f, %f",
+            client.name,
+            client.io.averageReceived(),
+            client.io.averageSent()
+        )
+
+    def recordDataTransferring(self, client):
+        if client.name is None:
+            return
+        filename = 'AverageIO@%s.csv ' % client.name
+        fileContent = 'averageReceived, averageSent\r\n' \
+                      '%f, %f\r\n' % (client.io.averageReceived(), client.io.averageSent())
+        self.writeFile(filename, fileContent)
+
+    @staticmethod
+    def writeFile(name, content):
+        f = open(name, 'w')
+        f.write(content)
+        f.close()
 
     def __handleMessage(self, client: Client, message: bytes):
         message = Message.decrypt(message)
-
+        self.recordDataTransferring(client)
         if isinstance(client, User):
             if message['type'] == 'submitData':
                 self.__handleData(client, message)
@@ -201,7 +210,9 @@ class FogMaster:
                     message = {'type': 'workerInfo',
                                'id': worker.workerID,
                                'ip': worker.ip,
-                               'port': worker.port}
+                               'port': worker.port,
+                               'name': worker.name
+                               }
                     client.sendingQueue.put(Message.encrypt(message))
                     return
 

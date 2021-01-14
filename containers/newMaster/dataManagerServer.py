@@ -116,19 +116,23 @@ class DataManagerServer:
                 buffer = buffer[dataSize:]
                 client.updateActiveTime()
                 if not data == b'alive':
+                    client.io.received(payloadSize + dataSize)
                     client.receivingQueue.put(data)
                 io.receivedSize += sys.getsizeof(data)
         except OSError:
             client.active = False
 
     @staticmethod
-    def __sender(client: Client, io: IO):
+    def __sender(client: Client, nodeIO: IO):
         try:
             while True:
                 data = client.sendingQueue.get()
                 data = struct.pack(">L", len(data)) + data
                 client.socket.sendall(data)
-                io.sentSize += sys.getsizeof(data)
+                dataSize = sys.getsizeof(data)
+                nodeIO.sentSize += dataSize
+                client.io.sent(dataSize)
+
         except OSError:
             client.active = False
 
