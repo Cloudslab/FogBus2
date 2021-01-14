@@ -10,13 +10,15 @@ if __name__ == '__main__':
     token = None
     nextWorkerToken = None
     ownedBy = None
+    userName = None
     if len(sys.argv) > 4:
         userID = int(sys.argv[1])
         appID = int(sys.argv[2])
         token = sys.argv[3]
         nextWorkerToken = sys.argv[4]
-    if len(sys.argv) > 5:
+    if len(sys.argv) > 6:
         ownedBy = int(sys.argv[5])
+        userName = sys.argv[6]
 
     if appID == 0:
         app = TestApp(0)
@@ -43,5 +45,6 @@ if __name__ == '__main__':
         token=token,
         nextWorkerToken=nextWorkerToken,
         ownedBy=ownedBy,
+        userName =userName,
         logLevel=logging.DEBUG)
     broker.run()

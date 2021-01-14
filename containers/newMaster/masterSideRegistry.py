@@ -57,7 +57,7 @@ class Registry:
             workerID=workerID,
             specs=nodeSpecs,
             ownedBy=ownedBy,
-            connectionIO = client.io
+            connectionIO=client.connectionIO
         )
 
         if userID is not None \
@@ -102,7 +102,7 @@ class Registry:
     def __addUser(self, client: Client, message: dict):
         userID = self.__newUserID()
         appIDs = message['appIDs']
-
+        label = message['label']
         user = User(socketID=client.socketID,
                     socket_=client.socket,
                     receivingQueue=client.receivingQueue,
@@ -110,9 +110,9 @@ class Registry:
                     userID=userID,
                     appRunMode=message['mode'],
                     appIDs=appIDs,
-                    connectionIO=client.io
+                    connectionIO=client.connectionIO
                     )
-        user.name = 'User-%d' % user.userID
+        user.name = '%s@User-%d' % (label, user.userID)
         threading.Thread(
             target=self.__assignWorkerForUser,
             args=(user,)).start()
@@ -133,6 +133,7 @@ class Registry:
             message = {
                 'type': 'runWorker',
                 'userID': user.userID,
+                'userName': user.name,
                 'appID': appID,
                 'token': token,
                 'nextWorkerToken': nextWorkerToken}

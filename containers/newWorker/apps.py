@@ -27,6 +27,7 @@ class FaceDetection(TasksWorkerSide):
         for (x, y, w, h) in faces:
             roi_gray = gray[y:y + h, x:x + w]
             result.append((x, y, w, h, roi_gray))
+
         return result
 
 

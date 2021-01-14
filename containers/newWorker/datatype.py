@@ -26,14 +26,31 @@ class ConnectionIO:
         self.__receivedCount: int = 0
         self.__sent: int = 0
         self.__sentCount: int = 0
+        self.receivedPerSecond = 0
+        self.sentPerSecond = 0
+        self.__t = time()
+        self.__lastReceived = 0
+        self.__lastSent = 0
 
     def received(self, bytes_: int):
         self.__received += bytes_
         self.__receivedCount += 1
+        t = time()
+        t_diff = t - self.__t
+        if t_diff > 1:
+            self.__t = t
+            self.receivedPerSecond = (self.__received - self.__lastReceived) / t_diff
+            self.__lastReceived = self.__received
 
     def sent(self, bytes_: int):
         self.__sent += bytes_
         self.__sentCount += 1
+        t = time()
+        t_diff = t - self.__t
+        if t_diff > 1:
+            self.__t = t
+            self.sentPerSecond = (self.__sent - self.__lastSent) / t_diff
+            self.__lastSent = self.__sent
 
     def averageReceived(self) -> float:
         if self.__receivedCount == 0:
@@ -41,7 +58,6 @@ class ConnectionIO:
         return self.__received / self.__receivedCount
 
     def averageSent(self) -> float:
-
         if self.__sentCount == 0:
             return 0
         return self.__sent / self.__sentCount
@@ -165,7 +181,7 @@ class DataManagerClient:
                 buffer = buffer[dataSize:]
                 self.activeTime = time()
                 if not data == b'alive':
-                    self.connectionIO.sent(payloadSize + dataSize)
+                    self.connectionIO.received(payloadSize + dataSize)
                     self.receivingQueue.put(data)
                     self.recordDataTransferring()
 
@@ -183,8 +199,9 @@ class DataManagerClient:
                 self.socket.sendall(data)
                 dataSize = sys.getsizeof(data)
                 self.__io.sentSize += dataSize
-                self.connectionIO.sent(dataSize)
-                self.recordDataTransferring()
+                if not data == b'alive':
+                    self.connectionIO.sent(dataSize)
+                    self.recordDataTransferring()
         except OSError:
             self.logger.warning("Sender disconnected.")
 
@@ -192,8 +209,14 @@ class DataManagerClient:
         if self.name is None:
             return
         filename = 'AverageIO@%s.csv ' % self.name
-        fileContent = 'averageReceived, averageSent\r\n' \
-                      '%f, %f\r\n' % (self.connectionIO.averageReceived(), self.connectionIO.averageSent())
+
+        fileContent = 'averageReceived, averageSent, receivedPerSecond, sentPerSecond\r\n' \
+                      '%f, %f, %f, %f\r\n' % (
+                          self.connectionIO.averageReceived(),
+                          self.connectionIO.averageSent(),
+                          self.connectionIO.receivedPerSecond,
+                          self.connectionIO.sentPerSecond
+                      )
         self.writeFile(filename, fileContent)
 
     @staticmethod
@@ -378,6 +401,7 @@ class Broker:
             token: str = None,
             nextWorkerToken: str = None,
             ownedBy: int = None,
+            userName: str = None,
             logLevel=logging.DEBUG):
         self.ownedBy: int = ownedBy
         self.task: TasksWorkerSide = task
@@ -386,7 +410,7 @@ class Broker:
         if self.ownedBy is None:
             self.name = 'Worker-Broker'
         else:
-            self.name = 'Worker-%d-Task-%d-%s' % (self.ownedBy, self.task.taskID, self.task.taskName)
+            self.name = 'Worker-%d-Task-%d-%s@%s' % (self.ownedBy, self.task.taskID, self.task.taskName, userName)
         self.logger = get_logger(self.name, logLevel)
         self.masterIP = masterIP
         self.masterPort = masterPort
@@ -513,6 +537,7 @@ class Broker:
         self.logger.info("[*] Registering ...")
         while self.workerID is None:
             pass
+        self.name
         if self.nextWorkerToken is not None:
             message = {'type': 'lookup',
                        'token': self.nextWorkerToken}
@@ -532,16 +557,18 @@ class Broker:
                 self.workerID = message['workerID']
             elif message['type'] == 'runWorker':
                 userID = message['userID']
+                userName = message['userName']
                 appID = message['appID']
                 token = message['token']
                 nextWorkerToken = message['nextWorkerToken']
                 ownedBy = self.workerID
                 self.__runWorker(
                     userID=userID,
+                    userName=userName,
                     appID=appID,
                     token=token,
                     nextWorkerToken=nextWorkerToken,
-                    ownedBy=ownedBy,
+                    ownedBy=ownedBy
                 )
             elif message['type'] == 'close':
                 self.logger.warning(
@@ -573,12 +600,24 @@ class Broker:
                 self.master.sendingQueue.put(Message.encrypt(message))
 
     @staticmethod
-    def __runWorker(userID: int, appID: int, token: str, nextWorkerToken: str, ownedBy: int):
+    def __runWorker(
+            userID: int,
+            userName: str,
+            appID: int,
+            token: str,
+            nextWorkerToken: str,
+            ownedBy: int):
         threading.Thread(
             target=os.system,
-            args=("python worker.py %d %d %s %s %d" % (userID, appID, token, nextWorkerToken, ownedBy),)
+            args=("python worker.py %d %d %s %s %d %s" % (
+                userID,
+                appID,
+                token,
+                nextWorkerToken,
+                ownedBy,
+                userName),)
         ).start()
-        # os.system("python worker.py %d %d %s %s %d" % (userID, appID, token, nextWorkerToken, ownedBy))
+        # os.system("python worker.py %d %d %s %s %d %s" % (userID, appID, token, nextWorkerToken, ownedBy, userName))
 
     def __runApp(self, app: TasksWorkerSide):
         self.logger.info('[*] AppID-%d-{%s} is serving ...', app.taskID, app.taskName)

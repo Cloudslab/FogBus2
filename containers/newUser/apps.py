@@ -10,7 +10,10 @@ class FaceDetection(ApplicationUserSide):
 
     def run(self):
         self.appName = 'FaceDetection'
-        self.broker.run(mode='sequential')
+        self.broker.run(
+            label='%s-%d' % (self.appName, self.targetWidth),
+            mode='sequential'
+        )
 
         threading.Thread(target=self.__sendData).start()
         threading.Thread(target=self.__receiveResult).start()
@@ -22,14 +25,14 @@ class FaceDetection(ApplicationUserSide):
             ret, frame = self.capture.read()
             if not ret:
                 break
-            width = frame.shape[1]
-            height = frame.shape[0]
-            targetWidth = int(width * 640 / height)
-            frame = cv2.resize(frame, (targetWidth, 640))
+            frame = self.resizeFrame(frame)
             dataID = self.createDataFrame(frame)
-            self.broker.submit(data=frame,
-                               dataID=dataID,
-                               mode='sequential')
+            self.broker.submit(
+                data=frame,
+                dataID=dataID,
+                mode='sequential',
+                label='%d' % self.targetWidth
+            )
             self.dataIDSubmittedQueue.put(dataID)
 
         self.capture.release()
@@ -57,7 +60,10 @@ class FaceDetection(ApplicationUserSide):
 class FaceAndEyeDetection(ApplicationUserSide):
     def run(self):
         self.appName = 'FaceAndEyeDetection'
-        self.broker.run(mode='sequential')
+        self.broker.run(
+            label='%s-%d' % (self.appName, self.targetWidth),
+            mode='sequential'
+        )
 
         threading.Thread(target=self.__sendData).start()
         threading.Thread(target=self.__receiveResult).start()
@@ -69,14 +75,14 @@ class FaceAndEyeDetection(ApplicationUserSide):
             ret, frame = self.capture.read()
             if not ret:
                 break
-            width = frame.shape[1]
-            height = frame.shape[0]
-            targetWidth = int(width * 640 / height)
-            frame = cv2.resize(frame, (targetWidth, 640))
+            frame = self.resizeFrame(frame)
             dataID = self.createDataFrame(frame)
-            self.broker.submit(data=frame,
-                               dataID=dataID,
-                               mode='sequential')
+            self.broker.submit(
+                data=frame,
+                dataID=dataID,
+                mode='sequential',
+                label='%d' % self.targetWidth
+            )
             self.dataIDSubmittedQueue.put(dataID)
 
         self.capture.release()
@@ -118,7 +124,10 @@ class ColorTracking(ApplicationUserSide):
 
     def run(self):
         self.appName = 'ColorTracking'
-        self.broker.run(mode='sequential')
+        self.broker.run(
+            label='%s-%d' % (self.appName, self.targetWidth),
+            mode='sequential'
+        )
         threading.Thread(target=self.__receiveResult).start()
 
         cv2.namedWindow('Trackbars')
@@ -134,10 +143,12 @@ class ColorTracking(ApplicationUserSide):
         cv2.createTrackbar('satHigh', 'Trackbars', 255, 255, self.nothing)
         cv2.createTrackbar('valLow', 'Trackbars', 100, 255, self.nothing)
         cv2.createTrackbar('valHigh', 'Trackbars', 255, 255, self.nothing)
+        targetWidth = 640
         while True:
             ret, frame = self.capture.read()
             if not ret:
                 break
+
             hueLow = cv2.getTrackbarPos('hueLower', 'Trackbars')
             hueUp = cv2.getTrackbarPos('hueUpper', 'Trackbars')
 
@@ -156,10 +167,7 @@ class ColorTracking(ApplicationUserSide):
             l_b2 = np.array([hue2Low, Ls, Lv])
             u_b2 = np.array([hue2Up, Us, Uv])
 
-            width = frame.shape[1]
-            height = frame.shape[0]
-            targetWidth = int(width * 320 / height)
-            frame = cv2.resize(frame, (targetWidth, 320))
+            frame = self.resizeFrame(frame)
             inputData = (frame,
                          hueLow, hueUp,
                          hue2Low, hue2Up,
@@ -172,7 +180,8 @@ class ColorTracking(ApplicationUserSide):
             self.broker.submit(
                 inputData,
                 dataID,
-                mode='sequential'
+                mode='sequential',
+                label='%d' % self.targetWidth
             )
             resultData = self.result[dataID].get()
             (FGmaskComp, frame) = resultData
@@ -196,13 +205,16 @@ class VideoOCR(ApplicationUserSide):
             ret, frame = self.capture.read()
             if not ret:
                 break
-            frame = self.__resize(frame)
+            frame = self.resizeFrame(frame)
             q.put(frame)
         q.put(None)
 
     def run(self):
         self.appName = 'VideoOCR'
-        self.broker.run(mode='sequential')
+        self.broker.run(
+            label='%s-%d' % (self.appName, self.targetWidth),
+            mode='sequential'
+        )
         framesQueue = Queue()
         threading.Thread(
             target=self.__preprocess,
@@ -217,7 +229,8 @@ class VideoOCR(ApplicationUserSide):
             self.broker.submit(
                 inputData,
                 dataID=-1,
-                mode='sequential'
+                mode='sequential',
+                label='%d' % self.targetWidth
             )
         print("[*] Sent all the frames and waiting for result ...")
         inputData = (None, True)
@@ -225,15 +238,10 @@ class VideoOCR(ApplicationUserSide):
             inputData,
             dataID=-1,
             mode='sequential',
+            label='%d' % self.targetWidth
         )
 
         result = self.broker.resultQueue.get()
 
         print(result['result'], '\r\n [*] The text is at above.')
         os._exit(0)
-
-    @staticmethod
-    def __resize(img):
-        width = 540
-        factor = width / img.shape[1]
-        return cv2.resize(img, (width, round(img.shape[0] * factor)))

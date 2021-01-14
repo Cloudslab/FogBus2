@@ -40,14 +40,31 @@ class ConnectionIO:
         self.__receivedCount: int = 0
         self.__sent: int = 0
         self.__sentCount: int = 0
+        self.receivedPerSecond = 0
+        self.sentPerSecond = 0
+        self.__t = time()
+        self.__lastReceived = 0
+        self.__lastSent = 0
 
     def received(self, bytes_: int):
         self.__received += bytes_
         self.__receivedCount += 1
+        t = time()
+        t_diff = t - self.__t
+        if t_diff > 1:
+            self.__t = t
+            self.receivedPerSecond = (self.__received - self.__lastReceived) / t_diff
+            self.__lastReceived = self.__received
 
     def sent(self, bytes_: int):
         self.__sent += bytes_
         self.__sentCount += 1
+        t = time()
+        t_diff = t - self.__t
+        if t_diff > 1:
+            self.__t = t
+            self.sentPerSecond = (self.__sent - self.__lastSent) / t_diff
+            self.__lastSent = self.__sent
 
     def averageReceived(self) -> float:
         if self.__receivedCount == 0:
@@ -55,7 +72,6 @@ class ConnectionIO:
         return self.__received / self.__receivedCount
 
     def averageSent(self) -> float:
-
         if self.__sentCount == 0:
             return 0
         return self.__sent / self.__sentCount
@@ -68,7 +84,8 @@ class Client:
             socketID: int,
             socket_: socket.socket,
             sendingQueue: Queue[bytes],
-            receivingQueue: Queue[bytes]
+            receivingQueue: Queue[bytes],
+            connectionIO: ConnectionIO = ConnectionIO()
     ):
         self.socketID: int = socketID
         self.socket: socket.socket = socket_
@@ -77,7 +94,7 @@ class Client:
         self.active = True
         self.activeTime = time()
         self.name: str = 'None'
-        self.io: ConnectionIO = ConnectionIO()
+        self.connectionIO: ConnectionIO = connectionIO
 
     def updateActiveTime(self):
         self.activeTime = time()
@@ -108,7 +125,9 @@ class Worker(Client):
             socketID=socketID,
             socket_=socket_,
             sendingQueue=sendingQueue,
-            receivingQueue=receivingQueue)
+            receivingQueue=receivingQueue,
+            connectionIO=connectionIO
+        )
 
         self.workerID: int = workerID
         self.specs: NodeSpecs = specs
@@ -116,7 +135,6 @@ class Worker(Client):
         self.ip = None
         self.port = None
         self.ownedBy: int = ownedBy
-        self.io = connectionIO
 
 
 class User(Client):
@@ -138,13 +156,13 @@ class User(Client):
             socket_=socket_,
             sendingQueue=sendingQueue,
             receivingQueue=receivingQueue,
+            connectionIO=connectionIO
         )
         self.userID = userID
         self.appRunMode = appRunMode
         self.appIDs = appIDs
         self.isReady = False
         self.appIDTokenMap = {}
-        self.io = connectionIO
         if workerByAppID is None:
             self.workerByAppID: dict[int, Worker] = {}
 

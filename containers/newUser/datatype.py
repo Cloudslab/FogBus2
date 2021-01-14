@@ -85,6 +85,7 @@ class Broker:
         self.userID = None
         self.name = None
         self.taskIDs = taskIDs
+        self.label = None
 
         self.resultQueue: Queue = Queue()
         self.master: Master = Master(
@@ -140,7 +141,8 @@ class Broker:
             }
             self.__sendLog(message)
 
-    def run(self, mode: str):
+    def run(self, mode: str, label: str):
+        self.label = label
         self.master.link()
         threading.Thread(target=self.__receivedMessageHandler).start()
         self.register(mode=mode)
@@ -150,12 +152,14 @@ class Broker:
             'type': 'register',
             'role': 'user',
             'mode': mode,
-            'appIDs': self.taskIDs}
+            'appIDs': self.taskIDs,
+            'label': self.label
+        }
         self.__send(message)
         self.logger.info("[*] Registering ...")
         while self.userID is None:
             pass
-        self.name = "User-%d" % self.userID
+        self.name = "%s@User-%d" % (self.label, self.userID)
         threading.Thread(target=self.__nodeLogger).start()
         self.logger.info("[*] Registered with userID-%d", self.userID)
 
@@ -181,13 +185,15 @@ class Broker:
             self,
             data: Any,
             dataID: int,
+            label: str,
             mode: str) -> NoReturn:
         message = {'time': [time()],
                    'type': 'submitData',
                    'mode': mode,
                    'appIDs': self.taskIDs,
                    'data': data,
-                   'dataID': dataID}
+                   'dataID': dataID,
+                   'label': label}
         # print('submit', time())
         self.__send(message)
 
@@ -205,6 +211,7 @@ class ApplicationUserSide:
         self.data: dict[int, Any] = {}
         self.result: dict[int, Queue] = defaultdict(Queue)
         self.dataIDSubmittedQueue = Queue()
+        self.targetWidth = 640
 
     def createDataFrame(self, data: Any) -> (int, Any):
         self.lockData.acquire()
@@ -213,6 +220,12 @@ class ApplicationUserSide:
         self.lockData.release()
         self.data[dataID] = data
         return dataID
+
+    def resizeFrame(self, frame):
+        width = frame.shape[1]
+        height = frame.shape[0]
+        resizedWidth = int(width * self.targetWidth / height)
+        return cv2.resize(frame, (resizedWidth, self.targetWidth))
 
     @abstractmethod
     def run(self):

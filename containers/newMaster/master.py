@@ -171,16 +171,21 @@ class FogMaster:
         self.logger.debug(
             "%s disconnected, average IO: %f, %f",
             client.name,
-            client.io.averageReceived(),
-            client.io.averageSent()
+            client.connectionIO.averageReceived(),
+            client.connectionIO.averageSent()
         )
 
     def recordDataTransferring(self, client):
         if client.name is None:
             return
-        filename = 'AverageIO@%s.csv ' % client.name
-        fileContent = 'averageReceived, averageSent\r\n' \
-                      '%f, %f\r\n' % (client.io.averageReceived(), client.io.averageSent())
+        filename = 'AverageIO@%s@%s.csv ' % (self.name, client.name)
+        fileContent = 'averageReceived, averageSent, receivedPerSecond, sentPerSecond\r\n' \
+                      '%f, %f, %f, %f\r\n' % (
+                          client.connectionIO.averageReceived(),
+                          client.connectionIO.averageSent(),
+                          client.connectionIO.receivedPerSecond,
+                          client.connectionIO.sentPerSecond
+                      )
         self.writeFile(filename, fileContent)
 
     @staticmethod
@@ -228,7 +233,7 @@ class FogMaster:
             nextAppID = appIDs[0]
             worker = user.workerByAppID[nextAppID]
             self.dataManager.writeData(worker, Message.encrypt(message))
-            self.logger.debug('Sent message from %s with appID-%d to %s', user.name, nextAppID,
+            self.logger.debug('Got data from %s and assigned to %s', user.name,
                               worker.name)
         elif mode == 'parallel':
             for appID in appIDs:

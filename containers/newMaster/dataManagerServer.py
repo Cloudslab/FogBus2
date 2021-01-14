@@ -116,7 +116,7 @@ class DataManagerServer:
                 buffer = buffer[dataSize:]
                 client.updateActiveTime()
                 if not data == b'alive':
-                    client.io.received(payloadSize + dataSize)
+                    client.connectionIO.received(payloadSize + dataSize)
                     client.receivingQueue.put(data)
                 io.receivedSize += sys.getsizeof(data)
         except OSError:
@@ -131,7 +131,8 @@ class DataManagerServer:
                 client.socket.sendall(data)
                 dataSize = sys.getsizeof(data)
                 nodeIO.sentSize += dataSize
-                client.io.sent(dataSize)
+                if not data == b'alive':
+                    client.connectionIO.sent(dataSize)
 
         except OSError:
             client.active = False
