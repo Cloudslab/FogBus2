@@ -56,6 +56,37 @@ class FogMaster:
         self.registry: Registry = Registry(logLevel=logLevel)
         self.__receivedTasksCount: int = 0
 
+        self.__profiler = self.__loadProfilers()
+
+    def __loadProfilers(self):
+        # TODO
+        denpendencies = self.__loadDependencies()
+        return None
+
+    def __loadDependencies(self):
+        # TODO
+        return None
+
+    def __scaleMethod(self):
+        # TODO
+        pass
+
+    def __scheduleMethod(self):
+        # TODO
+        # 1. Input: Consider user requests
+        # 2. Resources / Workers
+        # 3. Applications
+        #
+        # some algorithm here
+        #
+        # return the decision
+        pass
+
+    def __grabWorkersInfo(self):
+        # TODO
+        # List of workers
+        pass
+
     def __nodeLogger(self):
         sysInfo = MasterSysInfo(formatSize=False)
         sleepTime = 10

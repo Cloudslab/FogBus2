@@ -193,6 +193,7 @@ class Worker(Client):
             ownedBy: int,
             connectionIO: ConnectionIO
     ):
+        # TODO Containers info
         super(Worker, self).__init__(
             socketID=socketID,
             socket_=socket_,
@@ -232,7 +233,7 @@ class User(Client):
         )
         self.userID = userID
         self.appRunMode = appRunMode
-        self.appIDs = appIDs
+        self.taskIDs = appIDs
         self.isReady = False
         self.appIDTokenMap = {}
         if workerByAppID is None:

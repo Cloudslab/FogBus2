@@ -1,0 +1,3 @@
+application,  resolution,task, averageProcessingTime, averageCalls, CPUFrequency
+VideoOCR,1080p,BlurAndPHash,0.032641, 106.432406, 4499.999875
+VideoOCR,1080p,OCR,1.027047, 3033.827536, 4499.949500

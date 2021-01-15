@@ -121,20 +121,20 @@ class Registry:
         return user
 
     def __assignWorkerForUser(self, user: User):
-        for appID in user.appIDs:
+        for taskID in user.taskIDs:
             token = token_urlsafe(16)
-            user.appIDTokenMap[appID] = token
+            user.appIDTokenMap[taskID] = token
 
-        for i, appID in enumerate(user.appIDs):
+        for i, taskID in enumerate(user.taskIDs):
             worker = self.workerBrokerQueue.get(timeout=1)
-            token = user.appIDTokenMap[appID]
-            nextWorkerToken = None if i + 1 == len(user.appIDs) \
-                else user.appIDTokenMap[user.appIDs[i + 1]]
+            token = user.appIDTokenMap[taskID]
+            nextWorkerToken = None if i + 1 == len(user.taskIDs) \
+                else user.appIDTokenMap[user.taskIDs[i + 1]]
             message = {
                 'type': 'runWorker',
                 'userID': user.userID,
                 'userName': user.name,
-                'appID': appID,
+                'appID': taskID,
                 'token': token,
                 'nextWorkerToken': nextWorkerToken}
             worker.sendingQueue.put(Message.encrypt(message))
