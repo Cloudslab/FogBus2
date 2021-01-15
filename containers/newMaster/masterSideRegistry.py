@@ -77,7 +77,7 @@ class Registry:
             worker.token = token
             self.workerByToken[worker.token] = worker
             taskName = message['taskName']
-            worker.name = "Worker-%d-Task-%d-%s" % (workerID, ownedBy, taskName)
+            worker.name = "Worker-%d-Task-%d-%s@%s" % (workerID, ownedBy, taskName, user.name)
             self.logger.info("%s added. %s", worker.name, worker.specs.info())
         else:
             self.workerBrokerQueue.put(worker)

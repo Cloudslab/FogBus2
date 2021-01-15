@@ -26,41 +26,112 @@ class ConnectionIO:
         self.__receivedCount: int = 0
         self.__sent: int = 0
         self.__sentCount: int = 0
-        self.receivedPerSecond = 0
-        self.sentPerSecond = 0
-        self.__t = time()
-        self.__lastReceived = 0
-        self.__lastSent = 0
+        self.__lastReceiveTime = 0
+        self.__lastTotalReceived = 0
+        self.__lastSendTime = 0
+        self.__lastTotalSent = 0
+        self.averageReceivedPackageSize = 0
+        self.averageSentPackageSize = 0
+        self.lowestReceivingSpeed = 0
+        self.highestReceivingSpeed = 0
+        self.averageReceivingSpeed = 0
+        self.lowestSendingSpeed = 0
+        self.highestSendingSpeed = 0
+        self.averageSendingSpeed = 0
+
+        self.__run()
+
+    def __run(self):
+        threads = [
+            self.__averageReceivedPackageSize,
+            self.__averageSentPackageSize,
+            self.__averageReceivingSpeed,
+            self.__averageSendingSpeed,
+        ]
+        for t in threads:
+            threading.Thread(
+                target=t
+            ).start()
 
     def received(self, bytes_: int):
         self.__received += bytes_
         self.__receivedCount += 1
-        t = time()
-        t_diff = t - self.__t
-        if t_diff > 1:
-            self.__t = t
-            self.receivedPerSecond = (self.__received - self.__lastReceived) / t_diff
-            self.__lastReceived = self.__received
+        if self.__lastReceiveTime == 0:
+            self.__lastReceiveTime = time()
+            self.__lastTotalReceived = self.__received
 
     def sent(self, bytes_: int):
         self.__sent += bytes_
         self.__sentCount += 1
-        t = time()
-        t_diff = t - self.__t
-        if t_diff > 1:
-            self.__t = t
-            self.sentPerSecond = (self.__sent - self.__lastSent) / t_diff
-            self.__lastSent = self.__sent
+        if self.__lastSendTime == 0:
+            self.__lastSendTime = time()
+            self.__lastTotalSent = self.__sent
 
-    def averageReceived(self) -> float:
-        if self.__receivedCount == 0:
-            return 0
-        return self.__received / self.__receivedCount
+    def __averageReceivedPackageSize(self):
+        while True:
+            sleep(1)
+            if self.__receivedCount == 0:
+                continue
+            self.averageReceivedPackageSize = self.__received / self.__receivedCount
 
-    def averageSent(self) -> float:
-        if self.__sentCount == 0:
-            return 0
-        return self.__sent / self.__sentCount
+    def __averageSentPackageSize(self):
+        while True:
+            sleep(1)
+            if self.__sentCount == 0:
+                continue
+            self.averageSentPackageSize = self.__sent / self.__sentCount
+
+    def __averageReceivingSpeed(self):
+
+        while True:
+            sleep(1)
+            if self.__lastReceiveTime == 0:
+                continue
+            self.averageReceivingSpeed, \
+            self.lowestReceivingSpeed, \
+            self.highestReceivingSpeed, \
+            self.__lastReceiveTime, \
+            self.__lastTotalReceived = self.__speedCalculator(
+                self.__lastReceiveTime,
+                self.__lastTotalReceived,
+                self.__received,
+                self.lowestReceivingSpeed,
+                self.highestReceivingSpeed
+            )
+
+    def __averageSendingSpeed(self):
+
+        while True:
+            sleep(1)
+            if self.__lastSendTime == 0:
+                continue
+            self.averageSendingSpeed, \
+            self.lowestSendingSpeed, \
+            self.highestSendingSpeed, \
+            self.__lastSendTime, \
+            self.__lastTotalSent = self.__speedCalculator(
+                self.__lastSendTime,
+                self.__lastTotalSent,
+                self.__sent,
+                self.lowestSendingSpeed,
+                self.highestSendingSpeed
+            )
+
+    @staticmethod
+    def __speedCalculator(lastTime, lastSize, total, lowest, highest):
+
+        currentTime = time()
+        timeDiff = currentTime - lastTime
+        receivedDiff = total - lastSize
+        average = receivedDiff / timeDiff
+        if average > highest:
+            highest = average
+        if lowest == 0:
+            lowest = average
+        elif average < lowest:
+            lowest = average
+
+        return average, lowest, highest, currentTime, total
 
 
 class NodeSpecs:
@@ -209,14 +280,21 @@ class DataManagerClient:
         if self.name is None:
             return
         filename = 'AverageIO@%s.csv ' % self.name
-
-        fileContent = 'averageReceived, averageSent, receivedPerSecond, sentPerSecond\r\n' \
-                      '%f, %f, %f, %f\r\n' % (
-                          self.connectionIO.averageReceived(),
-                          self.connectionIO.averageSent(),
-                          self.connectionIO.receivedPerSecond,
-                          self.connectionIO.sentPerSecond
+        fileContent = 'averageReceivedPackageSize, ' \
+                      'averageSentPackageSize, ' \
+                      'lowestReceivingSpeed, ' \
+                      'highestReceivingSpeed, ' \
+                      'lowestSendingSpeed, ' \
+                      'highestSendingSpeed\r\n' \
+                      '%f, %f, %f, %f, %f, %f\r\n' % (
+                          self.connectionIO.averageReceivedPackageSize,
+                          self.connectionIO.averageSentPackageSize,
+                          self.connectionIO.lowestReceivingSpeed,
+                          self.connectionIO.highestReceivingSpeed,
+                          self.connectionIO.lowestSendingSpeed,
+                          self.connectionIO.highestSendingSpeed,
                       )
+
         self.writeFile(filename, fileContent)
 
     @staticmethod

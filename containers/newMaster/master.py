@@ -85,14 +85,14 @@ class FogMaster:
 
         message = {
             'logList': sysInfo.res.keys(changing=False),
-            'nodeName': "Master-%d.csv" % self.masterID,
+            'nodeName': "Master-%d" % self.masterID,
             'isChangingLog': False,
             'isTitle': True
         }
         self.__sendLog(message)
         message = {
             'logList': sysInfo.res.keys(changing=True),
-            'nodeName': "Master-%d.csv" % self.masterID,
+            'nodeName': "Master-%d" % self.masterID,
             'isChangingLog': True,
             'isTitle': True
         }
@@ -102,7 +102,7 @@ class FogMaster:
             sleep(sleepTime)
             message = {
                 'logList': sysInfo.res.values(changing=True),
-                'nodeName': "Master-%d.csv" % self.masterID,
+                'nodeName': "Master-%d" % self.masterID,
                 'isChangingLog': True,
                 'isTitle': False
             }
@@ -170,22 +170,27 @@ class FogMaster:
         self.registry.removeClient(client)
         self.dataManager.discard(client)
         self.logger.debug(
-            "%s disconnected, average IO: %f, %f",
-            client.name,
-            client.connectionIO.averageReceived(),
-            client.connectionIO.averageSent()
+            "%s disconnected.",
+            client.name
         )
 
     def recordDataTransferring(self, client):
         if client.name is None:
             return
         filename = 'AverageIO@%s@%s.csv ' % (self.name, client.name)
-        fileContent = 'averageReceived, averageSent, receivedPerSecond, sentPerSecond\r\n' \
-                      '%f, %f, %f, %f\r\n' % (
-                          client.connectionIO.averageReceived(),
-                          client.connectionIO.averageSent(),
-                          client.connectionIO.receivedPerSecond,
-                          client.connectionIO.sentPerSecond
+        fileContent = 'averageReceivedPackageSize, ' \
+                      'averageSentPackageSize, ' \
+                      'lowestReceivingSpeed, ' \
+                      'highestReceivingSpeed, ' \
+                      'lowestSendingSpeed, ' \
+                      'highestSendingSpeed\r\n' \
+                      '%f, %f, %f, %f, %f, %f\r\n' % (
+                          client.connectionIO.averageReceivedPackageSize,
+                          client.connectionIO.averageSentPackageSize,
+                          client.connectionIO.lowestReceivingSpeed,
+                          client.connectionIO.highestReceivingSpeed,
+                          client.connectionIO.lowestSendingSpeed,
+                          client.connectionIO.highestSendingSpeed
                       )
         self.writeFile(filename, fileContent)
 

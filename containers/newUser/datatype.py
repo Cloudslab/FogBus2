@@ -200,7 +200,7 @@ class Broker:
 
 class ApplicationUserSide:
 
-    def __init__(self, appID: int, broker: Broker, videoPath=None):
+    def __init__(self, appID: int, broker: Broker, videoPath=None, targetWidth: int = 640):
         self.appID = appID
         self.appName = None
         self.broker: Broker = broker
@@ -211,7 +211,7 @@ class ApplicationUserSide:
         self.data: dict[int, Any] = {}
         self.result: dict[int, Queue] = defaultdict(Queue)
         self.dataIDSubmittedQueue = Queue()
-        self.targetWidth = 640
+        self.targetWidth = targetWidth
 
     def createDataFrame(self, data: Any) -> (int, Any):
         self.lockData.acquire()
