@@ -69,8 +69,7 @@ class Registry:
                 worker=worker
             )
             if not isWorkerValid:
-                self.removeClient(
-                    worker)
+                self.removeClient(worker)
                 raise WorkerCredentialNotValid
             worker.ip = message['ip']
             worker.port = message['port']

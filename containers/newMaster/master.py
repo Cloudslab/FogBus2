@@ -159,8 +159,12 @@ class FogMaster:
                     args=(client, messageEncrypted,)).start()
             except Empty:
                 continue
-            except (OSError, KeyError):
+            except OSError:
                 break
+            except KeyError:
+                import traceback
+                traceback.print_exc()
+                continue
         self.__discardClient(client)
 
     def __discardClient(self, client: Client):
@@ -218,6 +222,8 @@ class FogMaster:
                 return
             if message['type'] == 'lookup':
                 token = message['token']
+                print(message, self.registry.workerByToken)
+
                 if token in self.registry.workerByToken:
                     worker = self.registry.workerByToken[token]
                     message = {'type': 'workerInfo',

@@ -340,17 +340,19 @@ class DataManagerServer:
     def __init__(
             self,
             host: str,
+            name: str,
             port: int = None,
             receivingQueue: Queue = Queue(),
             io: IO = IO(),
             logLevel=logging.DEBUG):
+        self.name: str = name
         self.host: str = host
         self.port: int = port
         self.receivingQueue: Queue = receivingQueue
         self.__currentSocketID = 0
         self.__lockSocketID: threading.Lock = threading.Lock()
         self.__serverSocket: socket.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.logger = get_logger('Worker-DataManagerServer', logLevel)
+        self.logger = get_logger('%s-DataManagerServer' % self.name, logLevel)
         self.__io = io
 
     def run(self):
@@ -517,6 +519,7 @@ class Broker:
         self.workers: List[Worker] = []
 
         self.service: DataManagerServer = DataManagerServer(
+            name=self.name,
             host=self.thisIP,
             receivingQueue=self.master.receivingQueue,
             io=self.__io
@@ -592,12 +595,12 @@ class Broker:
         self.__register()
         threading.Thread(target=self.__nodeLogger).start()
 
-        if self.task is not None:
-            self.logger.info("Waiting for the next Worker")
-            while len(self.nextWorkerToken) > 10 \
-                    and self.nextWorker is None:
+        if self.nextWorkerToken is not None and len(self.nextWorkerToken) > 10:
+            self.logger.info("Connecting to the next Worker")
+            while self.nextWorker is None:
                 pass
             self.logger.info("Connected to the next Worker")
+        if self.task is not None:
             threading.Thread(
                 target=self.__runApp,
                 args=(self.task,)
@@ -618,12 +621,17 @@ class Broker:
         self.logger.info("[*] Registering ...")
         while self.workerID is None:
             pass
-        self.name
-        if self.nextWorkerToken is not None:
+        self.logger.info("[*] Registered with workerID-%d", self.workerID)
+        if self.nextWorkerToken is None \
+                or len(self.nextWorkerToken) < 10:
+            return
+        self.logger.info("[*] WorkerID-%d is requesting nextWorkerInfo", self.workerID)
+        while self.nextWorker is None:
             message = {'type': 'lookup',
                        'token': self.nextWorkerToken}
             self.master.sendingQueue.put(Message.encrypt(message))
-        self.logger.info("[*] Registered with workerID-%d", self.workerID)
+            sleep(1)
+        self.logger.info("[*] WorkerID-%d has got nextWorkerInfo", self.workerID)
 
     @staticmethod
     def __sendTo(target: DataManagerClient, message: Any) -> NoReturn:
