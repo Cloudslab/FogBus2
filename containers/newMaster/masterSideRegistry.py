@@ -13,10 +13,15 @@ from time import sleep, time
 from message import Message
 from secrets import token_urlsafe
 
+from dependencies import loadDependencies, Application, Task, Dependency
+from weights import loadEdgeWeights, loadTaskWeights
+
 
 class Registry:
 
-    def __init__(self, logLevel=logging.DEBUG):
+    def __init__(
+            self,
+            logLevel=logging.DEBUG):
         self.__currentWorkerID: int = 0
         self.__lockCurrentWorkerID: Lock = Lock()
         self.workers: dict[int, Worker] = {}
@@ -27,8 +32,41 @@ class Registry:
         self.workerBrokerQueue: Queue[Worker] = Queue()
         self.workerByToken: dict[str, Worker] = {}
 
-        self.workersQueueByAppID: dict[int, Queue[Worker]] = defaultdict(Queue[Worker])
+        self.profiler = self.__loadProfilers()
+        self.tasks, self.applications, self.edgeWeights, self.taskWeights = self.profiler
         self.logger = get_logger('Master-Registry', logLevel)
+
+    @staticmethod
+    def __loadProfilers():
+        tasks, applications = loadDependencies()
+        edgeWeights = loadEdgeWeights(applications)
+        taskWeights = loadTaskWeights(tasks, applications)
+        return tasks, applications, edgeWeights, taskWeights
+
+    @staticmethod
+    def __loadDependencies():
+        return loadDependencies()
+
+    def __scaleMethod(self):
+        # TODO
+        pass
+
+    def __scheduleMethod(self):
+        # TODO
+        # 1. Input: Consider user requests
+        # 2. Resources / Workers
+        # 3. Applications
+        #
+        # some algorithm here
+        #
+        # return the decision
+
+        pass
+
+    def __grabWorkersInfo(self):
+        # TODO
+        # List of workers
+        pass
 
     def register(self, client: Client, message: dict) -> User or Worker:
         role = message['role']
@@ -45,7 +83,7 @@ class Registry:
         self.__lockCurrentWorkerID.release()
 
         userID = message['userID']
-        appID = message['appID']
+        taskName = message['taskName']
         token = message['token']
         ownedBy = message['ownedBy']
 
@@ -64,14 +102,14 @@ class Registry:
                 and userID in self.users:
             user = self.users[userID]
             isWorkerValid = user.verifyWorker(
-                appID=appID,
+                taskName=taskName,
                 token=token,
                 worker=worker
             )
             if not isWorkerValid:
                 self.removeClient(worker)
                 raise WorkerCredentialNotValid
-            worker.ip = message['ip']
+            worker.ip = worker.socket.getsockname()[0]
             worker.port = message['port']
             worker.token = token
             self.workerByToken[worker.token] = worker
@@ -88,8 +126,6 @@ class Registry:
 
         return worker
 
-    def workerWait(self, worker: Worker, appID: int = None) -> NoReturn:
-        self.workersQueueByAppID[appID].put(worker)
 
     def __newUserID(self):
         self.__lockCurrentUserID.acquire()
@@ -100,7 +136,7 @@ class Registry:
 
     def __addUser(self, client: Client, message: dict):
         userID = self.__newUserID()
-        appIDs = message['appIDs']
+        appName = message['appName']
         label = message['label']
         user = User(
             socketID=client.socketID,
@@ -109,36 +145,55 @@ class Registry:
             sendingQueue=client.sendingQueue,
             userID=userID,
             appRunMode=message['mode'],
-            appIDs=appIDs,
+            appName=appName,
             connectionIO=client.connectionIO
         )
         user.name = '%s@User-%d' % (label, user.userID)
-        threading.Thread(
-            target=self.__assignWorkerForUser,
-            args=(user,)).start()
+        # threading.Thread(
+        #     target=self.__handleForUserRequest,
+        #     args=(user,)).start()
         self.clientBySocketID[user.socketID] = user
         self.users[user.userID] = user
-        return user
+        return self.__handleForUserRequest(user)
 
-    def __assignWorkerForUser(self, user: User):
-        for taskID in user.taskIDs:
-            token = token_urlsafe(16)
-            user.appIDTokenMap[taskID] = token
-
-        for i, taskID in enumerate(user.taskIDs):
+    def __schedule(self, user):
+        for taskName, userTask in user.taskNameTokenMap.items():
+            token = userTask.token
+            childTaskTokens = userTask.childTaskTokens
             worker = self.workerBrokerQueue.get(timeout=1)
-            token = user.appIDTokenMap[taskID]
-            nextWorkerToken = None if i + 1 == len(user.taskIDs) \
-                else user.appIDTokenMap[user.taskIDs[i + 1]]
             message = {
                 'type': 'runWorker',
                 'userID': user.userID,
                 'userName': user.name,
-                'appID': taskID,
+                'taskName': taskName,
                 'token': token,
-                'nextWorkerToken': nextWorkerToken}
+                'childTaskTokens': childTaskTokens}
             worker.sendingQueue.put(Message.encrypt(message))
             self.workerBrokerQueue.put(worker)
+
+    def __handleForUserRequest(self, user: User):
+
+        app: Application = self.applications[user.appName]
+
+        for taskName, dependency in app.dependencies.items():
+            if taskName in ['Sensor', 'Actor', 'RemoteLogger']:
+                if taskName == 'Sensor':
+                    user.entranceTasksByName = dependency.childTaskList
+                continue
+            user.generateToken(taskName)
+
+        for taskName, dependency in app.dependencies.items():
+            if taskName in ['Sensor', 'Actor', 'RemoteLogger']:
+                continue
+            childTaskTokens = []
+            for childTaskName in dependency.childTaskList:
+                if childTaskName in ['Sensor', 'Actor', 'RemoteLogger']:
+                    continue
+                childTaskTokens.append(user.taskNameTokenMap[childTaskName].token)
+            user.taskNameTokenMap[taskName].childTaskTokens = childTaskTokens
+
+        self.__schedule(user)
+
         self.logger.debug('Waiting for workers of userID-%d ...', user.userID)
         timestamp = time()
         while time() - timestamp < 5 and not user.isReady:
@@ -154,6 +209,7 @@ class Registry:
         else:
             self.logger.info("Cannot run workers for User-%d.", user.userID)
             self.removeClient(user)
+        return user
 
     def removeClient(self, client: Client):
         if isinstance(client, User) \

@@ -1,9 +1,10 @@
 import socket
 import threading
 from queue import Queue
-from typing import List
+from typing import List, Dict
 from abc import abstractmethod
 from time import time, sleep
+from secrets import token_urlsafe
 
 
 class IO:
@@ -210,6 +211,14 @@ class Worker(Client):
         self.ownedBy: int = ownedBy
 
 
+class UserTask:
+    def __init__(self, token: str, childTaskTokens=None):
+        if childTaskTokens is None:
+            childTaskTokens = []
+        self.token: str = token
+        self.childTaskTokens: List[str] = childTaskTokens
+
+
 class User(Client):
 
     def __init__(
@@ -220,9 +229,9 @@ class User(Client):
             receivingQueue: Queue[bytes],
             userID: int,
             appRunMode: str,
-            appIDs: List[int],
+            appName: int,
             connectionIO: ConnectionIO,
-            workerByAppID: dict[int, Worker] = None,
+            workerByTaskName: dict[int, Worker] = None,
     ):
         super(User, self).__init__(
             socketID=socketID,
@@ -233,17 +242,24 @@ class User(Client):
         )
         self.userID = userID
         self.appRunMode = appRunMode
-        self.taskIDs = appIDs
+        self.appName = appName
         self.isReady = False
-        self.appIDTokenMap = {}
-        if workerByAppID is None:
-            self.workerByAppID: dict[int, Worker] = {}
+        self.taskNameTokenMap: Dict[str, UserTask] = {}
+        if workerByTaskName is None:
+            self.taskByName: dict[str, Worker] = {}
+        self.entranceTasksByName: List[str] = []
 
-    def verifyWorker(self, appID: int, token: str, worker: Worker) -> bool:
-        if appID in self.appIDTokenMap \
-                and self.appIDTokenMap[appID] == token:
-            self.workerByAppID[appID] = worker
-            if len(self.appIDTokenMap) == len(self.workerByAppID):
+    def generateToken(self, taskName: str):
+        token = token_urlsafe(16)
+        self.taskNameTokenMap[taskName] = UserTask(
+            token=token)
+        return token
+
+    def verifyWorker(self, taskName: str, token: str, worker: Worker) -> bool:
+        if taskName in self.taskNameTokenMap \
+                and self.taskNameTokenMap[taskName].token == token:
+            self.taskByName[taskName] = worker
+            if len(self.taskNameTokenMap) == len(self.taskByName):
                 self.isReady = True
             return True
         return False

@@ -73,7 +73,7 @@ class Broker:
             self,
             masterIP: str,
             masterPort: int,
-            taskIDs: List[int],
+            appName: str,
             remoteLoggerHost: str = None,
             remoteLoggerPort: int = None,
             logLevel=logging.DEBUG):
@@ -84,7 +84,7 @@ class Broker:
         self.remoteLoggerPort: int = remoteLoggerPort
         self.userID = None
         self.name = None
-        self.taskIDs = taskIDs
+        self.appName: str = appName
         self.label = None
 
         self.resultQueue: Queue = Queue()
@@ -152,7 +152,7 @@ class Broker:
             'type': 'register',
             'role': 'user',
             'mode': mode,
-            'appIDs': self.taskIDs,
+            'appName': self.appName,
             'label': self.label
         }
         self.__send(message)
@@ -190,7 +190,6 @@ class Broker:
         message = {'time': [time()],
                    'type': 'submitData',
                    'mode': mode,
-                   'appIDs': self.taskIDs,
                    'data': data,
                    'dataID': dataID,
                    'label': label}
@@ -233,9 +232,4 @@ class ApplicationUserSide:
 
 
 if __name__ == '__main__':
-    broker = Broker(
-        masterIP='127.0.0.1',
-        masterPort=5000,
-        taskIDs=[]
-    )
-    broker.run()
+    pass

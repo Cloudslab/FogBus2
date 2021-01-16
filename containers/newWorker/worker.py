@@ -6,33 +6,39 @@ from datatype import Broker
 if __name__ == '__main__':
     app = None
     userID = None
-    appID = None
+    taskName = None
     token = None
-    nextWorkerToken = None
+    childTaskTokens = None
     ownedBy = None
     userName = None
     if len(sys.argv) > 4:
         userID = int(sys.argv[1])
-        appID = int(sys.argv[2])
+        taskName = sys.argv[2]
         token = sys.argv[3]
-        nextWorkerToken = sys.argv[4]
+        childTaskTokens = sys.argv[4]
     if len(sys.argv) > 6:
         ownedBy = int(sys.argv[5])
         userName = sys.argv[6]
 
-    if appID == 0:
+    print('userID, taskName, token, childTaskTokens, ownedBy, userName')
+    print(userID, taskName, token, childTaskTokens, ownedBy, userName)
+    if taskName == 0:
         app = TestApp(0)
-    elif appID == 1:
+    elif taskName == 'FaceDetection':
         app = FaceDetection()
-    elif appID == 2:
+    elif taskName == 'EyeDetection':
         app = EyeDetection()
-    elif appID == 3:
+    elif taskName == 'ColorTracking':
         app = ColorTracking()
-    elif appID == 4:
+    elif taskName == 'BlurAndPHash':
         app = BlurAndPHash()
-    elif appID == 5:
+    elif taskName == 'OCR':
         app = OCR()
 
+    if childTaskTokens == 'None':
+        childTaskTokens = None
+    if childTaskTokens is not None:
+        childTaskTokens = childTaskTokens.split(',')
     broker = Broker(
         masterIP='127.0.0.1',
         masterPort=5000,
@@ -41,10 +47,10 @@ if __name__ == '__main__':
         thisIP='127.0.0.1',
         task=app,
         userID=userID,
-        appID=appID,
+        taskName=taskName,
         token=token,
-        nextWorkerToken=nextWorkerToken,
+        childTaskTokens=childTaskTokens,
         ownedBy=ownedBy,
-        userName =userName,
+        userName=userName,
         logLevel=logging.DEBUG)
     broker.run()

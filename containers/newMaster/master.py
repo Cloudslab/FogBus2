@@ -12,7 +12,7 @@ from datatype import Client, Worker, User, NodeSpecs, IO
 from time import time, sleep
 from exceptions import *
 from systemInfo import SystemInfo
-from dependencies import loadDependencies
+
 
 class MasterSysInfo(SystemInfo):
     def __init__(self, formatSize: bool):
@@ -53,39 +53,11 @@ class FogMaster:
             io=self.__io,
             logLevel=self.logger.level,
         )
-        self.registry: Registry = Registry(logLevel=logLevel)
+
+        self.registry: Registry = Registry(
+            logLevel=logLevel
+        )
         self.__receivedTasksCount: int = 0
-
-        self.__profiler = self.__loadProfilers()
-
-    def __loadProfilers(self):
-        # TODO
-        dependencies = self.__loadDependencies()
-        return None
-
-    @staticmethod
-    def __loadDependencies():
-        return loadDependencies()
-
-    def __scaleMethod(self):
-        # TODO
-        pass
-
-    def __scheduleMethod(self):
-        # TODO
-        # 1. Input: Consider user requests
-        # 2. Resources / Workers
-        # 3. Applications
-        #
-        # some algorithm here
-        #
-        # return the decision
-        pass
-
-    def __grabWorkersInfo(self):
-        # TODO
-        # List of workers
-        pass
 
     def __nodeLogger(self):
         sysInfo = MasterSysInfo(formatSize=False)
@@ -164,6 +136,8 @@ class FogMaster:
                     self.__serveClient(client)
                     break
             except (Empty, KeyError):
+                import traceback
+                traceback.print_exc()
                 self.dataManager.discard(client)
                 break
             except NoWorkerAvailableException:
@@ -198,7 +172,7 @@ class FogMaster:
 
     def __discardClient(self, client: Client):
         if isinstance(client, User):
-            for appID, worker in client.workerByAppID.items():
+            for appID, worker in client.taskByName.items():
                 self.registry.removeClient(worker)
         self.registry.removeClient(client)
         self.dataManager.discard(client)
@@ -247,7 +221,7 @@ class FogMaster:
                     and client.socketID in self.registry.clientBySocketID:
                 worker = self.registry.clientBySocketID[client.socketID]
                 if isinstance(worker, Worker):
-                    self.__handleResult(worker, message)
+                    self.__handleResult(message)
                 return
             if message['type'] == 'lookup':
                 token = message['token']
@@ -270,31 +244,21 @@ class FogMaster:
         message['userID'] = user.userID
         message['time'].append(time() - message['time'][0])
 
-        mode = message['mode']
-        appIDs = message['appIDs']
-        if mode == 'sequential':
-            nextAppID = appIDs[0]
-            worker = user.workerByAppID[nextAppID]
+        for taskName in user.entranceTasksByName:
+            worker = user.taskByName[taskName]
             self.dataManager.writeData(worker, Message.encrypt(message))
             self.recordDataTransferring(worker)
-            self.logger.debug('Got data from %s and assigned to %s', user.name,
-                              worker.name)
-        elif mode == 'parallel':
-            for appID in appIDs:
-                message['appIDs'] = [appID]
-                worker = user.workerByAppID[appID]
-                self.dataManager.writeData(worker, Message.encrypt(message))
-                self.logger.debug('Sent message from userID-%d with appID-%d to workerID-%d', user.userID, appID,
-                                  worker.workerID)
+            self.logger.debug(
+                'Got data from %s and assigned to %s',
+                user.name,
+                worker.name)
 
-    def __handleResult(self, worker: Worker, message: dict):
+    def __handleResult(self, message: dict):
         # TODO: use socket id to check the ownership of this task
-        appID = message['appID']
         userID = message['userID']
         user = self.registry.users[userID]
         message['type'] = 'result'
         self.dataManager.writeData(user, Message.encrypt(message))
-        self.registry.workerWait(worker, appID=appID)
 
 
 if __name__ == '__main__':

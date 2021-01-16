@@ -11,7 +11,7 @@ from queue import Empty
 from time import sleep
 from logger import get_logger
 from message import Message
-from typing import NoReturn, Any, List
+from typing import NoReturn, Any, List, Dict, DefaultDict
 from collections import defaultdict
 from time import time
 from queue import Queue
@@ -480,9 +480,9 @@ class Broker:
             remoteLoggerPort: int = None,
             task: TasksWorkerSide = None,
             userID: int = None,
-            appID: int = None,
+            taskName: str = None,
             token: str = None,
-            nextWorkerToken: str = None,
+            childTaskTokens=None,
             ownedBy: int = None,
             userName: str = None,
             logLevel=logging.DEBUG):
@@ -500,12 +500,13 @@ class Broker:
         self.thisIP = thisIP
         self.remoteLoggerHost: str = remoteLoggerHost
         self.remoteLoggerPort: int = remoteLoggerPort
-        self.token: str = token
-        self.nextWorkerToken: str = nextWorkerToken
+        self.taskName: str = taskName
+
+        self.ownedBy: int = ownedBy
         self.userID: int = userID
-        self.appID: int = appID
+
         self.workerID = None
-        self.messageByAppID: dict[int, Queue] = defaultdict(Queue)
+        self.dataToProcess: Queue = Queue()
         self.__io = IO()
 
         self.master: Master = Master(
@@ -515,8 +516,14 @@ class Broker:
             logLevel=self.logger.level,
             io=self.__io
         )
-        self.nextWorker = None
-        self.workers: List[Worker] = []
+        self.token: str = token
+
+        if childTaskTokens is None:
+            childTaskTokens = []
+
+        self.childTaskTokens = childTaskTokens
+
+        self.childTasks: DefaultDict[str, DataManagerClient] = defaultdict(DataManagerClient)
 
         self.service: DataManagerServer = DataManagerServer(
             name=self.name,
@@ -595,16 +602,21 @@ class Broker:
         self.__register()
         threading.Thread(target=self.__nodeLogger).start()
 
-        if self.nextWorkerToken is not None and len(self.nextWorkerToken) > 10:
-            self.logger.info("Connecting to the next Worker")
-            while self.nextWorker is None:
-                pass
-            self.logger.info("Connected to the next Worker")
-        if self.task is not None:
-            threading.Thread(
-                target=self.__runApp,
-                args=(self.task,)
-            ).start()
+        if self.task is None:
+            return
+
+        threading.Thread(
+            target=self.__runApp,
+            args=(self.task,)
+        ).start()
+
+        if not len(self.childTaskTokens):
+            return
+
+        self.logger.info("Waiting for child tasks ...")
+        while len(self.childTasks.keys()) < len(self.childTaskTokens):
+            pass
+        self.logger.info("Connected to child tasks")
 
     def __register(self) -> NoReturn:
         message = {'type': 'register',
@@ -612,26 +624,30 @@ class Broker:
                    'ip': self.thisIP,
                    'port': self.thisPort,
                    'userID': self.userID,
-                   'appID': self.appID,
+                   'taskName': None if self.task is None else self.taskName,
                    'token': self.token,
                    'ownedBy': self.ownedBy,
-                   'taskName': None if self.task is None else self.task.taskName,
                    'nodeSpecs': NodeSpecs(1, 2, 3, 4)}
         self.__sendTo(self.master, message)
         self.logger.info("[*] Registering ...")
         while self.workerID is None:
             pass
         self.logger.info("[*] Registered with workerID-%d", self.workerID)
-        if self.nextWorkerToken is None \
-                or len(self.nextWorkerToken) < 10:
+
+        if self.task is None:
             return
-        self.logger.info("[*] WorkerID-%d is requesting nextWorkerInfo", self.workerID)
-        while self.nextWorker is None:
-            message = {'type': 'lookup',
-                       'token': self.nextWorkerToken}
-            self.master.sendingQueue.put(Message.encrypt(message))
+
+        if not len(self.childTaskTokens):
+            return
+
+        self.logger.info("[*] TaskID-%d is requesting child tasks info", self.workerID)
+        while len(self.childTasks.keys()) < len(self.childTaskTokens):
+            for childTaskToken in self.childTaskTokens:
+                message = {'type': 'lookup',
+                           'token': childTaskToken}
+                self.master.sendingQueue.put(Message.encrypt(message))
             sleep(1)
-        self.logger.info("[*] WorkerID-%d has got nextWorkerInfo", self.workerID)
+        self.logger.info("[*] TaskID-%d has got all child tasks info", self.workerID)
 
     @staticmethod
     def __sendTo(target: DataManagerClient, message: Any) -> NoReturn:
@@ -647,16 +663,16 @@ class Broker:
             elif message['type'] == 'runWorker':
                 userID = message['userID']
                 userName = message['userName']
-                appID = message['appID']
+                taskName = message['taskName']
                 token = message['token']
-                nextWorkerToken = message['nextWorkerToken']
+                childTaskTokens = message['childTaskTokens']
                 ownedBy = self.workerID
                 self.__runWorker(
                     userID=userID,
                     userName=userName,
-                    appID=appID,
+                    taskName=taskName,
                     token=token,
-                    nextWorkerToken=nextWorkerToken,
+                    childTaskTokens=childTaskTokens,
                     ownedBy=ownedBy
                 )
             elif message['type'] == 'close':
@@ -665,20 +681,19 @@ class Broker:
                     message['reason'])
                 os._exit(0)
             elif message['type'] == 'data':
-                appID = message['appIDs'][0]
-                self.messageByAppID[appID].put(message)
+                self.dataToProcess.put(message)
 
             elif message['type'] == 'workerInfo':
-                nextWorkerIP = message['ip']
-                nextWorkerPort = message['port']
-                nextWorkerName = message['name']
-                self.nextWorker = DataManagerClient(
-                    name="%s@%s" % (self.name, nextWorkerName),
-                    host=nextWorkerIP,
-                    port=nextWorkerPort,
+                childTaskIP = message['ip']
+                childTaskPort = message['port']
+                childTaskName = message['name']
+                self.childTasks[childTaskName] = DataManagerClient(
+                    name="%s@%s" % (self.name, childTaskName),
+                    host=childTaskIP,
+                    port=childTaskPort,
                     io=self.__io
                 )
-                self.nextWorker.link()
+                self.childTasks[childTaskName].link()
             elif message['type'] == 'nodeCurrentInfo':
                 message = {
                     'type': 'workerCurrentInfo',
@@ -692,27 +707,28 @@ class Broker:
     def __runWorker(
             userID: int,
             userName: str,
-            appID: int,
+            taskName: str,
             token: str,
-            nextWorkerToken: str,
+            childTaskTokens: List[str],
             ownedBy: int):
+
         threading.Thread(
             target=os.system,
-            args=("python worker.py %d %d %s %s %d %s" % (
+            args=("python worker.py %d %s %s %s %d %s" % (
                 userID,
-                appID,
+                taskName,
                 token,
-                nextWorkerToken,
+                ','.join(childTaskTokens) if len(childTaskTokens) else 'None',
                 ownedBy,
                 userName),)
         ).start()
         # os.system("python worker.py %d %d %s %s %d %s" % (userID, appID, token, nextWorkerToken, ownedBy, userName))
 
     def __runApp(self, app: TasksWorkerSide):
-        self.logger.info('[*] AppID-%d-{%s} is serving ...', app.taskID, app.taskName)
+        self.logger.info('[*] {%s} is serving ...', app.taskName)
 
         while True:
-            message = self.messageByAppID[app.taskID].get()
+            message = self.dataToProcess.get()
             self.__receivedTasksCount += 1
             profiler = cProfile.Profile()
             profiler.enable()
@@ -741,34 +757,36 @@ class Broker:
         f.write(content)
         f.close()
 
-    def __executeApp(self, task: TasksWorkerSide, message) -> NoReturn:
+    def __executeApp(self, childTask: TasksWorkerSide, message) -> NoReturn:
         startTime = time()
-        self.logger.debug('Executing %s ...', task.taskName)
+        self.logger.debug('Executing %s ...', childTask.taskName)
         data = message['data']
-        result = task.process(data)
+        result = childTask.process(data)
         if result is None:
             return
 
         message['workerID'] = self.workerID
-        message['appID'] = task.taskID
-        message['appIDs'] = message['appIDs'][1:]
 
         t = time() - message['time'][0]
         message['time'].append(t)
 
-        if self.nextWorker is not None:
+        for childTaskName, childTask in self.childTasks.items():
             message['type'] = 'data'
             message['data'] = result
-            message['info'] = 'forward'
-            self.__sendTo(self.nextWorker, message)
-            self.logger.debug('Executed %s and send to next Worker', task.taskName)
-        else:
-            message['type'] = 'submitResult'
+            self.__sendTo(childTask, message)
+            self.logger.debug(
+                'Executed %s and sent to %s.',
+                self.taskName,
+                childTaskName)
 
+        if not len(self.childTasks):
+            message['type'] = 'submitResult'
             del message['data']
             message['result'] = result
             self.__sendTo(self.master, message)
-            self.logger.debug('Executed %s and returned the result', task.taskName)
+            self.logger.debug(
+                'Executed %s and returned the result to Master.',
+                self.task.taskName)
 
         self.__totalProcessingTime += time() - startTime
 
