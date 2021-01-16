@@ -12,7 +12,7 @@ from datatype import Client, Worker, User, NodeSpecs, IO
 from time import time, sleep
 from exceptions import *
 from systemInfo import SystemInfo
-
+from dependencies import loadDependencies
 
 class MasterSysInfo(SystemInfo):
     def __init__(self, formatSize: bool):
@@ -60,12 +60,12 @@ class FogMaster:
 
     def __loadProfilers(self):
         # TODO
-        denpendencies = self.__loadDependencies()
+        dependencies = self.__loadDependencies()
         return None
 
-    def __loadDependencies(self):
-        # TODO
-        return None
+    @staticmethod
+    def __loadDependencies():
+        return loadDependencies()
 
     def __scaleMethod(self):
         # TODO
