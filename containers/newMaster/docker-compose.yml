@@ -1,0 +1,18 @@
+version: '3'
+
+services:
+
+  master:
+    container_name: master
+    build:
+      context: ./
+      dockerfile: ./Dockerfile
+    volumes:
+      - ./:/workplace
+    environment:
+      PUID: 1000
+      PGID: 1000
+      TZ: Australia/Melbourne
+    ports:
+      - 5001:5001
+    restart: unless-stopped
