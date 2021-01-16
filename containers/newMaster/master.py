@@ -193,8 +193,6 @@ class FogMaster:
             except OSError:
                 break
             except KeyError:
-                import traceback
-                traceback.print_exc()
                 continue
         self.__discardClient(client)
 
