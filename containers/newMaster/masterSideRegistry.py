@@ -160,6 +160,7 @@ class Registry:
         for taskName, userTask in user.taskNameTokenMap.items():
             token = userTask.token
             childTaskTokens = userTask.childTaskTokens
+            # Scheduling Algorithm
             worker = self.workerBrokerQueue.get(timeout=1)
             message = {
                 'type': 'runWorker',
