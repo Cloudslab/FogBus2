@@ -3,6 +3,8 @@ import logging
 import socket
 import struct
 import os
+import sys
+
 from logger import get_logger
 from masterSideRegistry import Registry
 from dataManagerServer import DataManagerServer
@@ -262,9 +264,11 @@ class FogMaster:
 
 
 if __name__ == '__main__':
+    remoteLoggerHost = sys.argv[1]
+    remoteLoggerPort = int(sys.argv[2])
     master = FogMaster(host='0.0.0.0',
                        port=5000,
-                       remoteLoggerHost='0.0.0.0',
-                       remoteLoggerPort=5001,
+                       remoteLoggerHost=remoteLoggerHost,
+                       remoteLoggerPort=remoteLoggerPort,
                        logLevel=logging.DEBUG)
     master.run()

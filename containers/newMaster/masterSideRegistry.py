@@ -1,17 +1,12 @@
 import logging
-import threading
 from threading import Lock
 from queue import Queue
 from logger import get_logger
 from datatype import Worker, User, NodeSpecs
-from typing import NoReturn
 from datatype import Client
-from collections import defaultdict
-from queue import Empty
 from exceptions import *
 from time import sleep, time
 from message import Message
-from secrets import token_urlsafe
 
 from dependencies import loadDependencies, Application, Task, Dependency
 from weights import loadEdgeWeights, loadTaskWeights

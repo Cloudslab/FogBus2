@@ -7,6 +7,9 @@ services:
     build:
       context: ./
       dockerfile: ./Dockerfile
+      args:
+        RemoteLoggerIP: ${RemoteLoggerIP}
+        RemoteLoggerPort: ${RemoteLoggerPort}
     volumes:
       - ./:/workplace
     environment:
@@ -14,5 +17,5 @@ services:
       PGID: 1000
       TZ: Australia/Melbourne
     ports:
-      - 5001:5001
+      - 5000:5000
     restart: unless-stopped
