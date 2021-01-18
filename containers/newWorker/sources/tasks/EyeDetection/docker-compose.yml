@@ -7,8 +7,6 @@ services:
     build:
       context: ../../
       dockerfile: ./tasks/EyeDetection/Dockerfile
-    volumes:
-      - ./:/workplace
     environment:
       PUID: 1000
       PGID: 1000

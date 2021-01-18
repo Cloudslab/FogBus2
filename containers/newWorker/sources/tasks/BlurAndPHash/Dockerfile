@@ -37,14 +37,15 @@ RUN cd /workplace/opencv \
 ## Compile
 RUN cd /workplace/opencv/build && make -j $(nproc) && make install
 
-## Python libararies
+## Copy files
 ADD requirements.txt /workplace/requirements.txt
+ADD *.py /workplace/
+
+## Python libararies
 RUN python -m pip install -r requirements.txt --no-cache-dir
 
 # Hostname
 RUN echo "BlurAndPHash" > /etc/hostname
 
 # Run BlurAndPHash
-COPY ../../*.py /workplace
-COPY ../../cascade /workplace
 ENTRYPOINT ["python", "worker.py"]
