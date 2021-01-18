@@ -5,6 +5,8 @@ WORKDIR /workplace
 # Hostname
 RUN echo 'RemoteLogger' > /etc/hostname
 
+RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.tuna.tsinghua.edu.cn/g' /etc/apk/repositories
+
 # Dependencies
 RUN apk add --no-cache make automake gcc g++ subversion
 ADD sources/requirements.txt /workplace/requirements.txt
