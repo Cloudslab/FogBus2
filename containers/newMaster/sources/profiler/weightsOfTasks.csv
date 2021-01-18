@@ -1,0 +1,22 @@
+application,resolution,task,averageProcessingTime,averageCalls,CPUFrequency
+VideoOCR,1080p,BlurAndPHash,0.032641, 106.432406, 4499.999875
+VideoOCR,1080p,OCR,1.027047, 3033.827536, 4499.949500
+VideoOCR,720p,BlurAndPHash,0.021150, 106.441159, 4499.967875
+VideoOCR,720p,OCR,0.512856, 2969.975610, 4499.893250
+VideoOCR,480p,BlurAndPHash,0.012377, 109.526907, 4499.982125
+VideoOCR,480p,OCR,0.216436, 2917.966997, 4499.928750
+FaceAndEyeDetection,240p,FaceDetection,0.005637, 156.023540, 4499.916250
+FaceAndEyeDetection,240p,EyeDetection,0.000438, 154.021657, 4499.945375
+FaceAndEyeDetection,480p,FaceDetection,0.023503, 156.128310, 4499.975125
+FaceAndEyeDetection,480p,EyeDetection,0.002652, 154.128310, 4499.986000
+FaceAndEyeDetection,720p,FaceDetection,0.049406, 156.198964, 4499.999750
+FaceAndEyeDetection,720p,EyeDetection,0.006212, 154.198964, 4500.000375
+FaceAndEyeDetection,1080p,FaceDetection,0.090529, 156.437500, 4499.969375
+FaceAndEyeDetection,1080p,EyeDetection,0.010934, 154.437500, 4499.985875
+FaceDetection,240p,FaceDetection,0.005827, 156.234352, 4499.914000
+FaceDetection,480p,FaceDetection,0.026102, 156.181818, 4500.002250
+FaceDetection,720p,FaceDetection,0.047256, 156.136709, 4499.994250
+FaceDetection,1080p,FaceDetection,0.089195, 156.177700, 4499.963375
+ColorTracking,240p,ColorTracking,0.002569, 552.876036, 4499.937125
+ColorTracking,480p,ColorTracking,0.009592, 2067.567100, 4499.921875
+ColorTracking,720p,ColorTracking,0.018232, 871.074074, 4499.949250

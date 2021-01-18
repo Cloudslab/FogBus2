@@ -1,0 +1,186 @@
+{
+  "tasks": {
+    "Sensor": {
+      "id": 0,
+      "name": "Sensor"
+    },
+    "FaceDetection": {
+      "id": 1,
+      "name": "FaceDetection"
+    },
+    "EyeDetection": {
+      "id": 2,
+      "name": "EyeDetection"
+    },
+    "ColorTracking": {
+      "id": 3,
+      "name": "ColorTracking"
+    },
+    "BlurAndPHash": {
+      "id": 4,
+      "name": "BlurAndPHash"
+    },
+    "OCR": {
+      "id": 5,
+      "name": "OCR"
+    },
+    "Actor": {
+      "id": 98,
+      "name": "Actor"
+    },
+    "RemoteLogger": {
+      "id": 99,
+      "name": "RemoteLogger"
+    }
+  },
+  "applications": {
+    "FaceDetection": {
+      "name": "FaceDetection",
+      "dependencies": {
+        "Sensor": {
+          "parents": [],
+          "children": [
+            "FaceDetection"
+          ]
+        },
+        "FaceDetection": {
+          "parents": [
+            "Sensor"
+          ],
+          "children": [
+            "Actor",
+            "RemoteLogger"
+          ]
+        },
+        "Actor": {
+          "parents": [
+            "FaceDetection"
+          ],
+          "children": []
+        },
+        "RemoteLogger": {
+          "parents": [
+            "FaceDetection"
+          ],
+          "children": []
+        }
+      }
+    },
+    "FaceAndEyeDetection": {
+      "name": "FaceAndEyeDetection",
+      "dependencies": {
+        "Sensor": {
+          "parents": [],
+          "children": [
+            "FaceDetection"
+          ]
+        },
+        "FaceDetection": {
+          "parents": [
+            "Sensor"
+          ],
+          "children": [
+            "EyeDetection",
+            "RemoteLogger"
+          ]
+        },
+        "EyeDetection": {
+          "parents": [
+            "FaceDetection"
+          ],
+          "children": [
+            "Actor",
+            "RemoteLogger"
+          ]
+        },
+        "Actor": {
+          "parents": [
+            "EyeDetection"
+          ],
+          "children": []
+        },
+        "RemoteLogger": {
+          "parents": [
+            "FaceDetection",
+            "EyeDetection"
+          ],
+          "children": []
+        }
+      }
+    },
+    "ColorTracking": {
+      "name": "ColorTracking",
+      "dependencies": {
+        "Sensor": {
+          "parents": [],
+          "children": [
+            "ColorTracking"
+          ]
+        },
+        "ColorTracking": {
+          "parents": [
+            "Sensor"
+          ],
+          "children": [
+            "Actor",
+            "RemoteLogger"
+          ]
+        },
+        "Actor": {
+          "parents": [
+            "ColorTracking"
+          ],
+          "children": []
+        },
+        "RemoteLogger": {
+          "parents": [
+            "ColorTracking"
+          ],
+          "children": []
+        }
+      }
+    },
+    "BlurAndPHash": {
+      "name": "VideoOCR",
+      "dependencies": {
+        "Sensor": {
+          "parents": [],
+          "children": [
+            "BlurAndPHash"
+          ]
+        },
+        "BlurAndPHash": {
+          "parents": [
+            "Sensor"
+          ],
+          "children": [
+            "OCR",
+            "RemoteLogger"
+          ]
+        },
+        "OCR": {
+          "parents": [
+            "BlurAndPHash"
+          ],
+          "children": [
+            "Actor",
+            "RemoteLogger"
+          ]
+        },
+        "Actor": {
+          "parents": [
+            "OCR"
+          ],
+          "children": []
+        },
+        "RemoteLogger": {
+          "parents": [
+            "BlurAndPHash",
+            "OCR"
+          ],
+          "children": []
+        }
+      }
+    }
+  }
+}
