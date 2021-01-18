@@ -4,6 +4,11 @@ from apps import *
 from datatype import Broker
 
 if __name__ == '__main__':
+    thisHost = sys.argv[1]
+    masterHost = sys.argv[2]
+    masterPort = int(sys.argv[3])
+    remoteLoggerHost = sys.argv[4]
+    remoteLoggerPort = int(sys.argv[5])
     app = None
     userID = None
     taskName = None
@@ -11,17 +16,15 @@ if __name__ == '__main__':
     childTaskTokens = None
     ownedBy = None
     userName = None
-    if len(sys.argv) > 4:
-        userID = int(sys.argv[1])
-        taskName = sys.argv[2]
-        token = sys.argv[3]
-        childTaskTokens = sys.argv[4]
-    if len(sys.argv) > 6:
-        ownedBy = int(sys.argv[5])
-        userName = sys.argv[6]
+    if len(sys.argv) > 9:
+        userID = int(sys.argv[6])
+        taskName = sys.argv[7]
+        token = sys.argv[8]
+        childTaskTokens = sys.argv[9]
+    if len(sys.argv) > 11:
+        ownedBy = int(sys.argv[10])
+        userName = sys.argv[11]
 
-    print('userID, taskName, token, childTaskTokens, ownedBy, userName')
-    print(userID, taskName, token, childTaskTokens, ownedBy, userName)
     if taskName == 0:
         app = TestApp(0)
     elif taskName == 'FaceDetection':
@@ -40,11 +43,11 @@ if __name__ == '__main__':
     if childTaskTokens is not None:
         childTaskTokens = childTaskTokens.split(',')
     broker = Broker(
-        masterIP='127.0.0.1',
-        masterPort=5000,
-        remoteLoggerHost='127.0.0.1',
-        remoteLoggerPort=5001,
-        thisIP='127.0.0.1',
+        masterIP=masterHost,
+        masterPort=masterPort,
+        remoteLoggerHost=remoteLoggerHost,
+        remoteLoggerPort=remoteLoggerPort,
+        thisIP=thisHost,
         task=app,
         userID=userID,
         taskName=taskName,

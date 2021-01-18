@@ -7,8 +7,8 @@ RUN echo 'RemoteLogger' > /etc/hostname
 
 # Dependencies
 RUN apk add --no-cache make automake gcc g++ subversion
-ADD requirements.txt /workplace/requirements.txt
-RUN python -m pip install -r requirements.txt
+ADD sources/requirements.txt /workplace/requirements.txt
+RUN python -m pip install -r requirements.txt --no-cache-dir
 
 # Ports
 EXPOSE 5001

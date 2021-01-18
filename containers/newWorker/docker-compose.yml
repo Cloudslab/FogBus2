@@ -2,18 +2,18 @@ version: '3'
 
 services:
 
-  master:
-    container_name: master
+  worker:
+    container_name: worker
     build:
       context: ./
       dockerfile: ./Dockerfile
     volumes:
-      - ./sources/:/workplace
+      - ./sources:/workplace
+      - /var/run/docker.sock:/var/run/docker.sock
     environment:
       PUID: 1000
       PGID: 1000
       TZ: Australia/Melbourne
-    ports:
-      - 5000:5000
     network_mode: "host"
     restart: unless-stopped
+

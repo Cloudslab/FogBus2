@@ -6,6 +6,7 @@ import os
 import sys
 import cProfile
 import pstats
+import re
 
 from queue import Empty
 from time import sleep
@@ -704,23 +705,37 @@ class Broker:
                 self.master.sendingQueue.put(Message.encrypt(message))
 
     @staticmethod
+    def camel_to_snake(name):
+        # https://stackoverflow.com/questions/1175208
+        name = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', name)
+        return re.sub('([a-z0-9])([A-Z])', r'\1_\2', name).lower()
+
     def __runWorker(
+            self,
             userID: int,
             userName: str,
             taskName: str,
             token: str,
             childTaskTokens: List[str],
             ownedBy: int):
-
         threading.Thread(
             target=os.system,
-            args=("python worker.py %d %s %s %s %d %s" % (
-                userID,
-                taskName,
-                token,
-                ','.join(childTaskTokens) if len(childTaskTokens) else 'None',
-                ownedBy,
-                userName),)
+            args=(
+                "cd tasks/%s && docker-compose run %s %s %s %d %s %d "
+                "%d %s %s %s %d %s" % (
+                    taskName,
+                    self.camel_to_snake(taskName),
+                    self.thisIP,
+                    self.masterIP,
+                    self.masterPort,
+                    self.remoteLoggerHost,
+                    self.remoteLoggerPort,
+                    userID,
+                    taskName,
+                    token,
+                    ','.join(childTaskTokens) if len(childTaskTokens) else 'None',
+                    ownedBy,
+                    userName),)
         ).start()
         # os.system("python worker.py %d %d %s %s %d %s" % (userID, appID, token, nextWorkerToken, ownedBy, userName))
 

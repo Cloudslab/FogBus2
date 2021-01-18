@@ -9,8 +9,8 @@ RUN echo "Master" > /etc/hostname
 RUN apk add --no-cache \
     make automake gcc g++ subversion \
     linux-headers
-ADD requirements.txt /workplace/requirements.txt
-RUN python -m pip install -r requirements.txt
+ADD sources/requirements.txt /workplace/requirements.txt
+RUN python -m pip install -r requirements.txt --no-cache-dir
 
 # Ports
 EXPOSE 5000

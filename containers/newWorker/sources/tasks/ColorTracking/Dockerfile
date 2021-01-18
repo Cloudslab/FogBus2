@@ -2,9 +2,6 @@
 FROM python:3.9.1-alpine3.12
 WORKDIR /workplace
 
-# Hostname
-RUN echo "Worker" > /etc/hostname
-
 ## Dependencies
 RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.tuna.tsinghua.edu.cn/g' /etc/apk/repositories
 RUN apk add --no-cache \
@@ -41,11 +38,11 @@ RUN cd /workplace/opencv \
 RUN cd /workplace/opencv/build && make -j $(nproc) && make install
 
 ## Python libararies
-ADD sources/requirements.txt /workplace/requirements.txt
+ADD requirements.txt /workplace/requirements.txt
 RUN python -m pip install -r requirements.txt --no-cache-dir
 
-# Docker
-RUN apk add --no-cache docker docker-compose
+# Hostname
+RUN echo "ColorTracking" > /etc/hostname
 
-# Run Worker
+# Run ColorTracking
 ENTRYPOINT ["python", "worker.py"]

@@ -64,7 +64,7 @@ class EdgeWeights:
 
 def loadEdgeWeights(applications: Dict[str, Application]) -> EdgeWeights:
     edgeWeights = []
-    with open('./profiler/weightsOfEdges.csv', newline='') as file:
+    with open('profiler/weightsOfEdges.csv', newline='') as file:
         reader = csv.reader(file, delimiter=',')
         next(reader)
         for row in reader:
@@ -132,7 +132,7 @@ class TaskWeights(Weight):
 
 def loadTaskWeights(tasks: Dict[str, Task], applications: Dict[str, Application]):
     taskWeights = []
-    with open('./profiler/weightsOfTasks.csv', newline='') as file:
+    with open('profiler/weightsOfTasks.csv', newline='') as file:
         reader = csv.reader(file, delimiter=',')
         next(reader)
         for row in reader:

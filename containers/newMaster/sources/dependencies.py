@@ -27,7 +27,7 @@ class Application:
 
 
 def loadDependencies():
-    f = open('./dependencies.json')
+    f = open('dependencies.json')
     jsonData = json.loads(f.read())
     tasks: Dict[str, Task] = {}
 

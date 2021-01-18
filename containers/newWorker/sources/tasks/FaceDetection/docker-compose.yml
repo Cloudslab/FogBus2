@@ -2,18 +2,15 @@ version: '3'
 
 services:
 
-  master:
-    container_name: master
+  face_detection:
+    container_name: face_detection
     build:
-      context: ./
-      dockerfile: ./Dockerfile
-    volumes:
-      - ./sources/:/workplace
+      context: ../../
+      dockerfile: tasks/FaceDetection/Dockerfile
     environment:
       PUID: 1000
       PGID: 1000
       TZ: Australia/Melbourne
-    ports:
-      - 5000:5000
     network_mode: "host"
     restart: unless-stopped
+

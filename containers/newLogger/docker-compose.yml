@@ -8,11 +8,12 @@ services:
       context: ./
       dockerfile: ./Dockerfile
     volumes:
-      - ./:/workplace
+      - ./sources:/workplace
     environment:
       PUID: 1000
       PGID: 1000
       TZ: Australia/Melbourne
     ports:
       - 5001:5001
+    privileged: true
     restart: unless-stopped

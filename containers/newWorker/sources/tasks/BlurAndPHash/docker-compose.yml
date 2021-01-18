@@ -2,18 +2,17 @@ version: '3'
 
 services:
 
-  master:
-    container_name: master
+  blur_and_p_hash:
+    container_name: blur_and_p_hash
     build:
-      context: ./
-      dockerfile: ./Dockerfile
+      context: ../../
+      dockerfile: ./tasks/BlurAndPHash/Dockerfile
     volumes:
-      - ./sources/:/workplace
+      - ./:/workplace
     environment:
       PUID: 1000
       PGID: 1000
       TZ: Australia/Melbourne
-    ports:
-      - 5000:5000
     network_mode: "host"
     restart: unless-stopped
+

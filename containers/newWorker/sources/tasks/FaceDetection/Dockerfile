@@ -2,9 +2,6 @@
 FROM python:3.9.1-alpine3.12
 WORKDIR /workplace
 
-# Hostname
-RUN echo "Worker" > /etc/hostname
-
 ## Dependencies
 RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.tuna.tsinghua.edu.cn/g' /etc/apk/repositories
 RUN apk add --no-cache \
@@ -40,12 +37,16 @@ RUN cd /workplace/opencv \
 ## Compile
 RUN cd /workplace/opencv/build && make -j $(nproc) && make install
 
+## Copy files
+ADD requirements.txt /workplace/requirements.txt
+ADD cascade /workplace/cascade
+ADD *.py /workplace/
+
 ## Python libararies
-ADD sources/requirements.txt /workplace/requirements.txt
 RUN python -m pip install -r requirements.txt --no-cache-dir
 
-# Docker
-RUN apk add --no-cache docker docker-compose
+# Hostname
+RUN echo "FaceDetection" > /etc/hostname
 
-# Run Worker
+# Run FaceDetection
 ENTRYPOINT ["python", "worker.py"]

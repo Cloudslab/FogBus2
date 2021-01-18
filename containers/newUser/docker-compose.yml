@@ -2,18 +2,18 @@ version: '3'
 
 services:
 
-  master:
-    container_name: master
+  user:
+    container_name: user
     build:
       context: ./
       dockerfile: ./Dockerfile
     volumes:
-      - ./sources/:/workplace
+      - ./sources:/workplace
     environment:
       PUID: 1000
       PGID: 1000
       TZ: Australia/Melbourne
-    ports:
-      - 5000:5000
     network_mode: "host"
+    privileged: true
     restart: unless-stopped
+
