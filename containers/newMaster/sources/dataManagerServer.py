@@ -56,12 +56,20 @@ class DataManagerServer:
             )
             self.__sockets[socketID] = client
             self.unregisteredClients.put(client)
+            receiverEvent = threading.Event()
             threading.Thread(target=self.__receiver,
-                             args=(client, self.__io)).start()
+                             args=(client, self.__io, receiverEvent)).start()
+            receiverEvent.wait()
+
+            senderEvent = threading.Event()
             threading.Thread(target=self.__sender,
-                             args=(client, self.__io)).start()
+                             args=(client, self.__io, senderEvent)).start()
+            senderEvent.wait()
+
+            keepAliveEvent = threading.Event()
             threading.Thread(target=self.__keepAlive,
-                             args=(client,)).start()
+                             args=(client, keepAliveEvent)).start()
+            keepAliveEvent.wait()
 
     def hasClient(self, client: Client):
         return client.socketID in self.__sockets
@@ -87,7 +95,8 @@ class DataManagerServer:
             del self.__sockets[client.socketID]
             del client
 
-    def __keepAlive(self, client: Client):
+    def __keepAlive(self, client: Client, event: threading.Event):
+        event.set()
         while True:
 
             if not client.sendingQueue.qsize():
@@ -98,20 +107,30 @@ class DataManagerServer:
             sleep(1)
 
     @staticmethod
-    def __receiver(client: Client, io: IO):
+    def __receiver(client: Client, io: IO, event: threading.Event):
         buffer = b''
         payloadSize = struct.calcsize('>L')
+        event.set()
         try:
             while True:
+
                 while len(buffer) < payloadSize:
-                    buffer += client.socket.recv(4096)
+                    chunk = client.socket.recv(4096)
+                    if not chunk:
+                        raise OSError
+                    buffer += chunk
 
                 packedDataSize = buffer[:payloadSize]
                 buffer = buffer[payloadSize:]
                 dataSize = struct.unpack('>L', packedDataSize)[0]
 
                 while len(buffer) < dataSize:
-                    buffer += client.socket.recv(4096)
+                    if dataSize > 5:
+                        print('!!!!!!!!!!!!!!!dataSize', dataSize, len(buffer))
+                    chunk = client.socket.recv(4096)
+                    if not chunk:
+                        raise OSError
+                    buffer += chunk
 
                 data = buffer[:dataSize]
                 buffer = buffer[dataSize:]
@@ -124,7 +143,8 @@ class DataManagerServer:
             client.active = False
 
     @staticmethod
-    def __sender(client: Client, nodeIO: IO):
+    def __sender(client: Client, nodeIO: IO, event: threading.Event):
+        event.set()
         try:
             while True:
                 data_ = client.sendingQueue.get()

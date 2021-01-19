@@ -167,6 +167,8 @@ class FogMaster:
             except Empty:
                 continue
             except OSError:
+                import traceback
+                traceback.print_exc()
                 break
             except KeyError:
                 continue
@@ -237,6 +239,7 @@ class FogMaster:
                                'port': worker.port,
                                'name': worker.name
                                }
+                    print(message)
                     client.sendingQueue.put(Message.encrypt(message))
                     return
 

@@ -47,21 +47,25 @@ class DataManagerClient:
                 and self.port is not None:
             self.socket: socket.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self.socket.connect((self.host, self.port))
+
             sender = threading.Event()
             threading.Thread(
                 target=self.__sender,
                 args=(sender,)).start()
             sender.wait()
+
             receiver = threading.Event()
             threading.Thread(
                 target=self.__receiver,
                 args=(receiver,)).start()
             receiver.wait()
+
             keepAlive = threading.Event()
             threading.Thread(
                 target=self.__keepAlive,
                 args=(keepAlive,)).start()
             keepAlive.wait()
+
             self.isConnected = True
             self.activeTime = time()
 
@@ -102,14 +106,20 @@ class DataManagerClient:
         try:
             while True:
                 while len(buffer) < payloadSize:
-                    buffer += self.socket.recv(4096)
+                    chunk = self.socket.recv(4096)
+                    if not chunk:
+                        raise OSError
+                    buffer += chunk
 
                 packedDataSize = buffer[:payloadSize]
                 buffer = buffer[payloadSize:]
                 dataSize = struct.unpack('>L', packedDataSize)[0]
 
                 while len(buffer) < dataSize:
-                    buffer += self.socket.recv(4096)
+                    chunk = self.socket.recv(4096)
+                    if not chunk:
+                        raise OSError
+                    buffer += chunk
 
                 data = buffer[:dataSize]
                 buffer = buffer[dataSize:]

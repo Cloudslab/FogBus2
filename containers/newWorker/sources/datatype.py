@@ -196,12 +196,14 @@ class DataManagerClient:
             self.logger.info("[*] Linked to %s.", self.name)
 
         sender = threading.Event()
-        receiver = threading.Event()
-        keepAlive = threading.Event()
-        threading.Thread(target=self.__receiver, args=(sender,)).start()
+        threading.Thread(target=self.__sender, args=(sender,)).start()
         sender.wait()
-        threading.Thread(target=self.__sender, args=(receiver,)).start()
+
+        receiver = threading.Event()
+        threading.Thread(target=self.__receiver, args=(receiver,)).start()
         receiver.wait()
+
+        keepAlive = threading.Event()
         threading.Thread(target=self.__keepAlive, args=(keepAlive,)).start()
         keepAlive.wait()
 
@@ -240,14 +242,20 @@ class DataManagerClient:
         try:
             while True:
                 while len(buffer) < payloadSize:
-                    buffer += self.socket.recv(4096)
+                    chunk = self.socket.recv(4096)
+                    if not chunk:
+                        raise OSError
+                    buffer += chunk
 
                 packedDataSize = buffer[:payloadSize]
                 buffer = buffer[payloadSize:]
                 dataSize = struct.unpack('>L', packedDataSize)[0]
 
                 while len(buffer) < dataSize:
-                    buffer += self.socket.recv(4096)
+                    chunk = self.socket.recv(4096)
+                    if not chunk:
+                        raise OSError
+                    buffer += chunk
 
                 data = buffer[:dataSize]
                 buffer = buffer[dataSize:]
