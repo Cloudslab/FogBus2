@@ -1,5 +1,6 @@
 import pickle
-from typing import Any
+import traceback
+from typing import Dict
 
 
 def encrypt(obj) -> bytes:
@@ -7,6 +8,9 @@ def encrypt(obj) -> bytes:
     return data
 
 
-def decrypt(msg) -> Any:
-    obj = pickle.loads(msg, fix_imports=True, encoding="bytes")
-    return obj
+def decrypt(msg: bytes) -> Dict:
+    try:
+        obj = pickle.loads(msg, fix_imports=True, encoding="bytes")
+        return obj
+    except Exception:
+        traceback.print_exc()

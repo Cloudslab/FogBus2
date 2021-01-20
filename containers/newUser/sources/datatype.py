@@ -71,29 +71,18 @@ class Broker:
 
     def __init__(
             self,
-            masterIP: str,
-            masterPort: int,
             appName: str,
-            remoteLoggerHost: str = None,
-            remoteLoggerPort: int = None,
+            myAddr,
+            masterAddr,
+            loggerAddr,
             logLevel=logging.DEBUG):
         self.logger = get_logger('User-Broker', logLevel)
-        self.masterIP = masterIP
-        self.masterPort = masterPort
-        self.remoteLoggerHost: str = remoteLoggerHost
-        self.remoteLoggerPort: int = remoteLoggerPort
         self.userID = None
         self.name = None
         self.appName: str = appName
         self.label = None
 
         self.resultQueue: Queue = Queue()
-        self.master: Master = Master(
-            name='Master',
-            host=self.masterIP,
-            port=self.masterPort,
-            logLevel=self.logger.level
-        )
 
     def __nodeLogger(self):
         sysInfo = UserSysInfo(formatSize=False)
@@ -143,15 +132,14 @@ class Broker:
 
     def run(self, mode: str, label: str):
         self.label = label
-        self.master.link()
-        threading.Thread(target=self.__receivedMessageHandler).start()
-        self.register(mode=mode)
+        self.register()
 
-    def register(self, mode: str) -> NoReturn:
+        threading.Thread(target=self.__receivedMessageHandler).start()
+
+    def register(self):
         message = {
             'type': 'register',
             'role': 'user',
-            'mode': mode,
             'appName': self.appName,
             'label': self.label
         }

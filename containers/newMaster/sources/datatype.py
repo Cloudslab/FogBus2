@@ -154,23 +154,13 @@ class Client:
 
     def __init__(
             self,
-            socketID: int,
-            socket_: socket.socket,
-            sendingQueue: Queue[bytes],
-            receivingQueue: Queue[bytes],
+            name: str,
+            addr,
             connectionIO: ConnectionIO
     ):
-        self.socketID: int = socketID
-        self.socket: socket.socket = socket_
-        self.sendingQueue: Queue[bytes] = sendingQueue
-        self.receivingQueue: Queue[bytes] = receivingQueue
-        self.active = True
-        self.activeTime = time()
-        self.name: str = 'None'
+        self.name: str = name
+        self.addr = addr
         self.connectionIO: ConnectionIO = connectionIO
-
-    def updateActiveTime(self):
-        self.activeTime = time()
 
 
 class Master:
@@ -185,30 +175,47 @@ class Worker(Client):
 
     def __init__(
             self,
-            socketID: int,
-            socket_: socket.socket,
-            sendingQueue: Queue[bytes],
-            receivingQueue: Queue[bytes],
+            addr,
+            name: str,
             workerID: int,
-            specs: NodeSpecs,
-            ownedBy: int,
-            connectionIO: ConnectionIO
+            connectionIO: ConnectionIO,
     ):
         # TODO Containers info
+        if name is None:
+            name = "Worker-%d" % workerID
         super(Worker, self).__init__(
-            socketID=socketID,
-            socket_=socket_,
-            sendingQueue=sendingQueue,
-            receivingQueue=receivingQueue,
+            name=name,
+            addr=addr,
             connectionIO=connectionIO
         )
 
-        self.workerID: int = workerID
-        self.specs: NodeSpecs = specs
-        self.token = None
-        self.ip = None
-        self.port = None
-        self.ownedBy: int = ownedBy
+        self.id: int = workerID
+
+
+class TaskHandler(Client):
+
+    def __init__(
+            self,
+            addr,
+            taskHandlerID: int,
+            taskName: str,
+            token: str,
+            runningOnWorker: int,
+            connectionIO: ConnectionIO,
+            name: str = None,
+    ):
+        if name is None:
+            name = 'TaskHandler-%d' % taskHandlerID
+        super(TaskHandler, self).__init__(
+            name=name,
+            addr=addr,
+            connectionIO=connectionIO
+        )
+
+        self.id: int = taskHandlerID
+        self.taskName = taskName
+        self.token = token
+        self.runningOnWorker: int = runningOnWorker
 
 
 class UserTask:
@@ -223,30 +230,26 @@ class User(Client):
 
     def __init__(
             self,
-            socketID: int,
-            socket_: socket.socket,
-            sendingQueue: Queue[bytes],
-            receivingQueue: Queue[bytes],
+            addr,
             userID: int,
-            appRunMode: str,
             appName: int,
             connectionIO: ConnectionIO,
+            name: str,
             workerByTaskName: dict[int, Worker] = None,
     ):
+        if name is None:
+            name = 'User-%d' % userID
         super(User, self).__init__(
-            socketID=socketID,
-            socket_=socket_,
-            sendingQueue=sendingQueue,
-            receivingQueue=receivingQueue,
+            name=name,
+            addr=addr,
             connectionIO=connectionIO
         )
-        self.userID = userID
-        self.appRunMode = appRunMode
+        self.id = userID
         self.appName = appName
         self.isReady = False
         self.taskNameTokenMap: Dict[str, UserTask] = {}
         if workerByTaskName is None:
-            self.taskByName: dict[str, Worker] = {}
+            self.taskByName: dict[str, TaskHandler] = {}
         self.entranceTasksByName: List[str] = []
 
     def generateToken(self, taskName: str):
@@ -255,10 +258,12 @@ class User(Client):
             token=token)
         return token
 
-    def verifyWorker(self, taskName: str, token: str, worker: Worker) -> bool:
+    def verifyTaskHandler(
+            self, taskName: str,
+            taskHandler: TaskHandler) -> bool:
         if taskName in self.taskNameTokenMap \
-                and self.taskNameTokenMap[taskName].token == token:
-            self.taskByName[taskName] = worker
+                and self.taskNameTokenMap[taskName].token == taskHandler.token:
+            self.taskByName[taskName] = taskHandler
             if len(self.taskNameTokenMap) == len(self.taskByName):
                 self.isReady = True
             return True

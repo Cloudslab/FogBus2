@@ -2,12 +2,13 @@ import logging
 from threading import Lock
 from queue import Queue
 from logger import get_logger
-from datatype import Worker, User, NodeSpecs
-from datatype import Client
+from datatype import Worker, User, NodeSpecs, ConnectionIO
+from datatype import Client, TaskHandler
 from exceptions import *
 from time import sleep, time
-from message import Message
+from connection import Message, Connection
 
+from typing import Dict
 from dependencies import loadDependencies, Application, Task, Dependency
 from weights import loadEdgeWeights, loadTaskWeights
 
@@ -19,6 +20,8 @@ class Registry:
             logLevel=logging.DEBUG):
         self.__currentWorkerID: int = 0
         self.__lockCurrentWorkerID: Lock = Lock()
+        self.__currentTaskHandlerID: int = 0
+        self.__lockCurrentTaskHandlerID: Lock = Lock()
         self.workers: dict[int, Worker] = {}
         self.__currentUserID: int = 0
         self.__lockCurrentUserID: Lock = Lock()
@@ -26,6 +29,8 @@ class Registry:
         self.clientBySocketID: dict[int, Client] = {}
         self.workerBrokerQueue: Queue[Worker] = Queue()
         self.workerByToken: dict[str, Worker] = {}
+
+        self.taskHandlers: Dict[int, TaskHandler] = {}
 
         self.profiler = self.__loadProfilers()
         self.tasks, self.applications, self.edgeWeights, self.taskWeights = self.profiler
@@ -63,64 +68,86 @@ class Registry:
         # List of workers
         pass
 
-    def register(self, client: Client, message: dict) -> User or Worker:
-        role = message['role']
+    def register(self, message: Message):
+        role = message.content['role']
+        del message.content['role']
+        addr = message.content['addr']
         if role == 'user':
-            return self.__addUser(client, message)
-        elif role == 'worker':
-            return self.__addWorker(client, message)
+            return self.__addUser(message, addr)
+        if role == 'worker':
+            return self.__addWorker(message, addr)
+        if role == 'task':
+            return self.__addTaskHandler(message, addr)
 
-    def __addWorker(self, client: Client, message: dict) -> Worker:
-        nodeSpecs: NodeSpecs = message['nodeSpecs']
+    def __newWorkerID(self):
         self.__lockCurrentWorkerID.acquire()
         self.__currentWorkerID += 1
         workerID = self.__currentWorkerID
         self.__lockCurrentWorkerID.release()
+        return workerID
 
-        userID = message['userID']
-        taskName = message['taskName']
-        token = message['token']
-        ownedBy = message['ownedBy']
+    def __addWorker(self, message: Message, addr):
+        workerID = self.__newWorkerID()
 
         worker = Worker(
-            socketID=client.socketID,
-            socket_=client.socket,
-            sendingQueue=client.sendingQueue,
-            receivingQueue=client.receivingQueue,
+            name='Worker-%d' % workerID,
+            addr=addr,
             workerID=workerID,
-            specs=nodeSpecs,
-            ownedBy=ownedBy,
-            connectionIO=client.connectionIO
+            connectionIO=ConnectionIO()
         )
 
-        if userID is not None \
-                and userID in self.users:
-            user = self.users[userID]
-            isWorkerValid = user.verifyWorker(
-                taskName=taskName,
-                token=token,
-                worker=worker
-            )
-            if not isWorkerValid:
-                self.removeClient(worker)
-                raise WorkerCredentialNotValid
-            worker.ip = message['ip']
-            worker.port = message['port']
-            worker.token = token
-            self.workerByToken[worker.token] = worker
-            taskName = message['taskName']
-            worker.name = "Worker-%d-Task-%d-%s@%s" % (workerID, ownedBy, taskName, user.name)
-            self.logger.info("%s added. %s", worker.name, worker.specs.info())
-        else:
-            self.workerBrokerQueue.put(worker)
-            worker.name = "Worker-%d-Broker" % workerID
-            self.logger.info("Worker-%d-Broker added. %s", workerID, worker.specs.info())
-
         self.workers[workerID] = worker
-        self.clientBySocketID[client.socketID] = worker
+        respond = {
+            'type': 'registered',
+            'role': 'worker',
+            'name': worker.name,
+            'id': workerID
+        }
+        return respond
 
-        return worker
+    def __newTaskID(self):
+        self.__lockCurrentTaskHandlerID.acquire()
+        self.__lockCurrentTaskHandlerID += 1
+        taskHandlerID = self.__currentTaskHandlerID
+        self.__lockCurrentTaskHandlerID.release()
+        return taskHandlerID
 
+    def __addTaskHandler(self, message: Message, addr):
+        taskHandlerID = self.__newTaskID()
+
+        userID = message.content['userID']
+        taskName = message.content['taskName']
+        token = message.content['token']
+        runningOnWorker = message.content['runningOnWorker']
+
+        taskHandler = TaskHandler(
+            taskHandlerID=taskHandlerID,
+            addr=addr,
+            token=token,
+            taskName=taskName,
+            runningOnWorker=runningOnWorker,
+            connectionIO=ConnectionIO()
+        )
+
+        user = self.users[userID]
+        isWorkerValid = user.verifyTaskHandler(
+            taskName=taskName,
+            taskHandler=taskHandler
+        )
+        if not isWorkerValid:
+            respond = {
+                'type': 'disconnect',
+                'reason': 'token is not valid'
+            }
+            return respond
+
+        self.taskHandlers[taskHandler.id] = taskHandler
+        respond = {
+            'type': 'registered',
+            'role': 'taskHandler',
+            'id': taskHandlerID
+        }
+        return respond
 
     def __newUserID(self):
         self.__lockCurrentUserID.acquire()
@@ -129,27 +156,28 @@ class Registry:
         self.__lockCurrentUserID.release()
         return userID
 
-    def __addUser(self, client: Client, message: dict):
+    def __addUser(self, message: Message, addr):
         userID = self.__newUserID()
-        appName = message['appName']
-        label = message['label']
+        appName = message.content['appName']
+        label = message.content['label']
+
         user = User(
-            socketID=client.socketID,
-            socket_=client.socket,
-            receivingQueue=client.receivingQueue,
-            sendingQueue=client.sendingQueue,
+            name='%s@User-%d' % (label, userID),
+            addr=addr,
             userID=userID,
-            appRunMode=message['mode'],
             appName=appName,
-            connectionIO=client.connectionIO
+            connectionIO=ConnectionIO()
         )
-        user.name = '%s@User-%d' % (label, user.userID)
-        # threading.Thread(
-        #     target=self.__handleForUserRequest,
-        #     args=(user,)).start()
-        self.clientBySocketID[user.socketID] = user
-        self.users[user.userID] = user
-        return self.__handleForUserRequest(user)
+        self.__handleRequest(user)
+        self.users[user.id] = user
+
+        respond = {
+            'type': 'registered',
+            'role': 'user',
+            'id': userID,
+            'name': user.name
+        }
+        return respond
 
     def __schedule(self, user):
         for taskName, userTask in user.taskNameTokenMap.items():
@@ -159,7 +187,7 @@ class Registry:
             worker = self.workerBrokerQueue.get(timeout=1)
             message = {
                 'type': 'runWorker',
-                'userID': user.userID,
+                'userID': user.id,
                 'userName': user.name,
                 'taskName': taskName,
                 'token': token,
@@ -167,7 +195,7 @@ class Registry:
             worker.sendingQueue.put(Message.encrypt(message))
             self.workerBrokerQueue.put(worker)
 
-    def __handleForUserRequest(self, user: User):
+    def __handleRequest(self, user: User):
 
         app: Application = self.applications[user.appName]
 
@@ -189,33 +217,3 @@ class Registry:
             user.taskNameTokenMap[taskName].childTaskTokens = childTaskTokens
 
         self.__schedule(user)
-
-        self.logger.debug('Waiting for workers of userID-%d ...', user.userID)
-        timestamp = time()
-        while time() - timestamp < 5 and not user.isReady:
-            sleep(0.1)
-        if user.isReady:
-            message = {
-                'type': 'registration',
-                'userID': user.userID}
-            self.users[user.userID] = user
-            self.clientBySocketID[user.socketID] = user
-            user.sendingQueue.put(Message.encrypt(message))
-            self.logger.info("User-%d added.", user.userID)
-        else:
-            self.logger.info("Cannot run workers for User-%d.", user.userID)
-            self.removeClient(user)
-        return user
-
-    def removeClient(self, client: Client):
-        if isinstance(client, User) \
-                and client.userID in self.users:
-            del self.users[client.userID]
-        elif isinstance(client, Worker) \
-                and client.workerID in self.workers:
-            del self.workers[client.workerID]
-            if client.token is not None \
-                    and client.token in self.workerByToken:
-                del self.workerByToken[client.token]
-        if client.socketID in self.clientBySocketID:
-            del self.clientBySocketID[client.socketID]

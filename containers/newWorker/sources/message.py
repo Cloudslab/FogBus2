@@ -1,15 +1,16 @@
 import pickle
-import struct
+import traceback
+from typing import Dict
 
 
-class Message:
+def encrypt(obj) -> bytes:
+    data = pickle.dumps(obj, 0)
+    return data
 
-    @staticmethod
-    def encrypt(obj):
-        data = pickle.dumps(obj, 0)
-        return data
 
-    @staticmethod
-    def decrypt(msg):
+def decrypt(msg: bytes) -> Dict:
+    try:
         obj = pickle.loads(msg, fix_imports=True, encoding="bytes")
         return obj
+    except Exception:
+        traceback.print_exc()

@@ -20,3 +20,9 @@ class MessageDoesNotContainRespondAddr(Exception):
 
     def __init__(self):
         super(MessageDoesNotContainRespondAddr, self).__init__('Message does not contain responding address')
+
+
+class RegisteredAsWrongRole(Exception):
+
+    def __init__(self):
+        super(RegisteredAsWrongRole, self).__init__('Registered As Wrong Role')
