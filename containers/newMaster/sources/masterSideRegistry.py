@@ -104,7 +104,7 @@ class Registry:
             if not isWorkerValid:
                 self.removeClient(worker)
                 raise WorkerCredentialNotValid
-            worker.ip = worker.socket.getsockname()[0]
+            worker.ip = message['ip']
             worker.port = message['port']
             worker.token = token
             self.workerByToken[worker.token] = worker

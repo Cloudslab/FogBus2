@@ -696,6 +696,7 @@ class Broker:
                 childTaskIP = message['ip']
                 childTaskPort = message['port']
                 childTaskName = message['name']
+                self.logger.info(message)
                 self.childTasks[childTaskName] = DataManagerClient(
                     name="%s@%s" % (self.name, childTaskName),
                     host=childTaskIP,

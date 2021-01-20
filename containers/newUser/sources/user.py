@@ -5,13 +5,14 @@ from datatype import Broker
 from apps import FaceDetection, FaceAndEyeDetection, ColorTracking, VideoOCR
 
 if __name__ == "__main__":
-
-    appIDOrName = sys.argv[1]
-    targetWidth = int(sys.argv[2])
-    videoPath = sys.argv[3] if len(sys.argv) > 3 else None
+    remoteLoggerHost = sys.argv[1]
+    masterPort = int(sys.argv[2])
+    appIDOrName = sys.argv[3]
+    targetWidth = int(sys.argv[4])
+    videoPath = sys.argv[5] if len(sys.argv) > 5 else None
     broker = Broker(
-        masterIP='127.0.0.1',
-        masterPort=5000,
+        masterIP=remoteLoggerHost,
+        masterPort=masterPort,
         remoteLoggerHost='127.0.0.1',
         remoteLoggerPort=5001,
         appName=appIDOrName,

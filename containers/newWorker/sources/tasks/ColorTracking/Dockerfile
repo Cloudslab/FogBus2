@@ -37,12 +37,12 @@ RUN cd /workplace/opencv \
 ## Compile
 RUN cd /workplace/opencv/build && make -j $(nproc) && make install
 
-## Copy files
-ADD requirements.txt /workplace/requirements.txt
-ADD *.py /workplace/
-
 ## Python libararies
+ADD requirements.txt /workplace/requirements.txt
 RUN python -m pip install -r requirements.txt --no-cache-dir
+
+## Copy files
+ADD *.py /workplace/
 
 # Hostname
 RUN echo "ColorTracking" > /etc/hostname

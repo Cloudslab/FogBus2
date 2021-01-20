@@ -37,13 +37,14 @@ RUN cd /workplace/opencv \
 ## Compile
 RUN cd /workplace/opencv/build && make -j $(nproc) && make install
 
-## Copy files
+## Python libararies
 ADD requirements.txt /workplace/requirements.txt
+RUN python -m pip install -r requirements.txt --no-cache-dir
+
+## Copy Source Code
 ADD cascade /workplace/cascade
 ADD *.py /workplace/
 
-## Python libararies
-RUN python -m pip install -r requirements.txt --no-cache-dir
 
 # Hostname
 RUN echo "FaceDetection" > /etc/hostname
