@@ -16,10 +16,16 @@ class WorkerCredentialNotValid(Exception):
         super(WorkerCredentialNotValid, self).__init__('Worker Credential is Not Valid')
 
 
-class MessageDoesNotContainRespondAddr(Exception):
+class MessageDoesNotContainSourceInfo(Exception):
 
     def __init__(self):
-        super(MessageDoesNotContainRespondAddr, self).__init__('Message does not contain responding address')
+        super(MessageDoesNotContainSourceInfo, self).__init__('Message does not contain source information')
+
+
+class MessageDoesNotContainType(Exception):
+
+    def __init__(self):
+        super(MessageDoesNotContainType, self).__init__('Message does not contain Type')
 
 
 class RegisteredAsWrongRole(Exception):

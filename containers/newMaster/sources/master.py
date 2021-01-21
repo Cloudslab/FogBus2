@@ -25,16 +25,17 @@ class Master(Node):
             logLevel=logLevel
         )
 
-        self.masterID = masterID
+        self.id = masterID
         self.registry: Registry = Registry(logLevel=logLevel)
 
     def run(self):
         self.role = 'master'
-        self.name = 'Master-%d' % self.masterID
+        self.name = 'Master-%d' % self.id
         self.logger = get_logger(self.name, self.logLevel)
         self.logger.info("Serving ...")
 
     def handleMessage(self, message: Message):
+        self.logger.info(message.content)
         if self.isMessage(message, 'register'):
             self.__handleRegister(message=message)
         elif self.isMessage(message, 'data'):
@@ -46,8 +47,9 @@ class Master(Node):
 
     def __handleRegister(self, message: Message):
         respond = self.registry.register(message=message)
-        self.sendMessage(respond, message.sourceAddr)
+        self.sendMessage(respond, message.source.addr)
         self.logger.info('%s registered', respond['name'])
+
         if message.content['role'] == 'user':
             while self.registry.messageForWorker.qsize():
                 msg, addr = self.registry.messageForWorker.get()
@@ -67,7 +69,7 @@ class Master(Node):
     def __handleData(self, message: Message):
         userID = message.content['userID']
         user = self.registry.users[userID]
-        if not user.addr == message.sourceAddr:
+        if not user.addr == message.source.addr:
             return
 
         for taskName in user.entranceTasksByName:
@@ -90,7 +92,7 @@ class Master(Node):
             'addr': taskHandler.addr,
             'token': taskHandlerToken
         }
-        self.sendMessage(respond, message.sourceAddr)
+        self.sendMessage(respond, message.source.addr)
 
 
 if __name__ == '__main__':

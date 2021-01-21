@@ -4,7 +4,7 @@ import threading
 import traceback
 import pickle
 from queue import Queue
-from typing import Any, Dict
+from typing import Any, Dict, Tuple
 from exceptions import *
 
 
@@ -21,9 +21,22 @@ def decrypt(msg: bytes) -> Dict:
         traceback.print_exc()
 
 
-class Connection:
-    def __init__(self, addr):
+class Source:
+
+    def __init__(
+            self,
+            addr,
+            role,
+            id_,
+    ):
         self.addr = addr
+        self.role = role
+        self.id = id_
+
+
+class Connection:
+    def __init__(self, addr: Tuple[str, int]):
+        self.addr: Tuple[str, int] = addr
 
     def __send(self, message: bytes, retries: int = 3):
         if not retries:
@@ -54,10 +67,14 @@ class Message:
     def __init__(self, content: Dict):
         self.content: Dict = content
 
-        if 'addr' not in self.content:
-            raise MessageDoesNotContainRespondAddr
+        if 'source' not in self.content:
+            raise MessageDoesNotContainSourceInfo
 
-        self.sourceAddr = self.content['addr']
+        if 'type' not in self.content:
+            raise MessageDoesNotContainType
+
+        self.type = self.content['type']
+        self.source: Source = self.content['source']
 
 
 class Server:

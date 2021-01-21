@@ -2,9 +2,9 @@ import threading
 import logging
 
 from queue import Queue
-from connection import Server, Message, Connection
+from connection import Server, Message, Connection, Source
 from abc import abstractmethod
-from typing import Dict
+from typing import Dict, Tuple
 from logging import Logger
 
 
@@ -18,6 +18,7 @@ class Node:
             logLevel=logging.DEBUG):
         self.name: str = None
         self.role: str = None
+        self.id: int = None
         self.myAddr = myAddr
         self.masterAddr = masterAddr
         self.loggerAddr = loggerAddr
@@ -40,8 +41,12 @@ class Node:
             message = self.receivedMessage.get()
             self.handleMessage(message)
 
-    def sendMessage(self, message: Dict, addr):
-        message['addr'] = self.myAddr
+    def sendMessage(self, message: Dict, addr: Tuple[str, int]):
+        message['source'] = Source(
+            addr=self.myAddr,
+            role=self.role,
+            id_=self.id
+        )
         Connection(addr).send(message)
 
     @abstractmethod

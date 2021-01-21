@@ -21,6 +21,19 @@ def decrypt(msg: bytes) -> Dict:
         traceback.print_exc()
 
 
+class Source:
+
+    def __init__(
+            self,
+            addr,
+            role,
+            id_,
+    ):
+        self.addr = addr
+        self.role = role
+        self.id = id_
+
+
 class Connection:
     def __init__(self, addr):
         self.addr = addr
@@ -54,10 +67,14 @@ class Message:
     def __init__(self, content: Dict):
         self.content: Dict = content
 
-        if 'addr' not in self.content:
-            raise MessageDoesNotContainRespondAddr
+        if 'source' not in self.content:
+            raise MessageDoesNotContainSourceInfo
 
-        self.sourceAddr = self.content['addr']
+        if 'type' not in self.content:
+            raise MessageDoesNotContainType
+
+        self.type = self.content['type']
+        self.source: Source = self.content['source']
 
 
 class Server:

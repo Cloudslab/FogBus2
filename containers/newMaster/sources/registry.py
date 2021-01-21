@@ -49,14 +49,13 @@ class Registry:
         return loadDependencies()
 
     def register(self, message: Message):
-        role = message.content['role']
-        addr = message.content['addr']
-        if role == 'user':
-            return self.__addUser(message, addr)
-        if role == 'worker':
-            return self.__addWorker(message, addr)
-        if role == 'taskHandler':
-            return self.__addTaskHandler(message, addr)
+        targetRole = message.content['role']
+        if targetRole == 'user':
+            return self.__addUser(message, message.source.addr)
+        if targetRole == 'worker':
+            return self.__addWorker(message, message.source.addr)
+        if targetRole == 'taskHandler':
+            return self.__addTaskHandler(message, message.source.addr)
 
     def __newWorkerID(self):
         self.__lockCurrentWorkerID.acquire()

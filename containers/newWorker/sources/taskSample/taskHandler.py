@@ -10,7 +10,7 @@ from logging import Logger
 from typing import List, Dict
 from collections import defaultdict
 from time import sleep
-from apps import *
+from taskSample.apps import *
 
 
 class TaskHandler(Node):
@@ -41,7 +41,6 @@ class TaskHandler(Node):
         self.childTaskTokens: List[str] = childTaskTokens
         self.runningOnWorker: int = runningOnWorker
         self.isRegistered: threading.Event = threading.Event()
-        self.taskHandlerID: int = None
         self.childrenAddr: Dict[str, tuple] = {}
 
         app = None
@@ -85,6 +84,8 @@ class TaskHandler(Node):
                 message = {
                     'type': 'lookup',
                     'token': childToken}
+                print(self.childrenAddr, message)
+
                 self.sendMessage(message, self.masterAddr)
             sleep(1)
         self.logger.info('Got children\'s addr')
@@ -101,7 +102,7 @@ class TaskHandler(Node):
         role = message.content['role']
         if not role == 'taskHandler':
             raise RegisteredAsWrongRole
-        self.taskHandlerID = message.content['id']
+        self.id = message.content['id']
         self.name = message.content['name']
         self.logger = get_logger(self.name, self.logLevel)
         self.isRegistered.set()

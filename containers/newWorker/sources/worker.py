@@ -27,7 +27,6 @@ class Worker(Node):
         )
 
         self.isRegistered: threading.Event = threading.Event()
-        self.workerID: int = None
 
     def run(self):
         self.__register()
@@ -49,7 +48,7 @@ class Worker(Node):
         role = message.content['role']
         if not role == 'worker':
             raise RegisteredAsWrongRole
-        self.workerID = message.content['id']
+        self.id = message.content['id']
         self.name = message.content['name']
         self.logger = get_logger(self.name, self.logLevel)
         self.isRegistered.set()
@@ -67,7 +66,7 @@ class Worker(Node):
         taskName = message.content['taskName']
         token = message.content['token']
         childTaskTokens = message.content['childTaskTokens']
-        runningOnWorker = self.workerID
+        runningOnWorker = self.id
         # threading.Thread(
         #     target=os.system,
         #     args=(
@@ -88,46 +87,47 @@ class Worker(Node):
         #             userName),)
         # ).start()
 
-        threading.Thread(
-            target=os.system,
-            args=(
-                "cd taskSample && python taskHandler.py %s %s %d %s %d "
-                "%d %s %s %s %s %d" % (
-                    self.myAddr[0],
-                    self.masterAddr[0],
-                    self.masterAddr[1],
-                    self.loggerAddr[0],
-                    self.loggerAddr[1],
-                    userID,
-                    userName,
-                    taskName,
-                    token,
-                    ','.join(childTaskTokens) if len(childTaskTokens) else 'None',
-                    runningOnWorker
-                ),)
-        ).start()
+        # threading.Thread(
+        #     target=os.system,
+        #     args=(
+        #         "cd taskSample && python taskHandler.py %s %s %d %s %d "
+        #         "%d %s %s %s %s %d" % (
+        #             self.myAddr[0],
+        #             self.masterAddr[0],
+        #             self.masterAddr[1],
+        #             self.loggerAddr[0],
+        #             self.loggerAddr[1],
+        #             userID,
+        #             userName,
+        #             taskName,
+        #             token,
+        #             ','.join(childTaskTokens) if len(childTaskTokens) else 'None',
+        #             runningOnWorker
+        #         ),)
+        # ).start()
 
-        # import socket
-        # tmpSocket = socket.socket(
-        #     socket.AF_INET,
-        #     socket.SOCK_STREAM)
-        # tmpSocket.bind(('', 0))
-        # port = tmpSocket.getsockname()[1]
-        # tmpSocket.close()
-        # myAddr_ = (self.myAddr[0], port)
-        # from taskSample.taskHandler import TaskHandler
-        # taskHandler_ = TaskHandler(
-        #     myAddr=myAddr_,
-        #     masterAddr=self.masterAddr,
-        #     loggerAddr=self.loggerAddr,
-        #     userID=userID,
-        #     userName=userName,
-        #     taskName=taskName,
-        #     token=token,
-        #     childTaskTokens=childTaskTokens,
-        #     runningOnWorker=runningOnWorker
-        # )
-        # taskHandler_.run()
+        import socket
+        tmpSocket = socket.socket(
+            socket.AF_INET,
+            socket.SOCK_STREAM)
+        tmpSocket.bind(('', 0))
+        port = tmpSocket.getsockname()[1]
+        tmpSocket.close()
+        myAddr_ = (self.myAddr[0], port)
+        from taskSample.taskHandler import TaskHandler
+
+        taskHandler_ = TaskHandler(
+            myAddr=myAddr_,
+            masterAddr=self.masterAddr,
+            loggerAddr=self.loggerAddr,
+            userID=userID,
+            userName=userName,
+            taskName=taskName,
+            token=token,
+            childTaskTokens=childTaskTokens,
+            runningOnWorker=runningOnWorker
+        )
+        taskHandler_.run()
 
 
 if __name__ == '__main__':
