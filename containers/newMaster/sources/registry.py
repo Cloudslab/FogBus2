@@ -27,14 +27,15 @@ class Registry:
         self.__lockCurrentUserID: Lock = Lock()
         self.users: dict[int, User] = {}
         self.clientBySocketID: dict[int, Client] = {}
-        self.workerBrokerQueue: Queue[Worker] = Queue()
-        self.workerByToken: dict[str, Worker] = {}
+        self.workersQueue: Queue[Worker] = Queue()
+        self.taskHandlerByToken: dict[str, TaskHandler] = {}
 
         self.taskHandlers: Dict[int, TaskHandler] = {}
 
         self.profiler = self.__loadProfilers()
         self.tasks, self.applications, self.edgeWeights, self.taskWeights = self.profiler
         self.logger = get_logger('Master-Registry', logLevel)
+        self.messageForWorker: Queue[tuple[Dict, tuple[str, int]]] = Queue()
 
     @staticmethod
     def __loadProfilers():
@@ -47,36 +48,14 @@ class Registry:
     def __loadDependencies():
         return loadDependencies()
 
-    def __scaleMethod(self):
-        # TODO
-        pass
-
-    def __scheduleMethod(self):
-        # TODO
-        # 1. Input: Consider user requests
-        # 2. Resources / Workers
-        # 3. Applications
-        #
-        # some algorithm here
-        #
-        # return the decision
-
-        pass
-
-    def __grabWorkersInfo(self):
-        # TODO
-        # List of workers
-        pass
-
     def register(self, message: Message):
         role = message.content['role']
-        del message.content['role']
         addr = message.content['addr']
         if role == 'user':
             return self.__addUser(message, addr)
         if role == 'worker':
             return self.__addWorker(message, addr)
-        if role == 'task':
+        if role == 'taskHandler':
             return self.__addTaskHandler(message, addr)
 
     def __newWorkerID(self):
@@ -103,11 +82,13 @@ class Registry:
             'name': worker.name,
             'id': workerID
         }
+
+        self.workersQueue.put(worker)
         return respond
 
     def __newTaskID(self):
         self.__lockCurrentTaskHandlerID.acquire()
-        self.__lockCurrentTaskHandlerID += 1
+        self.__currentTaskHandlerID += 1
         taskHandlerID = self.__currentTaskHandlerID
         self.__lockCurrentTaskHandlerID.release()
         return taskHandlerID
@@ -130,11 +111,11 @@ class Registry:
         )
 
         user = self.users[userID]
-        isWorkerValid = user.verifyTaskHandler(
+        isTaskValid = user.verifyTaskHandler(
             taskName=taskName,
             taskHandler=taskHandler
         )
-        if not isWorkerValid:
+        if not isTaskValid:
             respond = {
                 'type': 'disconnect',
                 'reason': 'token is not valid'
@@ -142,10 +123,12 @@ class Registry:
             return respond
 
         self.taskHandlers[taskHandler.id] = taskHandler
+        self.taskHandlerByToken[taskHandler.token] = taskHandler
         respond = {
             'type': 'registered',
             'role': 'taskHandler',
-            'id': taskHandlerID
+            'id': taskHandlerID,
+            'name': taskHandler.name,
         }
         return respond
 
@@ -162,15 +145,14 @@ class Registry:
         label = message.content['label']
 
         user = User(
-            name='%s@User-%d' % (label, userID),
+            name='%s@%s@User-%d' % (appName, label, userID),
             addr=addr,
             userID=userID,
             appName=appName,
             connectionIO=ConnectionIO()
         )
-        self.__handleRequest(user)
         self.users[user.id] = user
-
+        self.__handleRequest(user)
         respond = {
             'type': 'registered',
             'role': 'user',
@@ -184,16 +166,16 @@ class Registry:
             token = userTask.token
             childTaskTokens = userTask.childTaskTokens
             # Scheduling Algorithm
-            worker = self.workerBrokerQueue.get(timeout=1)
+            worker = self.workersQueue.get(timeout=1)
             message = {
-                'type': 'runWorker',
+                'type': 'runTaskHandler',
                 'userID': user.id,
                 'userName': user.name,
                 'taskName': taskName,
                 'token': token,
-                'childTaskTokens': childTaskTokens}
-            worker.sendingQueue.put(Message.encrypt(message))
-            self.workerBrokerQueue.put(worker)
+                'childTaskTokens': childTaskTokens, }
+            self.messageForWorker.put((message, worker.addr))
+            self.workersQueue.put(worker)
 
     def __handleRequest(self, user: User):
 

@@ -5,54 +5,57 @@ import traceback
 from queue import Queue
 from message import encrypt, decrypt
 from typing import Any, Dict
-from abc import abstractmethod
+from exceptions import *
 
 
 class Connection:
-    def __init__(self, ip: str, port: int):
-        self.ip: str = ip
-        self.port: int = port
-        self.__payloadSize = struct.calcsize('>L')
+    def __init__(self, addr):
+        self.addr = addr
 
-    def __send(self, data: bytes, retries: int = 3):
+    def send(self, data: bytes, retries: int = 3):
         if not retries:
             raise OSError
         try:
             clientSocket = socket.socket(
                 socket.AF_INET,
                 socket.SOCK_STREAM)
-            clientSocket.connect((self.ip, self.port))
+            clientSocket.connect(self.addr)
             package = struct.pack(">L", len(data)) + data
             clientSocket.sendall(package)
             clientSocket.close()
         except OSError:
-            self.__send(data=data, retries=retries - 1)
-
-    def send(self, data: Any, retries: int = 3):
-        encryptData = encrypt(data)
-        self.__send(data=encryptData, retries=retries)
+            self.send(data=data, retries=retries - 1)
 
 
 class Request:
 
-    def __init__(self, clientSocket: socket.socket, ip: str, port: int):
+    def __init__(self, clientSocket: socket.socket, clientAddr):
         self.clientSocket: clientSocket = clientSocket
-        self.ip: str = ip
-        self.port: int = port
+        self.clientAddr = clientAddr
+
+
+class Message:
+    def __init__(self, content: Dict):
+        self.content: Dict = content
+
+        if 'addr' not in self.content:
+            raise MessageDoesNotContainRespondAddr
+
+        self.sourceAddr = self.content['addr']
 
 
 class Server:
 
     def __init__(
             self,
-            ip: str,
-            port: int,
+            addr,
+            messagesQueue: Queue[Message],
             threadNumber: int = 30):
-        self.ip: str = ip
-        self.port: int = port
+        self.addr = addr
+        self.messageQueue: Queue[Message] = messagesQueue
         self.threadNumber: int = threadNumber
-
         self.requests: Queue[Request] = Queue()
+        self.run()
 
     def run(self):
         for i in range(self.threadNumber):
@@ -71,18 +74,18 @@ class Server:
         serverSocket = socket.socket(
             socket.AF_INET,
             socket.SOCK_STREAM)
-        serverSocket.bind((self.ip, self.port))
+        serverSocket.bind(self.addr)
         serverSocket.listen()
         while True:
             clientSocket, clientAddress = serverSocket.accept()
-            request = Request(clientSocket, clientAddress[0], clientAddress[1])
+            request = Request(clientSocket, clientAddress)
             self.requests.put(request)
 
     def __handleThread(self):
         while True:
             request = self.requests.get()
             message = self.__receiveMessage(request.clientSocket)
-            self.handle(message, request.ip, request.port)
+            self.messageQueue.put(Message(content=message))
 
     @staticmethod
     def __receiveMessage(clientSocket: socket.socket) -> Dict:
@@ -112,13 +115,11 @@ class Server:
             result = decrypt(result)
         return result
 
-    @abstractmethod
-    def handle(self, message: Dict, ip: str, port: int):
-        pass
-
 
 if __name__ == '__main__':
     serverIP = ''
     serverPort = 5000
-    server_ = Server(serverIP, serverPort)
+    addr_ = ('', 5000)
+    server_ = Server(addr_, Queue())
     server_.run()
+    Connection(addr_).send('')

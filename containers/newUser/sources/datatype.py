@@ -7,9 +7,9 @@ import struct
 
 from time import time, sleep
 from logger import get_logger
-from message import Message
+from message import encrypt, decrypt
 from typing import NoReturn
-from typing import List
+from typing import List, Dict
 
 from abc import abstractmethod
 from typing import Any
@@ -72,10 +72,10 @@ class Broker:
     def __init__(
             self,
             appName: str,
-            myAddr,
             masterAddr,
-            loggerAddr,
             logLevel=logging.DEBUG):
+
+        self.masterAddr = masterAddr
         self.logger = get_logger('User-Broker', logLevel)
         self.userID = None
         self.name = None
@@ -84,56 +84,9 @@ class Broker:
 
         self.resultQueue: Queue = Queue()
 
-    def __nodeLogger(self):
-        sysInfo = UserSysInfo(formatSize=False)
-        sysInfo.recordPerSeconds(seconds=10, nodeName=self.name)
-        threading.Thread(
-            target=self.__sendLogToRemoteLogger,
-            args=(sysInfo,)
-        ).start()
-
-    def __sendLog(self, message):
-        serverSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        serverSocket.connect((self.remoteLoggerHost, self.remoteLoggerPort))
-
-        messageEncrypted = Message.encrypt(message)
-        serverSocket.sendall(struct.pack(">L", len(messageEncrypted)) + messageEncrypted)
-        serverSocket.close()
-
-    def __sendLogToRemoteLogger(self, sysInfo: UserSysInfo):
-        if self.remoteLoggerHost is None \
-                or self.remoteLoggerPort is None:
-            return
-
-        message = {
-            'logList': sysInfo.res.keys(changing=False),
-            'nodeName': self.name,
-            'isChangingLog': False,
-            'isTitle': True
-        }
-        self.__sendLog(message)
-        message = {
-            'logList': sysInfo.res.keys(changing=True),
-            'nodeName': self.name,
-            'isChangingLog': True,
-            'isTitle': True
-        }
-        self.__sendLog(message)
-        sleepTime = 10
-        while True:
-            sleep(sleepTime)
-            message = {
-                'logList': sysInfo.res.values(changing=True),
-                'nodeName': self.name,
-                'isChangingLog': True,
-                'isTitle': False
-            }
-            self.__sendLog(message)
-
-    def run(self, mode: str, label: str):
+    def run(self, label: str):
         self.label = label
         self.register()
-
         threading.Thread(target=self.__receivedMessageHandler).start()
 
     def register(self):
@@ -143,7 +96,7 @@ class Broker:
             'appName': self.appName,
             'label': self.label
         }
-        self.__send(message)
+        self.send(message)
         self.logger.info("[*] Registering ...")
         while self.userID is None:
             pass
@@ -151,8 +104,19 @@ class Broker:
         threading.Thread(target=self.__nodeLogger).start()
         self.logger.info("[*] Registered with userID-%d", self.userID)
 
-    def __send(self, data) -> NoReturn:
-        self.master.sendingQueue.put(Message.encrypt(data))
+    def send(self, data: Dict, retries: int = 3):
+        if not retries:
+            raise OSError
+        try:
+            clientSocket = socket.socket(
+                socket.AF_INET,
+                socket.SOCK_STREAM)
+            clientSocket.connect(self.masterAddr)
+            package = struct.pack(">L", len(data)) + data
+            clientSocket.sendall(package)
+            clientSocket.close()
+        except OSError:
+            self.send(data=data, retries=retries - 1)
 
     def __receivedMessageHandler(self):
         self.logger.info('[*] Received Message Handler stated.')

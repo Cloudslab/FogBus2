@@ -12,7 +12,7 @@ class Connection:
     def __init__(self, addr):
         self.addr = addr
 
-    def __send(self, message: bytes, retries: int = 3):
+    def send(self, data: bytes, retries: int = 3):
         if not retries:
             raise OSError
         try:
@@ -20,14 +20,11 @@ class Connection:
                 socket.AF_INET,
                 socket.SOCK_STREAM)
             clientSocket.connect(self.addr)
-            package = struct.pack(">L", len(message)) + message
+            package = struct.pack(">L", len(data)) + data
             clientSocket.sendall(package)
             clientSocket.close()
         except OSError:
-            self.__send(message=message, retries=retries - 1)
-
-    def send(self, message: Dict, retries: int = 3):
-        self.__send(encrypt(message), retries=retries)
+            self.send(data=data, retries=retries - 1)
 
 
 class Request:
@@ -125,4 +122,4 @@ if __name__ == '__main__':
     addr_ = ('', 5000)
     server_ = Server(addr_, Queue())
     server_.run()
-    Connection(addr_).send({})
+    Connection(addr_).send('')

@@ -5,6 +5,7 @@ from typing import List, Dict
 from abc import abstractmethod
 from time import time, sleep
 from secrets import token_urlsafe
+from connection import Connection
 
 
 class IO:
@@ -246,11 +247,12 @@ class User(Client):
         )
         self.id = userID
         self.appName = appName
-        self.isReady = False
+        self.ready: threading.Event = threading.Event()
         self.taskNameTokenMap: Dict[str, UserTask] = {}
         if workerByTaskName is None:
             self.taskByName: dict[str, TaskHandler] = {}
         self.entranceTasksByName: List[str] = []
+        self.respondMessageQueue: Queue = Queue()
 
     def generateToken(self, taskName: str):
         token = token_urlsafe(16)
@@ -265,7 +267,7 @@ class User(Client):
                 and self.taskNameTokenMap[taskName].token == taskHandler.token:
             self.taskByName[taskName] = taskHandler
             if len(self.taskNameTokenMap) == len(self.taskByName):
-                self.isReady = True
+                self.ready.set()
             return True
         return False
 

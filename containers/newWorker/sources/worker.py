@@ -1,9 +1,9 @@
 import sys
 import logging
 import threading
-from apps import *
+import os
+import re
 from exceptions import *
-from datatype import Broker
 from connection import Connection, Message
 from queue import Queue
 from node import Node
@@ -42,6 +42,8 @@ class Worker(Node):
     def handleMessage(self, message: Message):
         if self.isMessage(message, 'registered'):
             self.__handleRegistered(message)
+        elif self.isMessage(message, 'runTaskHandler'):
+            self.__handleRunTaskHandler(message)
 
     def __handleRegistered(self, message: Message):
         role = message.content['role']
@@ -49,8 +51,83 @@ class Worker(Node):
             raise RegisteredAsWrongRole
         self.workerID = message.content['id']
         self.name = message.content['name']
-        self.isRegistered.set()
         self.logger = get_logger(self.name, self.logLevel)
+        self.isRegistered.set()
+
+    @staticmethod
+    def camel_to_snake(name):
+        # https://stackoverflow.com/questions/1175208
+        name = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', name)
+        return re.sub('([a-z0-9])([A-Z])', r'\1_\2', name).lower()
+
+    def __handleRunTaskHandler(self, message: Message):
+
+        userID = message.content['userID']
+        userName = message.content['userName']
+        taskName = message.content['taskName']
+        token = message.content['token']
+        childTaskTokens = message.content['childTaskTokens']
+        runningOnWorker = self.workerID
+        # threading.Thread(
+        #     target=os.system,
+        #     args=(
+        #         "cd tasks/%s && docker-compose run %s %s %s %d %s %d "
+        #         "%d %s %s %s %d %s" % (
+        #             taskName,
+        #             self.camel_to_snake(taskName),
+        #             self.myAddr[0],
+        #             self.masterAddr[0],
+        #             self.masterAddr[1],
+        #             self.loggerAddr[0],
+        #             self.loggerAddr[1],
+        #             userID,
+        #             taskName,
+        #             token,
+        #             ','.join(childTaskTokens) if len(childTaskTokens) else 'None',
+        #             ownedBy,
+        #             userName),)
+        # ).start()
+
+        # threading.Thread(
+        #     target=os.system,
+        #     args=(
+        #         "cd taskSample && python taskHandler.py %s %s %d %s %d "
+        #         "%d %s %s %s %s %d" % (
+        #             self.myAddr[0],
+        #             self.masterAddr[0],
+        #             self.masterAddr[1],
+        #             self.loggerAddr[0],
+        #             self.loggerAddr[1],
+        #             userID,
+        #             userName,
+        #             taskName,
+        #             token,
+        #             ','.join(childTaskTokens) if len(childTaskTokens) else 'None',
+        #             runningOnWorker
+        #         ),)
+        # ).start()
+
+        import socket
+        tmpSocket = socket.socket(
+            socket.AF_INET,
+            socket.SOCK_STREAM)
+        tmpSocket.bind(('', 0))
+        port = tmpSocket.getsockname()[1]
+        tmpSocket.close()
+        myAddr_ = (self.myAddr[0], port)
+        from taskSample.taskHandler import TaskHandler
+        taskHandler_ = TaskHandler(
+            myAddr=myAddr_,
+            masterAddr=self.masterAddr,
+            loggerAddr=self.loggerAddr,
+            userID=userID,
+            userName=userName,
+            taskName=taskName,
+            token=token,
+            childTaskTokens=childTaskTokens,
+            runningOnWorker=runningOnWorker
+        )
+        taskHandler_.run()
 
 
 if __name__ == '__main__':
