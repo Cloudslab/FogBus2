@@ -68,22 +68,14 @@ class FaceAndEyeDetection(ApplicationUserSide):
 class ColorTracking(ApplicationUserSide):
 
     @staticmethod
-    def nothing():
+    def nothing(arg):
         pass
-
-    def __receiveResult(self):
-        while True:
-            message = self.broker.resultQueue.get()
-            self.result[message['dataID']].put(message['result'])
 
     def run(self):
         self.appName = 'ColorTracking'
-        self.broker.run(
-            label='%s-%d' % (self.appName, self.targetWidth),
-            mode='sequential'
-        )
-        threading.Thread(target=self.__receiveResult).start()
+        threading.Thread(target=self.__run).start()
 
+    def __run(self):
         cv2.namedWindow('Trackbars')
         cv2.moveWindow('Trackbars', 1320, 0)
 
@@ -97,7 +89,6 @@ class ColorTracking(ApplicationUserSide):
         cv2.createTrackbar('satHigh', 'Trackbars', 255, 255, self.nothing)
         cv2.createTrackbar('valLow', 'Trackbars', 100, 255, self.nothing)
         cv2.createTrackbar('valHigh', 'Trackbars', 255, 255, self.nothing)
-        targetWidth = 640
         while True:
             ret, frame = self.capture.read()
             if not ret:
@@ -130,14 +121,8 @@ class ColorTracking(ApplicationUserSide):
                          l_b, u_b,
                          l_b2, u_b2
                          )
-            dataID = self.createDataFrame(inputData)
-            self.broker.submit(
-                inputData,
-                dataID,
-                mode='sequential',
-                label='%d' % self.targetWidth
-            )
-            resultData = self.result[dataID].get()
+            self.dataToSubmit.put(inputData)
+            resultData = self.result.get()
             (FGmaskComp, frame) = resultData
 
             cv2.imshow('FGmaskComp', FGmaskComp)

@@ -22,13 +22,13 @@ class Registry:
         self.__lockCurrentWorkerID: Lock = Lock()
         self.__currentTaskHandlerID: int = 0
         self.__lockCurrentTaskHandlerID: Lock = Lock()
-        self.workers: dict[int, Worker] = {}
+        self.workers: Dict[int, Worker] = {}
         self.__currentUserID: int = 0
         self.__lockCurrentUserID: Lock = Lock()
-        self.users: dict[int, User] = {}
-        self.clientBySocketID: dict[int, Client] = {}
+        self.users: Dict[int, User] = {}
+        self.clientBySocketID: Dict[int, Client] = {}
         self.workersQueue: Queue[Worker] = Queue()
-        self.taskHandlerByToken: dict[str, TaskHandler] = {}
+        self.taskHandlerByToken: Dict[str, TaskHandler] = {}
 
         self.taskHandlers: Dict[int, TaskHandler] = {}
 
@@ -51,11 +51,11 @@ class Registry:
     def register(self, message: Message):
         targetRole = message.content['role']
         if targetRole == 'user':
-            return self.__addUser(message, message.source.addr)
+            return self.__addUser(message)
         if targetRole == 'worker':
-            return self.__addWorker(message, message.source.addr)
+            return self.__addWorker(message)
         if targetRole == 'taskHandler':
-            return self.__addTaskHandler(message, message.source.addr)
+            return self.__addTaskHandler(message)
 
     def __newWorkerID(self):
         self.__lockCurrentWorkerID.acquire()
@@ -64,12 +64,12 @@ class Registry:
         self.__lockCurrentWorkerID.release()
         return workerID
 
-    def __addWorker(self, message: Message, addr):
+    def __addWorker(self, message: Message):
         workerID = self.__newWorkerID()
 
         worker = Worker(
             name='Worker-%d' % workerID,
-            addr=addr,
+            addr=message.source.addr,
             workerID=workerID,
             connectionIO=ConnectionIO()
         )
@@ -92,7 +92,7 @@ class Registry:
         self.__lockCurrentTaskHandlerID.release()
         return taskHandlerID
 
-    def __addTaskHandler(self, message: Message, addr):
+    def __addTaskHandler(self, message: Message):
         taskHandlerID = self.__newTaskID()
 
         userID = message.content['userID']
@@ -103,7 +103,7 @@ class Registry:
 
         taskHandler = TaskHandler(
             taskHandlerID=taskHandlerID,
-            addr=addr,
+            addr=message.source.addr,
             token=token,
             taskName=taskName,
             runningOnWorker=runningOnWorker,
@@ -139,14 +139,14 @@ class Registry:
         self.__lockCurrentUserID.release()
         return userID
 
-    def __addUser(self, message: Message, addr):
+    def __addUser(self, message: Message):
         userID = self.__newUserID()
         appName = message.content['appName']
         label = message.content['label']
 
         user = User(
             name='%s@%s@User-%d' % (appName, label, userID),
-            addr=addr,
+            addr=message.source.addr,
             userID=userID,
             appName=appName,
             connectionIO=ConnectionIO()

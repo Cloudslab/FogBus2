@@ -81,12 +81,8 @@ class TaskHandler(Node):
             for childToken in self.childTaskTokens:
                 if childToken in self.childrenAddr:
                     continue
-                message = {
-                    'type': 'lookup',
-                    'token': childToken}
-                print(self.childrenAddr, message)
-
-                self.sendMessage(message, self.masterAddr)
+                msg = {'type': 'lookup', 'token': childToken}
+                self.sendMessage(msg, self.masterAddr)
             sleep(1)
         msg = {'type': 'ready', 'token': self.token}
         self.sendMessage(msg, self.masterAddr)
@@ -95,8 +91,8 @@ class TaskHandler(Node):
     def handleMessage(self, message: Message):
         if self.isMessage(message, 'registered'):
             self.__handleRegistered(message)
-        elif self.isMessage(message, 'taskHandlerAddr'):
-            self.__handleTaskHandlerAddr(message)
+        elif self.isMessage(message, 'taskHandlerInfo'):
+            self.__handleTaskHandlerInfo(message)
         elif self.isMessage(message, 'data'):
             self.__handleData(message)
 
@@ -110,14 +106,14 @@ class TaskHandler(Node):
         self.logger = get_logger(self.name, self.logLevel)
         self.isRegistered.set()
 
-    def __handleTaskHandlerAddr(self, message: Message):
+    def __handleTaskHandlerInfo(self, message: Message):
         taskHandlerAddr = message.content['addr']
         taskHandlerToken = message.content['token']
-        if taskHandlerAddr not in self.childTaskTokens:
+        if taskHandlerToken not in self.childTaskTokens:
             return
         self.childrenAddr[taskHandlerToken] = taskHandlerAddr
 
-        if not len(childTaskTokens) == len(self.childrenAddr.keys()):
+        if not len(self.childTaskTokens) == len(self.childrenAddr.keys()):
             return
         msg = {'type': 'ready', 'token': self.token}
         self.sendMessage(msg, self.masterAddr)
@@ -131,7 +127,7 @@ class TaskHandler(Node):
         msg = message.content
         if len(self.childrenAddr):
             msg['data'] = result
-            for addr in self.childrenAddr:
+            for _, addr in self.childrenAddr.items():
                 self.sendMessage(msg, addr)
             return
 

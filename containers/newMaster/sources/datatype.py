@@ -207,7 +207,7 @@ class TaskHandler(Client):
             name: str = None,
     ):
         if name is None:
-            name = 'TaskHandler-%d' % taskHandlerID
+            name = 'TaskHandler-%d@%s' % (taskHandlerID, taskName)
         super(TaskHandler, self).__init__(
             name=name,
             addr=addr,
@@ -219,6 +219,7 @@ class TaskHandler(Client):
         self.token = token
         self.runningOnWorker: int = runningOnWorker
         self.user: User = user
+        self.ready: threading.Event = threading.Event()
 
 
 class UserTask:
@@ -254,6 +255,8 @@ class User(Client):
             self.taskHandlerByTaskName: dict[str, TaskHandler] = {}
         self.entranceTasksByName: List[str] = []
         self.respondMessageQueue: Queue = Queue()
+        self.lock: threading.Lock = threading.Lock()
+        self.isReady = False
 
     def generateToken(self, taskName: str):
         token = token_urlsafe(16)

@@ -74,12 +74,11 @@ class Master(Node):
 
     def __handleLookup(self, message: Message):
         taskHandlerToken = message.content['token']
-        self.logger.info('taskHandlerByToken: ', self.registry.taskHandlerByToken)
         if taskHandlerToken not in self.registry.taskHandlerByToken:
             return
         taskHandler = self.registry.taskHandlerByToken[taskHandlerToken]
         respond = {
-            'type': 'taskHandlerAddr',
+            'type': 'taskHandlerInfo',
             'addr': taskHandler.addr,
             'token': taskHandlerToken
         }
@@ -91,14 +90,21 @@ class Master(Node):
 
         taskHandlerToken = message.content['token']
         taskHandler = self.registry.taskHandlerByToken[taskHandlerToken]
+        taskHandler.ready.set()
+
         user = taskHandler.user
+        user.lock.acquire()
         user.taskHandlerByTaskName[taskHandler.taskName] = taskHandler
-
-        if not len(user.taskNameTokenMap) == len(user.taskHandlerByTaskName):
-            return
-
-        msg = {'type': 'ready'}
-        self.sendMessage(msg, user.addr)
+        if len(user.taskNameTokenMap) == len(user.taskHandlerByTaskName):
+            for taskName, taskHandler in user.taskHandlerByTaskName.items():
+                if not taskHandler.ready.is_set():
+                    user.lock.release()
+                    return
+            if not user.isReady:
+                msg = {'type': 'ready'}
+                self.sendMessage(msg, user.addr)
+                user.isReady = True
+        user.lock.release()
 
 
 if __name__ == '__main__':

@@ -41,7 +41,6 @@ class EyeDetection(TasksWorkerSide):
         faces = inputData
         for i, (x, y, w, h, roi_gray) in enumerate(faces):
             eyes = self.eye_cascade.detectMultiScale(roi_gray)
-            print(eyes)
             faces[i] = (x, y, w, h, eyes)
         return faces
 
@@ -51,7 +50,6 @@ class ColorTracking(TasksWorkerSide):
         super().__init__(taskID=3, taskName='ColorTracking')
 
     def process(self, inputData):
-
         (frame,
          hueLow, hueUp,
          hue2Low, hue2Up,
