@@ -4,10 +4,12 @@ import os
 import signal
 
 from queue import Queue
-from connection import Server, Message, Connection, Source
+from connection import Server, Message, Connection, Source, RoundTripDelay, ReceivedPackageSize
 from abc import abstractmethod
-from typing import Dict
+from typing import Dict, Tuple, DefaultDict
 from logging import Logger
+from time import time
+from collections import defaultdict
 
 
 class Node:
@@ -24,16 +26,19 @@ class Node:
         self.myAddr = myAddr
         self.masterAddr = masterAddr
         self.loggerAddr = loggerAddr
-        self.receivedMessage: Queue[Message] = Queue()
+        self.receivedMessage: Queue[Tuple[Message, int]] = Queue()
         self.isRegistered: threading.Event = threading.Event()
         self.__myService = Server(
             self.myAddr,
-            self.receivedMessage
+            self.receivedMessage,
         )
         threading.Thread(target=self.__messageHandler).start()
         self.logLevel = logLevel
         self.logger: Logger = None
         self.handleSignal()
+        # Node stats
+        self.roundTripDelay: Dict[str, RoundTripDelay] = {}
+        self.receivedPackageSize: Dict[str, ReceivedPackageSize] = {}
 
     @abstractmethod
     def run(self):
@@ -41,17 +46,37 @@ class Node:
 
     def __messageHandler(self):
         while True:
-            message = self.receivedMessage.get()
+            message, messageSize = self.receivedMessage.get()
+
+            if message.source.name not in self.receivedPackageSize:
+                receivedPackageSize = ReceivedPackageSize(
+                    name=message.source.name,
+                    role=message.source.role,
+                    id_=message.source.id
+                )
+                self.receivedPackageSize[message.source.name] = receivedPackageSize
+            self.receivedPackageSize[message.source.name].received(messageSize)
+
+            print(message.source.name,
+                  self.receivedPackageSize[message.source.name].average()
+                  )
+            if message.type == 'ping':
+                self.__handleRoundTripDelay(message)
+                continue
             self.handleMessage(message)
 
     def sendMessage(self, message: Dict, addr):
-        message['source'] = Source(
+        source = Source(
             addr=self.myAddr,
             role=self.role,
             id_=self.id,
             name=self.name
         )
+        message['source'] = source
         Connection(addr).send(message)
+
+        ping = {'type': 'ping', 'time': time(), 'source': source}
+        Connection(addr).send(ping)
 
     @abstractmethod
     def handleMessage(self, message: Message):
@@ -75,3 +100,17 @@ class Node:
 
     def handleSignal(self):
         signal.signal(signal.SIGINT, self.__signalHandler)
+
+    def __handleRoundTripDelay(self, message: Message):
+        delay = time() - message.content['time']
+        source = message.source
+        if source.name not in self.roundTripDelay:
+            roundTripDelay = RoundTripDelay(
+                name=source.name,
+                role=source.role,
+                id_=source.id,
+                delay=delay
+            )
+            self.roundTripDelay[source.name] = roundTripDelay
+            return
+        self.roundTripDelay[source.name].update(delay)

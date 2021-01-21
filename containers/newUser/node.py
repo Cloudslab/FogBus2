@@ -4,12 +4,28 @@ import os
 import signal
 
 from queue import Queue
-from connection import Server, Message, Connection, Source, RoundTripDelay, ReceivedPackageSize
+from connection import Server, Message, Connection, Source
 from abc import abstractmethod
 from typing import Dict, Tuple, DefaultDict
 from logging import Logger
 from time import time
 from collections import defaultdict
+
+
+class RoundTripDelay(Source):
+
+    def __init__(
+            self,
+            role: str,
+            id_: int,
+            name: str,
+            delay: float):
+        super().__init__(('', 0), role, id_, name)
+        del self.addr
+        self.delay: float = delay
+
+    def update(self, delay: float):
+        self.delay = (self.delay + delay) / 2
 
 
 class Node:
@@ -26,19 +42,17 @@ class Node:
         self.myAddr = myAddr
         self.masterAddr = masterAddr
         self.loggerAddr = loggerAddr
-        self.receivedMessage: Queue[Tuple[Message, int]] = Queue()
+        self.receivedMessage: Queue[Message] = Queue()
         self.isRegistered: threading.Event = threading.Event()
         self.__myService = Server(
             self.myAddr,
-            self.receivedMessage,
+            self.receivedMessage
         )
         threading.Thread(target=self.__messageHandler).start()
         self.logLevel = logLevel
         self.logger: Logger = None
         self.handleSignal()
-        # Node stats
         self.roundTripDelay: Dict[str, RoundTripDelay] = {}
-        self.receivedPackageSize: Dict[str, ReceivedPackageSize] = {}
 
     @abstractmethod
     def run(self):
@@ -46,20 +60,7 @@ class Node:
 
     def __messageHandler(self):
         while True:
-            message, messageSize = self.receivedMessage.get()
-
-            if message.source.name not in self.receivedPackageSize:
-                receivedPackageSize = ReceivedPackageSize(
-                    name=message.source.name,
-                    role=message.source.role,
-                    id_=message.source.id
-                )
-                self.receivedPackageSize[message.source.name] = receivedPackageSize
-            self.receivedPackageSize[message.source.name].received(messageSize)
-
-            print(message.source.name,
-                  self.receivedPackageSize[message.source.name].average()
-                  )
+            message = self.receivedMessage.get()
             if message.type == 'ping':
                 self.__handleRoundTripDelay(message)
                 continue
@@ -114,3 +115,4 @@ class Node:
             self.roundTripDelay[source.name] = roundTripDelay
             return
         self.roundTripDelay[source.name].update(delay)
+        print(self.roundTripDelay)

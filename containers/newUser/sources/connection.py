@@ -5,7 +5,7 @@ import traceback
 import pickle
 import os
 from queue import Queue
-from typing import Any, Dict, Tuple
+from typing import Any, Dict, Tuple, List
 from exceptions import *
 
 
@@ -22,19 +22,73 @@ def decrypt(msg: bytes) -> Dict:
         traceback.print_exc()
 
 
-class Source:
-
+class Identity:
     def __init__(
             self,
-            addr: Tuple[str, int],
             role: str,
             id_: int,
             name: str
     ):
-        self.addr: Tuple[str, int] = addr
         self.role: str = role
         self.id: int = id_
         self.name: str = name
+
+
+class Source(Identity):
+
+    def __init__(
+            self,
+            role: str,
+            id_: int,
+            name: str,
+            addr: Tuple[str, int]):
+        super().__init__(role, id_, name)
+        self.addr: Tuple[str, int] = addr
+
+
+class RoundTripDelay(Identity):
+
+    def __init__(
+            self,
+            role: str,
+            id_: int,
+            name: str,
+            delay: float):
+        super().__init__(role, id_, name)
+        self.delay: float = delay * 1000
+
+    def update(self, delay: float):
+        self.delay = (self.delay + delay * 1000) / 2
+
+
+class ReceivedPackageSize(Identity):
+
+    def __init__(
+            self,
+            role: str,
+            id_: int,
+            name: str):
+        super().__init__(role, id_, name)
+        self.__maxRecordNumber = 100
+        self.__receivedIndex = 0
+        self.__received: List[int] = [0 for _ in range(self.__maxRecordNumber)]
+
+    def received(self, bytes_: int):
+        self.__received[self.__receivedIndex] = bytes_
+        self.__receivedIndex = (self.__receivedIndex + 1) % self.__maxRecordNumber
+
+    def average(self):
+        total = 0
+        count = 0
+        for received in self.__received:
+            if received == 0:
+                break
+            total += received
+            count += 1
+
+        if count == 0:
+            return 0
+        return total / count
 
 
 class Connection:
@@ -87,10 +141,11 @@ class Server:
     def __init__(
             self,
             addr,
-            messagesQueue: Queue[Message],
+            messagesQueue: Queue[Tuple[Message, int]],
             threadNumber: int = 20):
         self.addr = addr
-        self.messageQueue: Queue[Message] = messagesQueue
+        self.messageQueue: Queue[Tuple[Message, int]] = messagesQueue
+
         self.threadNumber: int = threadNumber
         self.requests: Queue[Request] = Queue()
         self.run()
@@ -122,11 +177,12 @@ class Server:
     def __handleThread(self):
         while True:
             request = self.requests.get()
-            message = self.__receiveMessage(request.clientSocket)
-            self.messageQueue.put(Message(content=message))
+            message, messageSize = self.__receiveMessage(request.clientSocket)
+            self.messageQueue.put(
+                (Message(content=message), messageSize))
 
     @staticmethod
-    def __receiveMessage(clientSocket: socket.socket) -> Dict:
+    def __receiveMessage(clientSocket: socket.socket) -> Tuple[Dict, int]:
         result = None
         buffer = b''
         payloadSize = struct.calcsize('>L')
@@ -149,8 +205,9 @@ class Server:
             traceback.print_exc()
 
         clientSocket.close()
-        result = decrypt(result)
-        return result
+        if result is None:
+            return {}, 0
+        return decrypt(result), len(result)
 
 
 if __name__ == '__main__':
