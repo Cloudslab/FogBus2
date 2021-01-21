@@ -25,7 +25,6 @@ class User(Node):
         )
 
         self.isRegistered: threading.Event = threading.Event()
-        self.userID: int = None
         self.appName = appName
         self.label = label
         self.app: ApplicationUserSide = None
@@ -55,7 +54,7 @@ class User(Node):
         role = message.content['role']
         if not role == 'user':
             raise RegisteredAsWrongRole
-        self.userID = message.content['id']
+        self.id = message.content['id']
         self.name = message.content['name']
         self.role = role
         self.logger = get_logger(self.name, self.logLevel)
@@ -93,7 +92,7 @@ class User(Node):
             data = self.app.dataToSubmit.get()
             message = {
                 'type': 'data',
-                'userID': self.userID,
+                'userID': self.id,
                 'data': data}
             self.sendMessage(message, self.masterAddr)
 

@@ -166,7 +166,10 @@ class Registry:
             token = userTask.token
             childTaskTokens = userTask.childTaskTokens
             # Scheduling Algorithm
-            worker = self.workersQueue.get(timeout=1)
+            while True:
+                worker = self.workersQueue.get(timeout=1)
+                if worker.id in self.workers:
+                    break
             message = {
                 'type': 'runTaskHandler',
                 'userID': user.id,

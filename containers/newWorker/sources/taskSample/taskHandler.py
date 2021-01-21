@@ -1,6 +1,7 @@
 import sys
 import logging
 import threading
+import os
 from exceptions import *
 from connection import Connection, Message
 from queue import Queue
@@ -89,12 +90,14 @@ class TaskHandler(Node):
         self.logger.info('Got children\'s addr')
 
     def handleMessage(self, message: Message):
-        if self.isMessage(message, 'registered'):
+        if message.type == 'registered':
             self.__handleRegistered(message)
-        elif self.isMessage(message, 'taskHandlerInfo'):
+        elif message.type == 'taskHandlerInfo':
             self.__handleTaskHandlerInfo(message)
-        elif self.isMessage(message, 'data'):
+        elif message.type == 'data':
             self.__handleData(message)
+        elif message.type == 'stop':
+            self.__handleStop(message)
 
     def __handleRegistered(self, message: Message):
         role = message.content['role']
@@ -136,6 +139,12 @@ class TaskHandler(Node):
         msg['result'] = result
 
         self.sendMessage(msg, self.masterAddr)
+
+    def __handleStop(self, message: Message):
+        msg = {'type': 'exit'}
+        self.sendMessage(msg, self.masterAddr)
+        self.logger.info('Exit.')
+        os._exit(0)
 
 
 if __name__ == '__main__':

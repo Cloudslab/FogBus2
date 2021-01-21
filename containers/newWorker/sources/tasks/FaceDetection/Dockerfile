@@ -49,6 +49,5 @@ ADD ./taskSample/*.py /workplace/
 # Hostname
 RUN echo "FaceDetection" > /etc/hostname
 
-RUN ls /workplace
 # Run FaceDetection
 ENTRYPOINT ["python", "taskHandler.py"]

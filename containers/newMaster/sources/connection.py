@@ -3,8 +3,9 @@ import struct
 import threading
 import traceback
 import pickle
+import os
 from queue import Queue
-from typing import Any, Dict, Tuple
+from typing import Any, Dict
 from exceptions import *
 
 
@@ -35,21 +36,23 @@ class Source:
 
 
 class Connection:
-    def __init__(self, addr: Tuple[str, int]):
-        self.addr: Tuple[str, int] = addr
+    def __init__(self, addr):
+        self.addr = addr
 
     def __send(self, message: bytes, retries: int = 3):
+        clientSocket = socket.socket(
+            socket.AF_INET,
+            socket.SOCK_STREAM)
         if not retries:
-            raise OSError
+            traceback.print_exc()
+            os._exit(-1)
         try:
-            clientSocket = socket.socket(
-                socket.AF_INET,
-                socket.SOCK_STREAM)
             clientSocket.connect(self.addr)
             package = struct.pack(">L", len(message)) + message
             clientSocket.sendall(package)
             clientSocket.close()
         except OSError:
+            clientSocket.close()
             self.__send(message=message, retries=retries - 1)
 
     def send(self, message: Dict, retries: int = 3):

@@ -12,5 +12,4 @@ services:
       PGID: 1000
       TZ: Australia/Melbourne
     network_mode: "host"
-    restart: unless-stopped
 

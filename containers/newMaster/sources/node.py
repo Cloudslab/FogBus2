@@ -1,10 +1,12 @@
 import threading
 import logging
+import os
+import signal
 
 from queue import Queue
 from connection import Server, Message, Connection, Source
 from abc import abstractmethod
-from typing import Dict, Tuple
+from typing import Dict
 from logging import Logger
 
 
@@ -31,6 +33,7 @@ class Node:
         threading.Thread(target=self.__messageHandler).start()
         self.logLevel = logLevel
         self.logger: Logger = None
+        self.handleSignal()
 
     @abstractmethod
     def run(self):
@@ -41,7 +44,7 @@ class Node:
             message = self.receivedMessage.get()
             self.handleMessage(message)
 
-    def sendMessage(self, message: Dict, addr: Tuple[str, int]):
+    def sendMessage(self, message: Dict, addr):
         message['source'] = Source(
             addr=self.myAddr,
             role=self.role,
@@ -60,3 +63,14 @@ class Node:
         if not message.content['type'] == name:
             return False
         return True
+
+    def __signalHandler(self, sig, frame):
+        # https://stackoverflow.com/questions/1112343
+        if not self.role == 'master':
+            message = {'type': 'exit'}
+            self.sendMessage(message, self.masterAddr)
+        print('[*] Bye.')
+        os._exit(0)
+
+    def handleSignal(self):
+        signal.signal(signal.SIGINT, self.__signalHandler)

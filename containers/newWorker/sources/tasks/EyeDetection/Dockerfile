@@ -45,7 +45,6 @@ RUN python -m pip install -r requirements.txt --no-cache-dir
 ADD ./taskSample/cascade /workplace/cascade
 ADD ./taskSample/*.py /workplace/
 
-
 # Hostname
 RUN echo "EyeDetection" > /etc/hostname
 

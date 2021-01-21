@@ -45,6 +45,8 @@ class Master(Node):
             self.__handleLookup(message=message)
         elif message.type == 'ready':
             self.__handleReady(message=message)
+        elif message.type == 'exit':
+            self.__handleExit(message=message)
 
     def __handleRegister(self, message: Message):
         respond = self.registry.register(message=message)
@@ -58,6 +60,8 @@ class Master(Node):
 
     def __handleData(self, message: Message):
         userID = message.content['userID']
+        if userID not in self.registry.users:
+            return
         user = self.registry.users[userID]
         if not user.addr == message.source.addr:
             return
@@ -69,6 +73,8 @@ class Master(Node):
 
     def __handleResult(self, message: Message):
         userID = message.content['userID']
+        if userID not in self.registry.users:
+            return
         user = self.registry.users[userID]
         self.sendMessage(message.content, user.addr)
 
@@ -105,6 +111,25 @@ class Master(Node):
                 self.sendMessage(msg, user.addr)
                 user.isReady = True
         user.lock.release()
+
+    def __handleExit(self, message: Message):
+        if message.source.role == 'user':
+            user = self.registry.users[message.source.id]
+            msg = {'type': 'stop'}
+            for taskHandler in user.taskHandlerByTaskName.values():
+                self.sendMessage(msg, taskHandler.addr)
+            del self.registry.users[message.source.id]
+        elif message.source.role == 'taskHandler':
+            taskHandler = self.registry.taskHandlers[message.source.id]
+            del self.registry.taskHandlerByToken[taskHandler.token]
+            del self.registry.taskHandlers[message.source.id]
+        elif message.source.role == 'worker':
+            del self.registry.workers[message.source.id]
+
+        self.logger.info(
+            '%s-%d exit.',
+            message.source.role,
+            message.source.id)
 
 
 if __name__ == '__main__':
