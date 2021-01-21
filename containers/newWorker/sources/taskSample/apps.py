@@ -49,7 +49,8 @@ class ColorTracking(TasksWorkerSide):
     def __init__(self):
         super().__init__(taskID=3, taskName='ColorTracking')
 
-    def process(self, inputData):
+    @staticmethod
+    def process(inputData):
         (frame,
          hueLow, hueUp,
          hue2Low, hue2Up,
@@ -175,7 +176,6 @@ class OCR(TasksWorkerSide):
             return None
         self.text += currText
         self.preText = currText
-
         return None
 
     @staticmethod

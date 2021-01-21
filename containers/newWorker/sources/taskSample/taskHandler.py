@@ -125,7 +125,7 @@ class TaskHandler(Node):
             return
 
         msg = message.content
-        if len(self.childrenAddr):
+        if len(self.childrenAddr.keys()):
             msg['data'] = result
             for _, addr in self.childrenAddr.items():
                 self.sendMessage(msg, addr)
@@ -134,6 +134,7 @@ class TaskHandler(Node):
         del msg['data']
         msg['type'] = 'result'
         msg['result'] = result
+
         self.sendMessage(msg, self.masterAddr)
 
 

@@ -83,7 +83,7 @@ class Server:
             self,
             addr,
             messagesQueue: Queue[Message],
-            threadNumber: int = 1):
+            threadNumber: int = 20):
         self.addr = addr
         self.messageQueue: Queue[Message] = messagesQueue
         self.threadNumber: int = threadNumber

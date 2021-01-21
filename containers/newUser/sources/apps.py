@@ -150,37 +150,21 @@ class VideoOCR(ApplicationUserSide):
 
     def run(self):
         self.appName = 'VideoOCR'
-        self.broker.run(
-            label='%s-%d' % (self.appName, self.targetWidth),
-            mode='sequential'
-        )
-        framesQueue = Queue()
-        threading.Thread(
-            target=self.__preprocess,
-            args=(framesQueue,)
-        ).start()
+        threading.Thread(target=self.__run).start()
+
+    def __run(self):
         print("[*] Sending frames ...")
         while True:
-            frame = framesQueue.get()
-            if frame is None:
+            ret, frame = self.capture.read()
+            if not ret:
                 break
+            frame = self.resizeFrame(frame)
             inputData = (frame, False)
-            self.broker.submit(
-                inputData,
-                dataID=-1,
-                mode='sequential',
-                label='%d' % self.targetWidth
-            )
-        print("[*] Sent all the frames and waiting for result ...")
+            self.dataToSubmit.put(inputData)
         inputData = (None, True)
-        self.broker.submit(
-            inputData,
-            dataID=-1,
-            mode='sequential',
-            label='%d' % self.targetWidth
-        )
+        self.dataToSubmit.put(inputData)
+        print("[*] Sent all the frames and waiting for result ...")
 
-        result = self.broker.resultQueue.get()
-
-        print(result['result'], '\r\n [*] The text is at above.')
+        result = self.result.get()
+        print(result, '\r\n [*] The text is at above.')
         os._exit(0)
