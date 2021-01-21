@@ -10,51 +10,31 @@ class FaceDetection(ApplicationUserSide):
 
     def run(self):
         self.appName = 'FaceDetection'
-        self.broker.run(
-            label='%s-%d' % (self.appName, self.targetWidth),
-            mode='sequential'
-        )
+        self.dataToSubmit: Queue = Queue(1)
+        threading.Thread(target=self.__run).start()
 
-        threading.Thread(target=self.__sendData).start()
-        threading.Thread(target=self.__receiveResult).start()
-        threading.Thread(target=self.__handleResult).start()
-
-    def __sendData(self):
-        self.dataIDSubmittedQueue = Queue(1)
+    def __run(self):
         while True:
             ret, frame = self.capture.read()
             if not ret:
                 break
             frame = self.resizeFrame(frame)
-            dataID = self.createDataFrame(frame)
-            self.broker.submit(
-                data=frame,
-                dataID=dataID,
-                mode='sequential',
-                label='%d' % self.targetWidth
-            )
-            self.dataIDSubmittedQueue.put(dataID)
+            self.dataToSubmit.put(frame)
 
-        self.capture.release()
-
-    def __receiveResult(self):
-        while True:
-            message = self.broker.resultQueue.get()
-            self.result[message['dataID']].put(message['result'])
-
-    def __handleResult(self):
-        while True:
-            dataID = self.dataIDSubmittedQueue.get()
-            faces = self.result[dataID].get()
-            frame = self.data[dataID]
+            faces = self.result.get()
             for (x, y, w, h, roi_gray) in faces:
-                cv2.rectangle(frame, (x, y), (x + w, y + h), (255, 0, 0), 2)
+                cv2.rectangle(
+                    frame,
+                    (x, y),
+                    (x + w, y + h),
+                    (255, 0, 0),
+                    2)
 
-            cv2.imshow("App-%d %s" % (self.appID, self.appName), frame)
-            del self.data[dataID]
+            cv2.imshow("%s" % self.appName, frame)
 
             if cv2.waitKey(1) == ord('q'):
                 break
+        self.capture.release()
 
 
 class FaceAndEyeDetection(ApplicationUserSide):

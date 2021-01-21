@@ -7,7 +7,6 @@ import struct
 
 from time import time, sleep
 from logger import get_logger
-from message import encrypt, decrypt
 from typing import NoReturn
 from typing import List, Dict
 
@@ -151,26 +150,16 @@ class Broker:
 
 class ApplicationUserSide:
 
-    def __init__(self, appID: int, broker: Broker, videoPath=None, targetWidth: int = 640):
-        self.appID = appID
+    def __init__(
+            self,
+            videoPath=None,
+            targetWidth: int = 640):
         self.appName = None
-        self.broker: Broker = broker
         self.capture = cv2.VideoCapture(0) if videoPath is None \
             else cv2.VideoCapture(videoPath)
-        self.lockData: threading.Lock = threading.Lock()
-        self.dataID = -1
-        self.data: dict[int, Any] = {}
-        self.result: dict[int, Queue] = defaultdict(Queue)
-        self.dataIDSubmittedQueue = Queue()
+        self.result: Queue = Queue()
+        self.dataToSubmit: Queue = Queue()
         self.targetWidth = targetWidth
-
-    def createDataFrame(self, data: Any) -> (int, Any):
-        self.lockData.acquire()
-        self.dataID += 1
-        dataID = self.dataID
-        self.lockData.release()
-        self.data[dataID] = data
-        return dataID
 
     def resizeFrame(self, frame):
         width = frame.shape[1]

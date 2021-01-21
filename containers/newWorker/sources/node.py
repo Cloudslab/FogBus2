@@ -1,6 +1,4 @@
 import threading
-import pickle
-import traceback
 import logging
 
 from queue import Queue
@@ -8,19 +6,6 @@ from connection import Server, Message, Connection
 from abc import abstractmethod
 from typing import Dict
 from logging import Logger
-
-
-def encrypt(obj) -> bytes:
-    data = pickle.dumps(obj, 0)
-    return data
-
-
-def decrypt(msg: bytes) -> Dict:
-    try:
-        obj = pickle.loads(msg, fix_imports=True, encoding="bytes")
-        return obj
-    except Exception:
-        traceback.print_exc()
 
 
 class Node:
@@ -57,8 +42,7 @@ class Node:
 
     def sendMessage(self, message: Dict, addr):
         message['addr'] = self.myAddr
-        encryptMessage = encrypt(message)
-        Connection(addr).send(encryptMessage)
+        Connection(addr).send(message)
 
     @abstractmethod
     def handleMessage(self, message: Message):

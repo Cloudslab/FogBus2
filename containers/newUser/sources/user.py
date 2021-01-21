@@ -2,7 +2,7 @@ import logging
 import sys
 import threading
 from datatype import Broker
-from apps import FaceDetection, FaceAndEyeDetection, ColorTracking, VideoOCR
+from apps import *
 from node import Node
 from connection import Message
 from exceptions import *
@@ -31,6 +31,7 @@ class User(Node):
         self.userID: int = None
         self.appName = appName
         self.label = label
+        self.app: ApplicationUserSide = None
 
     def run(self):
         self.__register()
@@ -50,6 +51,8 @@ class User(Node):
             self.__handleRegistered(message)
         elif self.isMessage(message, 'ready'):
             self.__handleReady(message)
+        elif self.isMessage(message, 'result'):
+            self.__handleResult(message)
 
     def __handleRegistered(self, message: Message):
         role = message.content['role']
@@ -57,11 +60,36 @@ class User(Node):
             raise RegisteredAsWrongRole
         self.userID = message.content['id']
         self.name = message.content['name']
-        self.isRegistered.set()
         self.logger = get_logger(self.name, self.logLevel)
+        self.isRegistered.set()
 
     def __handleReady(self, message: Message):
+        threading.Thread(target=self.__ready).start()
+
+    def __ready(self):
         self.logger.info("Resources is ready.")
+        videoPath = sys.argv[8] if len(sys.argv) > 8 else None
+        if self.appName == 'FaceDetection':
+            self.app = FaceDetection(
+                videoPath=videoPath,
+                targetWidth=int(self.label))
+        if self.app is None:
+            self.logger.info('Application does not exist.')
+            os._exit(0)
+        self.app.run()
+        self.logger.info('Running ...')
+
+        while True:
+            data = self.app.dataToSubmit.get()
+            message = {
+                'type': 'data',
+                'userID': self.userID,
+                'data': data}
+            self.sendMessage(message, self.masterAddr)
+
+    def __handleResult(self, message: Message):
+        result = message.content['result']
+        self.app.result.put(result)
 
 
 if __name__ == "__main__":
@@ -78,13 +106,12 @@ if __name__ == "__main__":
     loggerAddr_ = (sys.argv[4], int(sys.argv[5]))
     appName = sys.argv[6]
     label = sys.argv[7]
-
     user_ = User(
         myAddr=myAddr_,
         masterAddr=masterAddr_,
         loggerAddr=loggerAddr_,
         appName=appName,
-        label=label
+        label=label,
     )
     user_.run()
 

@@ -65,10 +65,20 @@ class Master(Node):
         self.sendMessage(message, user.addr)
 
     def __handleData(self, message: Message):
-        pass
+        userID = message.content['userID']
+        user = self.registry.users[userID]
+        if not user.addr == message.sourceAddr:
+            return
+
+        for taskName in user.entranceTasksByName:
+            taskHandlerToken = user.taskNameTokenMap[taskName].token
+            taskHandler = self.registry.taskHandlerByToken[taskHandlerToken]
+            self.sendMessage(message.content, taskHandler.addr)
 
     def __handleResult(self, message: Message):
-        pass
+        userID = message.content['userID']
+        user = self.registry.users[userID]
+        self.sendMessage(message.content, user.addr)
 
     def __handleLookup(self, message: Message):
         taskHandlerToken = message.content['token']

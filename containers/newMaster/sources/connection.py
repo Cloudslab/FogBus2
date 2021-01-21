@@ -2,10 +2,23 @@ import socket
 import struct
 import threading
 import traceback
+import pickle
 from queue import Queue
-from message import encrypt, decrypt
 from typing import Any, Dict
 from exceptions import *
+
+
+def encrypt(obj) -> bytes:
+    data = pickle.dumps(obj, 0)
+    return data
+
+
+def decrypt(msg: bytes) -> Dict:
+    try:
+        obj = pickle.loads(msg, fix_imports=True, encoding="bytes")
+        return obj
+    except Exception:
+        traceback.print_exc()
 
 
 class Connection:
@@ -53,7 +66,7 @@ class Server:
             self,
             addr,
             messagesQueue: Queue[Message],
-            threadNumber: int = 30):
+            threadNumber: int = 1):
         self.addr = addr
         self.messageQueue: Queue[Message] = messagesQueue
         self.threadNumber: int = threadNumber
@@ -98,14 +111,14 @@ class Server:
 
         try:
             while len(buffer) < payloadSize:
-                buffer = clientSocket.recv(4096)
+                buffer += clientSocket.recv(4096)
 
             packedDataSize = buffer[:payloadSize]
             buffer = buffer[payloadSize:]
             dataSize = struct.unpack('>L', packedDataSize)[0]
 
             while len(buffer) < dataSize:
-                buffer = clientSocket.recv(4096)
+                buffer += clientSocket.recv(4096)
 
             data = buffer[:dataSize]
             result = data
@@ -114,8 +127,7 @@ class Server:
             traceback.print_exc()
 
         clientSocket.close()
-        if result is not None:
-            result = decrypt(result)
+        result = decrypt(result)
         return result
 
 

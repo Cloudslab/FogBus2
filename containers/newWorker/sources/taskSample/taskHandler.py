@@ -10,6 +10,7 @@ from logging import Logger
 from typing import List, Dict
 from collections import defaultdict
 from time import sleep
+from apps import *
 
 
 class TaskHandler(Node):
@@ -43,6 +44,21 @@ class TaskHandler(Node):
         self.taskHandlerID: int = None
         self.childrenAddr: Dict[str, tuple] = {}
 
+        app = None
+        if taskName == 'FaceDetection':
+            app = FaceDetection()
+        elif taskName == 'EyeDetection':
+            app = EyeDetection()
+        elif taskName == 'ColorTracking':
+            app = ColorTracking()
+        elif taskName == 'BlurAndPHash':
+            app = BlurAndPHash()
+        elif taskName == 'OCR':
+            app = OCR()
+        if app is None:
+            os._exit(0)
+        self.app: TasksWorkerSide = app
+
     def run(self):
         self.__register()
         self.__lookupChildren()
@@ -74,11 +90,12 @@ class TaskHandler(Node):
         self.logger.info('Got children\'s addr')
 
     def handleMessage(self, message: Message):
-        print(message)
         if self.isMessage(message, 'registered'):
             self.__handleRegistered(message)
         elif self.isMessage(message, 'taskHandlerAddr'):
             self.__handleTaskHandlerAddr(message)
+        elif self.isMessage(message, 'data'):
+            self.__handleData(message)
 
     def __handleRegistered(self, message: Message):
         role = message.content['role']
@@ -90,11 +107,28 @@ class TaskHandler(Node):
         self.isRegistered.set()
 
     def __handleTaskHandlerAddr(self, message: Message):
-
         taskHandlerAddr = message.content['addr']
         taskHandlerToken = message.content['token']
         if taskHandlerAddr in self.childTaskTokens:
             self.childrenAddr[taskHandlerToken] = taskHandlerAddr
+
+    def __handleData(self, message: Message):
+        data = message.content['data']
+        result = self.app.process(data)
+        if result is None:
+            return
+
+        msg = message.content
+        if len(self.childrenAddr):
+            msg['data'] = result
+            for addr in self.childrenAddr:
+                self.sendMessage(msg, addr)
+            return
+
+        del msg['data']
+        msg['type'] = 'result'
+        msg['result'] = result
+        self.sendMessage(msg, self.masterAddr)
 
 
 if __name__ == '__main__':
@@ -116,6 +150,7 @@ if __name__ == '__main__':
     token = sys.argv[9]
     childTaskTokens = sys.argv[10].split(',')
     runningOnWorker = int(sys.argv[11])
+
     taskHandler_ = TaskHandler(
         myAddr=myAddr_,
         masterAddr=masterAddr_,

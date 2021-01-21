@@ -1,6 +1,4 @@
 import threading
-import pickle
-import traceback
 import logging
 
 from queue import Queue
@@ -10,32 +8,19 @@ from typing import Dict
 from logging import Logger
 
 
-def encrypt(obj) -> bytes:
-    data = pickle.dumps(obj, 0)
-    return data
-
-
-def decrypt(msg: bytes) -> Dict:
-    try:
-        obj = pickle.loads(msg, fix_imports=True, encoding="bytes")
-        return obj
-    except Exception:
-        traceback.print_exc()
-
-
 class Node:
 
     def __init__(
             self,
-            myAddr: tuple[str, int],
-            masterAddr: tuple[str, int],
-            loggerAddr: tuple[str, int],
+            myAddr,
+            masterAddr,
+            loggerAddr,
             logLevel=logging.DEBUG):
         self.name: str = None
         self.role: str = None
-        self.myAddr: tuple[str, int] = myAddr
-        self.masterAddr: tuple[str, int] = masterAddr
-        self.loggerAddr: tuple[str, int] = loggerAddr
+        self.myAddr = myAddr
+        self.masterAddr = masterAddr
+        self.loggerAddr = loggerAddr
         self.receivedMessage: Queue[Message] = Queue()
         self.isRegistered: threading.Event = threading.Event()
         self.__myService = Server(
@@ -55,7 +40,7 @@ class Node:
             message = self.receivedMessage.get()
             self.handleMessage(message)
 
-    def sendMessage(self, message: Dict, addr: tuple[str, int]):
+    def sendMessage(self, message: Dict, addr):
         message['addr'] = self.myAddr
         Connection(addr).send(message)
 
