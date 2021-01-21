@@ -10,7 +10,7 @@ from logging import Logger
 from typing import List, Dict
 from collections import defaultdict
 from time import sleep
-from taskSample.apps import *
+from apps import *
 
 
 class TaskHandler(Node):
@@ -155,7 +155,10 @@ if __name__ == '__main__':
     userName = sys.argv[7]
     taskName = sys.argv[8]
     token = sys.argv[9]
-    childTaskTokens = sys.argv[10].split(',')
+    if sys.argv[10] == 'None':
+        childTaskTokens = []
+    else:
+        childTaskTokens = sys.argv[10].split(',')
     runningOnWorker = int(sys.argv[11])
 
     taskHandler_ = TaskHandler(

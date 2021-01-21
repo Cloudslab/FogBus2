@@ -2,7 +2,7 @@ import cv2
 import pytesseract
 import editdistance
 import numpy as np
-from taskSample.datatype import TasksWorkerSide
+from datatype import TasksWorkerSide
 
 
 class TestApp(TasksWorkerSide):
