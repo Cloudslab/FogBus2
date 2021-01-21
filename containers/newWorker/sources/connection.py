@@ -5,7 +5,7 @@ import traceback
 import pickle
 import os
 from queue import Queue
-from typing import Any, Dict
+from typing import Any, Dict, Tuple
 from exceptions import *
 
 
@@ -26,13 +26,15 @@ class Source:
 
     def __init__(
             self,
-            addr,
-            role,
-            id_,
+            addr: Tuple[str, int],
+            role: str,
+            id_: int,
+            name: str
     ):
-        self.addr = addr
-        self.role = role
-        self.id = id_
+        self.addr: Tuple[str, int] = addr
+        self.role: str = role
+        self.id: int = id_
+        self.name: str = name
 
 
 class Connection:

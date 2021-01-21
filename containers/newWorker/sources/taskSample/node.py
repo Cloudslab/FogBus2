@@ -48,7 +48,8 @@ class Node:
         message['source'] = Source(
             addr=self.myAddr,
             role=self.role,
-            id_=self.id
+            id_=self.id,
+            name=self.name
         )
         Connection(addr).send(message)
 

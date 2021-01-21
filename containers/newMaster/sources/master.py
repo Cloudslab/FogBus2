@@ -126,10 +126,7 @@ class Master(Node):
         elif message.source.role == 'worker':
             del self.registry.workers[message.source.id]
 
-        self.logger.info(
-            '%s-%d exit.',
-            message.source.role,
-            message.source.id)
+        self.logger.info('%s exit.', message.source.name)
 
 
 if __name__ == '__main__':
