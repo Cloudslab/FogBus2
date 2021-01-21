@@ -68,32 +68,13 @@ class Worker(Node):
         token = message.content['token']
         childTaskTokens = message.content['childTaskTokens']
         runningOnWorker = self.id
-        # threading.Thread(
-        #     target=os.system,
-        #     args=(
-        #         "cd tasks/%s && docker-compose run %s %s %s %d %s %d "
-        #         "%d %s %s %s %d %s" % (
-        #             taskName,
-        #             self.camel_to_snake(taskName),
-        #             self.myAddr[0],
-        #             self.masterAddr[0],
-        #             self.masterAddr[1],
-        #             self.loggerAddr[0],
-        #             self.loggerAddr[1],
-        #             userID,
-        #             taskName,
-        #             token,
-        #             ','.join(childTaskTokens) if len(childTaskTokens) else 'None',
-        #             ownedBy,
-        #             userName),)
-        # ).start()
-
         threading.Thread(
             target=os.system,
             args=(
-                "cd taskSample && python taskHandler.py %s %s %d %s %d "
-                "%d %s %s %s %s %d " % (
-                    # > /dev/null 2>&1 &
+                "cd tasks/%s && docker-compose run %s %s %s %d %s %d "
+                "%d %s %s %s %s %d" % (
+                    taskName,
+                    self.camel_to_snake(taskName),
                     self.myAddr[0],
                     self.masterAddr[0],
                     self.masterAddr[1],
@@ -104,9 +85,29 @@ class Worker(Node):
                     taskName,
                     token,
                     ','.join(childTaskTokens) if len(childTaskTokens) else 'None',
-                    runningOnWorker
-                ),)
+                    runningOnWorker,
+                    ),)
         ).start()
+
+        # threading.Thread(
+        #     target=os.system,
+        #     args=(
+        #         "cd taskSample && python taskHandler.py %s %s %d %s %d "
+        #         "%d %s %s %s %s %d " % (
+        #             # > /dev/null 2>&1 &
+        #             self.myAddr[0],
+        #             self.masterAddr[0],
+        #             self.masterAddr[1],
+        #             self.loggerAddr[0],
+        #             self.loggerAddr[1],
+        #             userID,
+        #             userName,
+        #             taskName,
+        #             token,
+        #             ','.join(childTaskTokens) if len(childTaskTokens) else 'None',
+        #             runningOnWorker
+        #         ),)
+        # ).start()
 
         # import socket
         # tmpSocket = socket.socket(

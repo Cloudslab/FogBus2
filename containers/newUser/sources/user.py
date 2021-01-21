@@ -1,13 +1,10 @@
 import logging
 import sys
-import threading
-from datatype import Broker
 from apps import *
 from node import Node
 from connection import Message
 from exceptions import *
 from logger import get_logger
-from typing import Dict
 
 
 class User(Node):
@@ -89,8 +86,8 @@ class User(Node):
         if self.app is None:
             self.logger.info('Application does not exist.')
             os._exit(0)
-        self.app.run()
         self.logger.info('Running ...')
+        self.app.run()
 
         while True:
             data = self.app.dataToSubmit.get()
