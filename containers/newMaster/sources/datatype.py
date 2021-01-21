@@ -203,6 +203,7 @@ class TaskHandler(Client):
             token: str,
             runningOnWorker: int,
             connectionIO: ConnectionIO,
+            user,
             name: str = None,
     ):
         if name is None:
@@ -217,6 +218,7 @@ class TaskHandler(Client):
         self.taskName = taskName
         self.token = token
         self.runningOnWorker: int = runningOnWorker
+        self.user: User = user
 
 
 class UserTask:
@@ -236,7 +238,7 @@ class User(Client):
             appName: int,
             connectionIO: ConnectionIO,
             name: str,
-            workerByTaskName: dict[int, Worker] = None,
+            taskHandlerByTaskName: dict[int, Worker] = None,
     ):
         if name is None:
             name = 'User-%d' % userID
@@ -247,10 +249,9 @@ class User(Client):
         )
         self.id = userID
         self.appName = appName
-        self.ready: threading.Event = threading.Event()
         self.taskNameTokenMap: Dict[str, UserTask] = {}
-        if workerByTaskName is None:
-            self.taskByName: dict[str, TaskHandler] = {}
+        if taskHandlerByTaskName is None:
+            self.taskHandlerByTaskName: dict[str, TaskHandler] = {}
         self.entranceTasksByName: List[str] = []
         self.respondMessageQueue: Queue = Queue()
 
@@ -265,9 +266,6 @@ class User(Client):
             taskHandler: TaskHandler) -> bool:
         if taskName in self.taskNameTokenMap \
                 and self.taskNameTokenMap[taskName].token == taskHandler.token:
-            self.taskByName[taskName] = taskHandler
-            if len(self.taskNameTokenMap) == len(self.taskByName):
-                self.ready.set()
             return True
         return False
 

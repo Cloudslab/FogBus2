@@ -88,6 +88,8 @@ class TaskHandler(Node):
 
                 self.sendMessage(message, self.masterAddr)
             sleep(1)
+        msg = {'type': 'ready', 'token': self.token}
+        self.sendMessage(msg, self.masterAddr)
         self.logger.info('Got children\'s addr')
 
     def handleMessage(self, message: Message):
@@ -104,14 +106,21 @@ class TaskHandler(Node):
             raise RegisteredAsWrongRole
         self.id = message.content['id']
         self.name = message.content['name']
+        self.role = role
         self.logger = get_logger(self.name, self.logLevel)
         self.isRegistered.set()
 
     def __handleTaskHandlerAddr(self, message: Message):
         taskHandlerAddr = message.content['addr']
         taskHandlerToken = message.content['token']
-        if taskHandlerAddr in self.childTaskTokens:
-            self.childrenAddr[taskHandlerToken] = taskHandlerAddr
+        if taskHandlerAddr not in self.childTaskTokens:
+            return
+        self.childrenAddr[taskHandlerToken] = taskHandlerAddr
+
+        if not len(childTaskTokens) == len(self.childrenAddr.keys()):
+            return
+        msg = {'type': 'ready', 'token': self.token}
+        self.sendMessage(msg, self.masterAddr)
 
     def __handleData(self, message: Message):
         data = message.content['data']

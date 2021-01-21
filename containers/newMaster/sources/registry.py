@@ -99,6 +99,7 @@ class Registry:
         taskName = message.content['taskName']
         token = message.content['token']
         runningOnWorker = message.content['runningOnWorker']
+        user = self.users[userID]
 
         taskHandler = TaskHandler(
             taskHandlerID=taskHandlerID,
@@ -106,10 +107,10 @@ class Registry:
             token=token,
             taskName=taskName,
             runningOnWorker=runningOnWorker,
-            connectionIO=ConnectionIO()
+            connectionIO=ConnectionIO(),
+            user=user
         )
 
-        user = self.users[userID]
         isTaskValid = user.verifyTaskHandler(
             taskName=taskName,
             taskHandler=taskHandler

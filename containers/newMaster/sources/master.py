@@ -35,15 +35,16 @@ class Master(Node):
         self.logger.info("Serving ...")
 
     def handleMessage(self, message: Message):
-        self.logger.info(message.content)
-        if self.isMessage(message, 'register'):
+        if message.type == 'register':
             self.__handleRegister(message=message)
-        elif self.isMessage(message, 'data'):
+        elif message.type == 'data':
             self.__handleData(message=message)
-        elif self.isMessage(message, 'result'):
+        elif message.type == 'result':
             self.__handleResult(message=message)
-        elif self.isMessage(message, 'lookup'):
+        elif message.type == 'lookup':
             self.__handleLookup(message=message)
+        elif message.type == 'ready':
+            self.__handleReady(message=message)
 
     def __handleRegister(self, message: Message):
         respond = self.registry.register(message=message)
@@ -54,17 +55,6 @@ class Master(Node):
             while self.registry.messageForWorker.qsize():
                 msg, addr = self.registry.messageForWorker.get()
                 self.sendMessage(msg, addr)
-
-        if not message.content['role'] == 'taskHandler':
-            return
-
-        userID = message.content['userID']
-        user = self.registry.users[userID]
-        if not user.ready.is_set():
-            return
-
-        message = {'type': 'ready'}
-        self.sendMessage(message, user.addr)
 
     def __handleData(self, message: Message):
         userID = message.content['userID']
@@ -84,6 +74,7 @@ class Master(Node):
 
     def __handleLookup(self, message: Message):
         taskHandlerToken = message.content['token']
+        self.logger.info('taskHandlerByToken: ', self.registry.taskHandlerByToken)
         if taskHandlerToken not in self.registry.taskHandlerByToken:
             return
         taskHandler = self.registry.taskHandlerByToken[taskHandlerToken]
@@ -93,6 +84,21 @@ class Master(Node):
             'token': taskHandlerToken
         }
         self.sendMessage(respond, message.source.addr)
+
+    def __handleReady(self, message: Message):
+        if not message.source.role == 'taskHandler':
+            return
+
+        taskHandlerToken = message.content['token']
+        taskHandler = self.registry.taskHandlerByToken[taskHandlerToken]
+        user = taskHandler.user
+        user.taskHandlerByTaskName[taskHandler.taskName] = taskHandler
+
+        if not len(user.taskNameTokenMap) == len(user.taskHandlerByTaskName):
+            return
+
+        msg = {'type': 'ready'}
+        self.sendMessage(msg, user.addr)
 
 
 if __name__ == '__main__':

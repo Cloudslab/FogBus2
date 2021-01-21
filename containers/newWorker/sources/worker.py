@@ -127,7 +127,9 @@ class Worker(Node):
             childTaskTokens=childTaskTokens,
             runningOnWorker=runningOnWorker
         )
-        taskHandler_.run()
+        threading.Thread(
+            target=taskHandler_.run
+        ).start()
 
 
 if __name__ == '__main__':

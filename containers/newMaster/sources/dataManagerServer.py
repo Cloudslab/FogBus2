@@ -88,7 +88,7 @@ class DataManagerServer:
             }
             client.sendingQueue.put(Message.encrypt(message))
             if isinstance(client, User):
-                for appID, worker in client.taskByName.items():
+                for appID, worker in client.taskHandlerByTaskName.items():
                     self.discard(worker)
             client.active = False
             client.socket.close()
