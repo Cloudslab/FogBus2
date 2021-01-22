@@ -46,7 +46,8 @@ class Node:
 
         defaultPeriodicTasks = [
             self.__resources,
-            self.__averageReceivedPackageSize
+            self.__averageReceivedPackageSize,
+            self.__roundTripDelay,
         ]
         if periodicTasks is None:
             periodicTasks = []
@@ -156,4 +157,10 @@ class Node:
         msg = {
             'type': 'averageReceivedPackageSize',
             'averageReceivedPackageSize': self.receivedPackageSize}
+        self.sendMessage(msg, self.loggerAddr)
+
+    def __roundTripDelay(self):
+        msg = {
+            'type': 'roundTripDelay',
+            'roundTripDelay': self.roundTripDelay}
         self.sendMessage(msg, self.loggerAddr)

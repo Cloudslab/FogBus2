@@ -29,20 +29,25 @@ class RemoteLogger(Node):
             self.__handleAverageProcessTime(message=message)
         elif message.type == 'nodeResources':
             self.__handleNodeResources(message=message)
-        elif message.type == 'responseTime':
+        elif message.type == 'respondTime':
             self.__handleResponseTime(message=message)
+        elif message.type == 'roundTripDelay':
+            self.__handleRoundTripDelay(message=message)
 
     def __handleAverageReceivedPackageSize(self, message: Message):
-        self.logger.info(message.content)
+        pass
 
     def __handleAverageProcessTime(self, message: Message):
-        self.logger.info(message.content)
+        pass
 
     def __handleNodeResources(self, message: Message):
-        self.logger.info(message.source.name)
+        pass
 
     def __handleResponseTime(self, message: Message):
         pass
+
+    def __handleRoundTripDelay(self, message: Message):
+        self.logger.info(message.content)
 
 
 if __name__ == '__main__':
