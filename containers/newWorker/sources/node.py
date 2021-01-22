@@ -4,7 +4,7 @@ import os
 import signal
 
 from queue import Queue
-from connection import Server, Message, Connection, Source, RoundTripDelay, ReceivedPackageSize
+from connection import Server, Message, Connection, Source, Average
 from abc import abstractmethod
 from typing import Dict, Tuple, List, Callable
 from logging import Logger
@@ -40,8 +40,8 @@ class Node:
         self.logger: Logger = None
         self.handleSignal()
         # Node stats
-        self.roundTripDelay: Dict[str, RoundTripDelay] = {}
-        self.receivedPackageSize: Dict[str, ReceivedPackageSize] = {}
+        self.roundTripDelay: Dict[str, Average] = {}
+        self.receivedPackageSize: Dict[str, Average] = {}
         self.resources: Resources = Resources()
 
         defaultPeriodicTasks = [
@@ -67,13 +67,13 @@ class Node:
             message, messageSize = self.receivedMessage.get()
 
             if message.source.name not in self.receivedPackageSize:
-                receivedPackageSize = ReceivedPackageSize(
+                receivedPackageSize = Average(
                     name=message.source.name,
                     role=message.source.role,
                     id_=message.source.id
                 )
                 self.receivedPackageSize[message.source.name] = receivedPackageSize
-            self.receivedPackageSize[message.source.name].received(messageSize)
+            self.receivedPackageSize[message.source.name].update(messageSize)
 
             if message.type == 'ping':
                 self.__handleRoundTripDelay(message)
@@ -123,15 +123,14 @@ class Node:
         delay = time() - message.content['time']
         source = message.source
         if source.name not in self.roundTripDelay:
-            roundTripDelay = RoundTripDelay(
+            roundTripDelay = Average(
                 name=source.name,
                 role=source.role,
-                id_=source.id,
-                delay=delay
+                id_=source.id
             )
             self.roundTripDelay[source.name] = roundTripDelay
             return
-        self.roundTripDelay[source.name].update(delay)
+        self.roundTripDelay[source.name].update(delay * 1000)
 
     def __handleResourcesQuery(self, message: Message):
         if not message.source.addr == self.masterAddr:

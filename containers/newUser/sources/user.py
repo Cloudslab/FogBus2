@@ -5,6 +5,16 @@ from node import Node
 from connection import Message
 from exceptions import *
 from logger import get_logger
+from time import time
+from typing import List
+
+
+class ResponseTime:
+
+    def __init__(self):
+        self.__maxRecordNumber = 100
+        self.__sentTimeTable: List[float] = [0 for _ in range(self.__maxRecordNumber)]
+
 
 
 class User(Node):
@@ -28,6 +38,8 @@ class User(Node):
         self.appName = appName
         self.label = label
         self.app: ApplicationUserSide = None
+
+        self.__lastDataSentTime = time()
 
     def run(self):
         self.__register()
@@ -95,6 +107,7 @@ class User(Node):
                 'userID': self.id,
                 'data': data}
             self.sendMessage(message, self.masterAddr)
+            self.__lastDataSentTime = time()
 
     def __handleResult(self, message: Message):
         result = message.content['result']

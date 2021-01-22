@@ -3,41 +3,12 @@ import logging
 import threading
 import os
 from exceptions import *
-from connection import Connection, Message
-from queue import Queue
+from connection import Message, Average
 from node import Node
 from logger import get_logger
-from logging import Logger
 from typing import List, Dict
-from collections import defaultdict
 from time import sleep, time
 from apps import *
-
-
-class ProcessingTime:
-
-    def __init__(self):
-        self.__maxRecordNum = 100
-        self.__index = 0
-        self.__costTable: List[float] = [0 for _ in range(self.__maxRecordNum)]
-
-    def update(self, cost_):
-        self.__costTable[self.__index] = cost_
-        self.__index = (self.__index + 1) % self.__maxRecordNum
-
-    def average(self):
-        total, count = 0, 0
-        for cost in self.__costTable:
-            if cost == 0:
-                break
-            total += cost
-            count += 1
-        if count == 0:
-            return None
-        return 1000 * total / count
-
-    def __str__(self):
-        return str(self.average())
 
 
 class TaskHandler(Node):
@@ -70,7 +41,7 @@ class TaskHandler(Node):
         self.runningOnWorker: int = runningOnWorker
         self.isRegistered: threading.Event = threading.Event()
         self.childrenAddr: Dict[str, tuple] = {}
-        self.processTime: ProcessingTime = ProcessingTime()
+        self.processTime: Average = Average()
 
         app = None
         if taskName == 'FaceDetection':
@@ -196,25 +167,25 @@ if __name__ == '__main__':
     masterAddr_ = (sys.argv[2], int(sys.argv[3]))
     loggerAddr_ = (sys.argv[4], int(sys.argv[5]))
 
-    userID = int(sys.argv[6])
-    userName = sys.argv[7]
-    taskName = sys.argv[8]
-    token = sys.argv[9]
+    userID_ = int(sys.argv[6])
+    userName_ = sys.argv[7]
+    taskName_ = sys.argv[8]
+    token_ = sys.argv[9]
     if sys.argv[10] == 'None':
-        childTaskTokens = []
+        childTaskTokens_ = []
     else:
-        childTaskTokens = sys.argv[10].split(',')
-    runningOnWorker = int(sys.argv[11])
+        childTaskTokens_ = sys.argv[10].split(',')
+    runningOnWorker_ = int(sys.argv[11])
 
     taskHandler_ = TaskHandler(
         myAddr=myAddr_,
         masterAddr=masterAddr_,
         loggerAddr=loggerAddr_,
-        userID=userID,
-        userName=userName,
-        taskName=taskName,
-        token=token,
-        childTaskTokens=childTaskTokens,
-        runningOnWorker=runningOnWorker
+        userID=userID_,
+        userName=userName_,
+        taskName=taskName_,
+        token=token_,
+        childTaskTokens=childTaskTokens_,
+        runningOnWorker=runningOnWorker_
     )
     taskHandler_.run()

@@ -47,7 +47,7 @@ class RemoteLogger(Node):
         pass
 
     def __handleRoundTripDelay(self, message: Message):
-        self.logger.info(message.content)
+        pass
 
 
 if __name__ == '__main__':

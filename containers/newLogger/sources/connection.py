@@ -61,33 +61,33 @@ class RoundTripDelay(Identity):
         self.delay = (self.delay + delay * 1000) / 2
 
 
-class ReceivedPackageSize(Identity):
+class Average(Identity):
 
     def __init__(
             self,
-            role: str,
-            id_: int,
-            name: str):
+            role: str = None,
+            id_: int = None,
+            name: str = None):
         super().__init__(role, id_, name)
         self.__maxRecordNumber = 100
-        self.__receivedIndex = 0
-        self.__received: List[int] = [0 for _ in range(self.__maxRecordNumber)]
+        self.__index = 0
+        self.__table: List[int] = [0 for _ in range(self.__maxRecordNumber)]
 
-    def received(self, bytes_: int):
-        self.__received[self.__receivedIndex] = bytes_
-        self.__receivedIndex = (self.__receivedIndex + 1) % self.__maxRecordNumber
+    def update(self, bytes_):
+        self.__table[self.__index] = bytes_
+        self.__index = (self.__index + 1) % self.__maxRecordNumber
 
     def average(self):
         total = 0
         count = 0
-        for received in self.__received:
-            if received == 0:
+        for record in self.__table:
+            if record == 0:
                 break
-            total += received
+            total += record
             count += 1
 
         if count == 0:
-            return 0
+            return None
         return total / count
 
     def __str__(self):
