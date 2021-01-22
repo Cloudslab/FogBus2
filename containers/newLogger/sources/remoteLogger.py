@@ -33,7 +33,7 @@ class RemoteLogger(Node):
             self.__handleResponseTime(message=message)
 
     def __handleAverageReceivedPackageSize(self, message: Message):
-        pass
+        self.logger.info(message.content)
 
     def __handleAverageProcessTime(self, message: Message):
         self.logger.info(message.content)

@@ -44,11 +44,13 @@ class Node:
         self.receivedPackageSize: Dict[str, ReceivedPackageSize] = {}
         self.resources: Resources = Resources()
 
+        defaultPeriodicTasks = [
+            self.__resources,
+            self.__averageReceivedPackageSize
+        ]
         if periodicTasks is None:
-            self.periodicTasks: List[Callable] = [self.__resources]
-        else:
-            self.periodicTasks: List[Callable] = periodicTasks
-            self.periodicTasks.append(self.__resources)
+            periodicTasks = []
+        self.periodicTasks: List[Callable] = defaultPeriodicTasks + periodicTasks
         for runner in self.periodicTasks:
             threading.Thread(
                 target=self.__periodic,
@@ -148,4 +150,10 @@ class Node:
 
     def __resources(self):
         msg = {'type': 'nodeResources', 'resources': self.resources.all()}
+        self.sendMessage(msg, self.loggerAddr)
+
+    def __averageReceivedPackageSize(self):
+        msg = {
+            'type': 'averageReceivedPackageSize',
+            'averageReceivedPackageSize': self.receivedPackageSize}
         self.sendMessage(msg, self.loggerAddr)

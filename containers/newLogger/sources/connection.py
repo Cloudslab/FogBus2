@@ -90,6 +90,9 @@ class ReceivedPackageSize(Identity):
             return 0
         return total / count
 
+    def __str__(self):
+        return str(self.average())
+
 
 class Connection:
     def __init__(self, addr):

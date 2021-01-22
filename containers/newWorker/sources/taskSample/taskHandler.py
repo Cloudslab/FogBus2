@@ -36,6 +36,9 @@ class ProcessingTime:
             return None
         return 1000 * total / count
 
+    def __str__(self):
+        return str(self.average())
+
 
 class TaskHandler(Node):
 

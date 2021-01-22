@@ -90,18 +90,21 @@ class ReceivedPackageSize(Identity):
             return 0
         return total / count
 
+    def __str__(self):
+        return str(self.average())
+
 
 class Connection:
     def __init__(self, addr):
         self.addr = addr
 
     def __send(self, message: bytes, retries: int = 3):
-        clientSocket = socket.socket(
-            socket.AF_INET,
-            socket.SOCK_STREAM)
         if not retries:
             traceback.print_exc()
             os._exit(-1)
+        clientSocket = socket.socket(
+            socket.AF_INET,
+            socket.SOCK_STREAM)
         try:
             clientSocket.connect(self.addr)
             package = struct.pack(">L", len(message)) + message
