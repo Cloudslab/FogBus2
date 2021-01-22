@@ -1,8 +1,10 @@
 import sys
 import logging
 from node import Node, Address
-from connection import Message
+from connection import Message, Average
 from logger import get_logger
+from edge import Edge
+from typing import Dict
 
 
 class RemoteLogger(Node):
@@ -14,6 +16,8 @@ class RemoteLogger(Node):
             logLevel=logging.DEBUG):
         super().__init__(myAddr, masterAddr, loggerAddr)
         self.logLevel = logLevel
+
+        self.edges: Dict[str, Edge] = {}
 
     def run(self):
         self.role = 'RemoteLogger'
@@ -37,7 +41,18 @@ class RemoteLogger(Node):
             self.__handleImagesAndRunningContainers(message=message)
 
     def __handleAverageReceivedPackageSize(self, message: Message):
-        pass
+        for item in message.content['averageReceivedPackageSize'].values():
+            if not isinstance(item, Average):
+                continue
+            if item.name is None:
+                continue
+            edgeName = '%s,%s' % (item.name, message.source.name)
+            if edgeName not in self.edges:
+                self.edges[edgeName] = Edge(
+                    source=item.name,
+                    destination=message.source.name,
+                )
+            self.edges[edgeName].averagePackageSize = item.average()
 
     def __handleAverageProcessTime(self, message: Message):
         pass
