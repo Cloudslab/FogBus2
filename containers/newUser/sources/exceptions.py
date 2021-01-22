@@ -32,3 +32,9 @@ class RegisteredAsWrongRole(Exception):
 
     def __init__(self):
         super(RegisteredAsWrongRole, self).__init__('Registered As Wrong Role')
+
+
+class CannotBindAddr(Exception):
+
+    def __init__(self):
+        super(CannotBindAddr, self).__init__('can not bind address')

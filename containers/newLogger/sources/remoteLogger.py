@@ -25,7 +25,7 @@ class RemoteLogger(Node):
         self.imagesAndRunningContainers: Dict[str, float] = {}
 
     def run(self):
-        self.role = 'RemoteLogger'
+        self.role = 'remoteLogger'
         self.id = 0
         self.name = '%s-%d' % (self.role, self.id)
         self.logger = get_logger(self.name, self.logLevel)

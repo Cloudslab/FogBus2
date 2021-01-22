@@ -1,4 +1,7 @@
-class Edge:
+from resourcesInfo import Dictionary
+
+
+class Edge(Dictionary):
 
     def __init__(
             self,
@@ -12,3 +15,4 @@ class Edge:
         self.destination: str = destination
         self.averageReceivedPackageSize: float = averagePackageSize
         self.averageRoundTripDelay: float = averageRoundTripDelay
+        Dictionary.__init__(self)

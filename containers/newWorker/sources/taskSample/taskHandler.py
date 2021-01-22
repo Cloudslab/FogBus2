@@ -2,6 +2,7 @@ import sys
 import logging
 import threading
 import os
+import signal
 from exceptions import *
 from connection import Message, Average
 from node import Node
@@ -55,7 +56,7 @@ class TaskHandler(Node):
         elif taskName == 'OCR':
             app = OCR()
         if app is None:
-            os._exit(0)
+            os.killpg(os.getpgrp(), signal.SIGINT)
         self.app: TasksWorkerSide = app
 
     def __uploadAverageProcessTime(self):
@@ -151,7 +152,7 @@ class TaskHandler(Node):
         msg = {'type': 'exit'}
         self.sendMessage(msg, self.masterAddr)
         self.logger.info('Exit.')
-        os._exit(0)
+        os.killpg(os.getpgrp(), signal.SIGINT)
 
 
 if __name__ == '__main__':

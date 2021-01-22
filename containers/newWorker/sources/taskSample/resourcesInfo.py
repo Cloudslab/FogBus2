@@ -8,6 +8,20 @@ from pprint import pformat
 from typing import List, Set
 
 
+class Dictionary(dict):
+
+    def __init__(self):
+        publicItems = {}
+        for key, value in vars(self).items():
+            if '_' == key[0]:
+                continue
+            publicItems[key] = value
+        super().__init__(self)
+
+        for key, value in publicItems.items():
+            self.__setitem__(key, value)
+
+
 class WorkerInfo:
 
     def __init__(
@@ -19,7 +33,7 @@ class WorkerInfo:
         self.containers: Set[str] = containers
 
 
-class ResourcesInfo:
+class ResourcesInfo(Dictionary):
 
     def __init__(self,
                  currentTimestamp=None,
@@ -81,6 +95,7 @@ class ResourcesInfo:
         self.diskTotalRead = diskTotalRead
         self.diskTotalWrite = diskTotalWrite
         self.gpus = gpus
+        Dictionary.__init__(self)
 
     def __str__(self):
         return pformat(vars(self))

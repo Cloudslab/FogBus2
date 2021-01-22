@@ -120,9 +120,10 @@ class Master(Node):
                 self.sendMessage(msg, taskHandler.addr)
             del self.registry.users[message.source.id]
         elif message.source.role == 'taskHandler':
-            taskHandler = self.registry.taskHandlers[message.source.id]
-            del self.registry.taskHandlerByToken[taskHandler.token]
-            del self.registry.taskHandlers[message.source.id]
+            if message.source.id in self.registry.taskHandlers:
+                taskHandler = self.registry.taskHandlers[message.source.id]
+                del self.registry.taskHandlerByToken[taskHandler.token]
+                del self.registry.taskHandlers[message.source.id]
         elif message.source.role == 'worker':
             del self.registry.workers[message.source.id]
 

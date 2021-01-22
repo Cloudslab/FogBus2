@@ -1,5 +1,6 @@
 import logging
 import sys
+import signal
 from apps import *
 from node import Node
 from connection import Message, Average
@@ -97,7 +98,7 @@ class User(Node):
                 targetWidth=int(self.label))
         if self.app is None:
             self.logger.info('Application does not exist.')
-            os._exit(0)
+            os.killpg(os.getpgrp(), signal.SIGINT)
         self.logger.info('Running ...')
         self.app.run()
 

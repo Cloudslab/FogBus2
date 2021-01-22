@@ -136,6 +136,8 @@ class Worker(Node):
         #     target=taskHandler_.run
         # ).start()
 
+        self.logger.info('Ran %s', taskName)
+
     def __uploadImagesAndRunningContainersList(self):
         imagesList = self.dockerClient.images.list()
 

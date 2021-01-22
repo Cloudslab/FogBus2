@@ -4,6 +4,7 @@ import threading
 import traceback
 import pickle
 import os
+import signal
 from queue import Queue
 from typing import Any, Dict, Tuple, List
 from exceptions import *
@@ -100,15 +101,16 @@ class Connection:
 
     def __send(self, message: bytes, retries: int = 3):
         if not retries:
-            traceback.print_exc()
-            os._exit(-1)
+            raise socket.timeout
         clientSocket = socket.socket(
             socket.AF_INET,
             socket.SOCK_STREAM)
         try:
+            clientSocket.settimeout(1)
             clientSocket.connect(self.addr)
             package = struct.pack(">L", len(message)) + message
             clientSocket.sendall(package)
+            clientSocket.settimeout(None)
             clientSocket.close()
         except (OSError, ConnectionRefusedError):
             clientSocket.close()
@@ -147,6 +149,9 @@ class Server:
             messagesQueue: Queue[Tuple[Message, int]],
             threadNumber: int = 20):
         self.addr = addr
+        self.serverSocket = socket.socket(
+            socket.AF_INET,
+            socket.SOCK_STREAM)
         self.messageQueue: Queue[Tuple[Message, int]] = messagesQueue
 
         self.threadNumber: int = threadNumber
@@ -167,20 +172,23 @@ class Server:
         server.start()
 
     def __serve(self):
-        serverSocket = socket.socket(
-            socket.AF_INET,
-            socket.SOCK_STREAM)
-        serverSocket.bind(self.addr)
-        serverSocket.listen()
-        while True:
-            clientSocket, clientAddress = serverSocket.accept()
-            request = Request(clientSocket, clientAddress)
-            self.requests.put(request)
+        try:
+            self.serverSocket.bind(self.addr)
+            self.serverSocket.listen()
+            while True:
+                clientSocket, clientAddress = self.serverSocket.accept()
+                request = Request(clientSocket, clientAddress)
+                self.requests.put(request)
+        except socket.error:
+            self.serverSocket.close()
+            raise CannotBindAddr
 
     def __handleThread(self):
         while True:
             request = self.requests.get()
             message, messageSize = self.__receiveMessage(request.clientSocket)
+            if message is None:
+                continue
             self.messageQueue.put(
                 (Message(content=message), messageSize))
 
@@ -205,7 +213,7 @@ class Server:
             result = data
 
         except OSError:
-            traceback.print_exc()
+            clientSocket.close()
 
         clientSocket.close()
         if result is None:

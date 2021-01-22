@@ -1,5 +1,6 @@
 import cv2
 import os
+import signal
 import threading
 import numpy as np
 from datatype import ApplicationUserSide
@@ -167,4 +168,4 @@ class VideoOCR(ApplicationUserSide):
 
         result = self.result.get()
         print(result, '\r\n [*] The text is at above.')
-        os._exit(0)
+        os.killpg(os.getpgrp(), signal.SIGINT)

@@ -2,7 +2,8 @@ import threading
 import logging
 import os
 import signal
-
+import traceback
+from socket import error as SocketError
 from queue import Queue
 from connection import Server, Message, Connection, Source, Average
 from abc import abstractmethod
@@ -90,11 +91,15 @@ class Node:
             id_=self.id,
             name=self.name
         )
-        message['source'] = source
-        Connection(addr).send(message)
+        try:
+            message['source'] = source
+            Connection(addr).send(message)
 
-        ping = {'type': 'ping', 'time': time(), 'source': source}
-        Connection(addr).send(ping)
+            ping = {'type': 'ping', 'time': time(), 'source': source}
+            Connection(addr).send(ping)
+        except SocketError:
+            self.logger.info('Failed to send message to %s:%d', addr[0], addr[1])
+            os._exit(-1)
 
     @abstractmethod
     def handleMessage(self, message: Message):
@@ -110,9 +115,10 @@ class Node:
 
     def __signalHandler(self, sig, frame):
         # https://stackoverflow.com/questions/1112343
-        if not self.role == 'master':
+        if self.role not in {'master', 'remoteLogger'}:
             message = {'type': 'exit'}
             self.sendMessage(message, self.masterAddr)
+        self.__myService.serverSocket.close()
         print('[*] Bye.')
         os._exit(0)
 
@@ -136,7 +142,7 @@ class Node:
         if not message.source.addr == self.masterAddr:
             return
         msg = {'type': 'nodeResources', 'resources': self.resources.all()}
-        self.sendMessage(msg, self.masterAddr)
+        self.sendMessage(msg, message.source.addr)
 
     def __periodic(self, runner: Callable):
         lastCollectTime = time()
