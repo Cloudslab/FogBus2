@@ -4,6 +4,7 @@ services:
 
   color_tracking:
     container_name: color_tracking
+    image: color_tracking
     build:
       context: ../../
       dockerfile: ./tasks/ColorTracking/Dockerfile

@@ -4,6 +4,7 @@ services:
 
   master:
     container_name: master
+    image: master
     build:
       context: ./
       dockerfile: ./Dockerfile

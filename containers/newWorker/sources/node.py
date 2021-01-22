@@ -45,9 +45,9 @@ class Node:
         self.resources: Resources = Resources()
 
         defaultPeriodicTasks = [
-            self.__resources,
-            self.__averageReceivedPackageSize,
-            self.__roundTripDelay,
+            self.__uploadResources,
+            self.__uploadAverageReceivedPackageSize,
+            self.__uploadRoundTripDelay,
         ]
         if periodicTasks is None:
             periodicTasks = []
@@ -148,17 +148,17 @@ class Node:
             lastCollectTime = time()
             runner()
 
-    def __resources(self):
+    def __uploadResources(self):
         msg = {'type': 'nodeResources', 'resources': self.resources.all()}
         self.sendMessage(msg, self.loggerAddr)
 
-    def __averageReceivedPackageSize(self):
+    def __uploadAverageReceivedPackageSize(self):
         msg = {
             'type': 'averageReceivedPackageSize',
             'averageReceivedPackageSize': self.receivedPackageSize}
         self.sendMessage(msg, self.loggerAddr)
 
-    def __roundTripDelay(self):
+    def __uploadRoundTripDelay(self):
         msg = {
             'type': 'roundTripDelay',
             'roundTripDelay': self.roundTripDelay}

@@ -4,6 +4,7 @@ services:
 
   worker:
     container_name: worker
+    image: worker
     build:
       context: ./
       dockerfile: ./Dockerfile

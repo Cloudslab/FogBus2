@@ -4,6 +4,7 @@ services:
 
   blur_and_p_hash:
     container_name: blur_and_p_hash
+    image: blur_and_p_hash
     build:
       context: ../../
       dockerfile: ./tasks/BlurAndPHash/Dockerfile

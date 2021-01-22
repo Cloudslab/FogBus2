@@ -2,7 +2,7 @@ import logging
 import sys
 from apps import *
 from node import Node
-from connection import Message
+from connection import Message, Average
 from exceptions import *
 from logger import get_logger
 from time import time
@@ -14,7 +14,6 @@ class ResponseTime:
     def __init__(self):
         self.__maxRecordNumber = 100
         self.__sentTimeTable: List[float] = [0 for _ in range(self.__maxRecordNumber)]
-
 
 
 class User(Node):
@@ -31,6 +30,7 @@ class User(Node):
             myAddr=myAddr,
             masterAddr=masterAddr,
             loggerAddr=loggerAddr,
+            periodicTasks=[self.__uploadAverageRespondTime],
             logLevel=logLevel
         )
 
@@ -40,6 +40,7 @@ class User(Node):
         self.app: ApplicationUserSide = None
 
         self.__lastDataSentTime = time()
+        self.respondTime: Average = Average()
 
     def run(self):
         self.__register()
@@ -111,7 +112,14 @@ class User(Node):
 
     def __handleResult(self, message: Message):
         result = message.content['result']
+        self.respondTime.update(100 * time() - self.__lastDataSentTime)
         self.app.result.put(result)
+
+    def __uploadAverageRespondTime(self):
+        msg = {
+            'type': 'respondTime',
+            'respondTime': self.respondTime.average()}
+        self.sendMessage(msg, self.loggerAddr)
 
 
 if __name__ == "__main__":

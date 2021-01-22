@@ -4,6 +4,7 @@ services:
 
   ocr:
     container_name: ocr
+    image: ocr
     build:
       context: ../../
       dockerfile: ./tasks/OCR/Dockerfile

@@ -4,6 +4,7 @@ services:
 
   face_detection:
     container_name: face_detection
+    image: face_detection
     build:
       context: ../../
       dockerfile: tasks/FaceDetection/Dockerfile

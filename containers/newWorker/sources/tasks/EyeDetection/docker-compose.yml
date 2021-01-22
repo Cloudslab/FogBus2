@@ -4,6 +4,7 @@ services:
 
   eye_detection:
     container_name: eye_detection
+    image: eye_detection
     build:
       context: ../../
       dockerfile: ./tasks/EyeDetection/Dockerfile

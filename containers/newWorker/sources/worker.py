@@ -5,10 +5,8 @@ import os
 import re
 from exceptions import *
 from connection import Connection, Message
-from queue import Queue
 from node import Node
 from logger import get_logger
-from logging import Logger
 
 
 class Worker(Node):
@@ -133,6 +131,9 @@ class Worker(Node):
         # threading.Thread(
         #     target=taskHandler_.run
         # ).start()
+
+    def __uploadImagesList(self):
+        pass
 
 
 if __name__ == '__main__':

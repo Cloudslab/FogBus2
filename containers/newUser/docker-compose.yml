@@ -4,6 +4,7 @@ services:
 
   user:
     container_name: user
+    image: user
     build:
       context: ./
       dockerfile: ./Dockerfile
