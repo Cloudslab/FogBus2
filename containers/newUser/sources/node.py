@@ -57,9 +57,6 @@ class Node:
                 self.receivedPackageSize[message.source.name] = receivedPackageSize
             self.receivedPackageSize[message.source.name].received(messageSize)
 
-            print(message.source.name,
-                  self.receivedPackageSize[message.source.name].average()
-                  )
             if message.type == 'ping':
                 self.__handleRoundTripDelay(message)
                 continue

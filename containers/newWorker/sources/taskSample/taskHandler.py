@@ -10,8 +10,31 @@ from logger import get_logger
 from logging import Logger
 from typing import List, Dict
 from collections import defaultdict
-from time import sleep
+from time import sleep, time
 from apps import *
+
+
+class ProcessingTime:
+
+    def __init__(self):
+        self.__maxRecordNum = 100
+        self.__index = 0
+        self.__costTable: List[float] = [0 for _ in range(self.__maxRecordNum)]
+
+    def update(self, cost_):
+        self.__costTable[self.__index] = cost_
+        self.__index = (self.__index + 1) % self.__maxRecordNum
+
+    def average(self):
+        total, count = 0, 0
+        for cost in self.__costTable:
+            if cost == 0:
+                break
+            total += cost
+            count += 1
+        if count == 0:
+            return None
+        return 1000 * total / count
 
 
 class TaskHandler(Node):
@@ -43,6 +66,7 @@ class TaskHandler(Node):
         self.runningOnWorker: int = runningOnWorker
         self.isRegistered: threading.Event = threading.Event()
         self.childrenAddr: Dict[str, tuple] = {}
+        self.processTime: ProcessingTime = ProcessingTime()
 
         app = None
         if taskName == 'FaceDetection':
@@ -123,7 +147,9 @@ class TaskHandler(Node):
 
     def __handleData(self, message: Message):
         data = message.content['data']
+        startTime = time()
         result = self.app.process(data)
+        self.processTime.update(time() - startTime)
         if result is None:
             return
 
