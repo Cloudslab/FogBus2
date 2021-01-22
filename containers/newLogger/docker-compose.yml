@@ -16,4 +16,3 @@ services:
     ports:
       - 5001:5001
     network_mode: "host"
-    restart: unless-stopped

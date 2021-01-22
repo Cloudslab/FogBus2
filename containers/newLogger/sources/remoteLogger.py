@@ -36,7 +36,7 @@ class RemoteLogger(Node):
         pass
 
     def __handleAverageProcessTime(self, message: Message):
-        pass
+        self.logger.info(message.content)
 
     def __handleNodeResources(self, message: Message):
         self.logger.info(message.source.name)

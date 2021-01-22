@@ -6,7 +6,7 @@ import signal
 from queue import Queue
 from connection import Server, Message, Connection, Source, RoundTripDelay, ReceivedPackageSize
 from abc import abstractmethod
-from typing import Dict, Tuple
+from typing import Dict, Tuple, List, Callable
 from logging import Logger
 from time import time, sleep
 from resourcesInfo import Resources
@@ -21,6 +21,7 @@ class Node:
             myAddr: Address,
             masterAddr: Address,
             loggerAddr: Address,
+            periodicTasks=None,
             logLevel=logging.DEBUG):
         self.name: str = None
         self.role: str = None
@@ -43,7 +44,16 @@ class Node:
         self.receivedPackageSize: Dict[str, ReceivedPackageSize] = {}
         self.resources: Resources = Resources()
 
-        threading.Thread(target=self.__resourcesMonitor).start()
+        if periodicTasks is None:
+            self.periodicTasks: List[Callable] = [self.__resources]
+        else:
+            self.periodicTasks: List[Callable] = periodicTasks
+            self.periodicTasks.append(self.__resources)
+        for runner in self.periodicTasks:
+            threading.Thread(
+                target=self.__periodic,
+                args=(runner,)
+            ).start()
 
     @abstractmethod
     def run(self):
@@ -126,7 +136,7 @@ class Node:
         msg = {'type': 'nodeResources', 'resources': self.resources.all()}
         self.sendMessage(msg, self.masterAddr)
 
-    def __resourcesMonitor(self):
+    def __periodic(self, runner: Callable):
         lastCollectTime = time()
         while True:
             timeToSleep = lastCollectTime + 10 - time()
@@ -134,5 +144,8 @@ class Node:
             if self.role is None:
                 continue
             lastCollectTime = time()
-            msg = {'type': 'nodeResources', 'resources': self.resources.all()}
-            self.sendMessage(msg, self.loggerAddr)
+            runner()
+
+    def __resources(self):
+        msg = {'type': 'nodeResources', 'resources': self.resources.all()}
+        self.sendMessage(msg, self.loggerAddr)

@@ -55,6 +55,7 @@ class TaskHandler(Node):
             myAddr=myAddr,
             masterAddr=masterAddr,
             loggerAddr=loggerAddr,
+            periodicTasks=[self.__processTime],
             logLevel=logLevel
         )
 
@@ -82,6 +83,12 @@ class TaskHandler(Node):
         if app is None:
             os._exit(0)
         self.app: TasksWorkerSide = app
+
+    def __processTime(self):
+        msg = {
+            'type': 'averageProcessTime',
+            'averageProcessTime': self.processTime.average()}
+        self.sendMessage(msg, self.loggerAddr)
 
     def run(self):
         self.__register()
