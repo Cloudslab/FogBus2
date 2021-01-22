@@ -2,7 +2,21 @@ import cv2
 import pytesseract
 import editdistance
 import numpy as np
-from datatype import TasksWorkerSide
+from abc import abstractmethod
+
+
+class TasksWorkerSide:
+
+    def __init__(self, taskID: int, taskName: str):
+        self.taskID = taskID
+        self.taskName = taskName
+        self.taskCalls = 0
+        self.processedTime = 0
+        self.processedCount = 0
+
+    @abstractmethod
+    def process(self, inputData):
+        pass
 
 
 class TestApp(TasksWorkerSide):
@@ -49,8 +63,7 @@ class ColorTracking(TasksWorkerSide):
     def __init__(self):
         super().__init__(taskID=3, taskName='ColorTracking')
 
-    @staticmethod
-    def process(inputData):
+    def process(self, inputData):
         (frame,
          hueLow, hueUp,
          hue2Low, hue2Up,

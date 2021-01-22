@@ -107,7 +107,7 @@ class Connection:
             package = struct.pack(">L", len(message)) + message
             clientSocket.sendall(package)
             clientSocket.close()
-        except OSError:
+        except (OSError, ConnectionRefusedError):
             clientSocket.close()
             self.__send(message=message, retries=retries - 1)
 

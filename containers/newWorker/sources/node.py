@@ -6,19 +6,21 @@ import signal
 from queue import Queue
 from connection import Server, Message, Connection, Source, RoundTripDelay, ReceivedPackageSize
 from abc import abstractmethod
-from typing import Dict, Tuple, DefaultDict
+from typing import Dict, Tuple
 from logging import Logger
-from time import time
-from collections import defaultdict
+from time import time, sleep
+from resourcesInfo import Resources
+
+Address = Tuple[str, int]
 
 
 class Node:
 
     def __init__(
             self,
-            myAddr,
-            masterAddr,
-            loggerAddr,
+            myAddr: Address,
+            masterAddr: Address,
+            loggerAddr: Address,
             logLevel=logging.DEBUG):
         self.name: str = None
         self.role: str = None
@@ -39,6 +41,9 @@ class Node:
         # Node stats
         self.roundTripDelay: Dict[str, RoundTripDelay] = {}
         self.receivedPackageSize: Dict[str, ReceivedPackageSize] = {}
+        self.resources: Resources = Resources()
+
+        threading.Thread(target=self.__resourcesMonitor).start()
 
     @abstractmethod
     def run(self):
@@ -59,6 +64,9 @@ class Node:
 
             if message.type == 'ping':
                 self.__handleRoundTripDelay(message)
+                continue
+            elif message.type == 'resourcesQuery':
+                self.__handleResourcesQuery(message)
                 continue
             self.handleMessage(message)
 
@@ -111,3 +119,20 @@ class Node:
             self.roundTripDelay[source.name] = roundTripDelay
             return
         self.roundTripDelay[source.name].update(delay)
+
+    def __handleResourcesQuery(self, message: Message):
+        if not message.source.addr == self.masterAddr:
+            return
+        msg = {'type': 'nodeResources', 'resources': self.resources.all()}
+        self.sendMessage(msg, self.masterAddr)
+
+    def __resourcesMonitor(self):
+        lastCollectTime = time()
+        while True:
+            timeToSleep = lastCollectTime + 10 - time()
+            sleep(0 if timeToSleep < 0 else timeToSleep)
+            if self.role is None:
+                continue
+            lastCollectTime = time()
+            msg = {'type': 'nodeResources', 'resources': self.resources.all()}
+            self.sendMessage(msg, self.loggerAddr)

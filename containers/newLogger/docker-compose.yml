@@ -15,5 +15,5 @@ services:
       TZ: Australia/Melbourne
     ports:
       - 5001:5001
-    privileged: true
+    network_mode: "host"
     restart: unless-stopped

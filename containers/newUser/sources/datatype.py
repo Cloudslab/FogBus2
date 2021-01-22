@@ -2,7 +2,6 @@ import cv2
 
 from abc import abstractmethod
 from queue import Queue
-from systemInfo import SystemInfo
 
 
 class NodeSpecs:
@@ -23,10 +22,6 @@ class NodeSpecs:
                 ram: %d GB\n\
                 disk: %d GB\n\
                 network: %d Mbps\n" % (self.cores, self.ram, self.disk, self.cores)
-
-
-class UserSysInfo(SystemInfo):
-    pass
 
 
 class ApplicationUserSide:

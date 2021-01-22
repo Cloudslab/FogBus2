@@ -4,14 +4,12 @@ import platform
 import GPUtil
 import threading
 import numpy as np
-import os
-import csv
 from datetime import datetime
 from pprint import pformat
-from time import sleep
+from typing import List
 
 
-class SystemInfoResult:
+class ResourcesInfo:
 
     def __init__(self,
                  currentTimestamp=None,
@@ -74,71 +72,15 @@ class SystemInfoResult:
         self.diskTotalWrite = diskTotalWrite
         self.gpus = gpus
 
-        self.unchanging = [
-            'currentTimestamp',
-            'bootTimeZone',
-            'bootTimestamp',
-            'bootTimeDate',
-            'operatingSystemName',
-            'nodeName',
-            'operatingSystemReleaseName',
-            'operatingSystemVersion',
-            'operatingSystemArch',
-            'physicalCPUCores',
-            'totalCPUCores',
-            'maxCPUFrequency',
-            'minCPUFrequency',
-            'totalMemory',
-            'totalSwapMemory',
-        ]
-        self.changing = [
-            'currentTimestamp',
-            'currentCPUFrequency',
-            'currentTotalCPUUsage',
-            'currentTotalCPUUsagePerCore',
-            'availableMemory',
-            'availableSwapMemory',
-            'networkTotalReceived',
-            'networkTotalSent',
-            'diskTotalRead',
-            'diskTotalWrite',
-            'gpus',
-        ]
-
     def __str__(self):
-        self.currentTimestamp = datetime.now().timestamp()
         return pformat(vars(self))
 
-    def keys(self, changing=None):
-        self.currentTimestamp = datetime.now().timestamp()
-        if changing is None:
-            allProperties = vars(self)
-            del allProperties['changing']
-            del allProperties['unchanging']
-            return list(dict(allProperties).keys())
-        if not changing:
-            return self.unchanging
-        if changing:
-            return self.changing
 
-    def values(self, changing=None):
-        self.currentTimestamp = datetime.now().timestamp()
-        allProperties = vars(self)
-        if changing is None:
-            return list(dict(allProperties).values())
-        if not changing:
-            res = [allProperties[name] for name in self.unchanging]
-            return res
-        if changing:
-            res = [allProperties[name] for name in self.changing]
-            return res
+class Resources:
 
-
-class SystemInfo:
-
-    def __init__(self, formatSize: bool):
+    def __init__(self, formatSize: bool = False):
         self.__formatSize = formatSize
-        self.res: SystemInfoResult = SystemInfoResult()
+        self.__res: ResourcesInfo = ResourcesInfo()
 
         self.threads = [self.cpu,
                         self.bootTime,
@@ -165,26 +107,25 @@ class SystemInfo:
             "%z")
         bootTimestamp = bt.timestamp()
         dateFormatted = f"{bt.month}/{bt.day}/{bt.year} {bt.hour}:{bt.minute}:{bt.second}"
-        if event is not None:
-            event.set()
 
         resBootTime = timeZone, bootTimestamp, dateFormatted
-        self.res.bootTimeZone = timeZone
-        self.res.bootTimestamp = bootTimestamp
-        self.res.bootTimeDate = dateFormatted
-
+        self.__res.bootTimeZone = timeZone
+        self.__res.bootTimestamp = bootTimestamp
+        self.__res.bootTimeDate = dateFormatted
+        event.set()
+        self.__res.currentTimestamp = datetime.now().timestamp()
         return resBootTime
 
     def operatingSystem(self, event: threading.Event = None):
         uname = platform.uname()
-        if event is not None:
-            event.set()
         resOS = uname.system, uname.node, uname.release, uname.version, uname.machine
-        self.res.operatingSystemName = uname.system
-        self.res.nodeName = uname.node
-        self.res.operatingSystemReleaseName = uname.release
-        self.res.operatingSystemVersion = uname.version
-        self.res.operatingSystemArch = uname.machine
+        self.__res.operatingSystemName = uname.system
+        self.__res.nodeName = uname.node
+        self.__res.operatingSystemReleaseName = uname.release
+        self.__res.operatingSystemVersion = uname.version
+        self.__res.operatingSystemArch = uname.machine
+        event.set()
+        self.__res.currentTimestamp = datetime.now().timestamp()
         return resOS
 
     def cpu(self, event: threading.Event = None):
@@ -198,20 +139,18 @@ class SystemInfo:
         # CPU usage
         for i, percentage in enumerate(psutil.cpu_percent(percpu=True, interval=1)):
             coresPercentage.append(percentage)
-        coresPercentage = np.asarray(coresPercentage)
         totalPercentage = psutil.cpu_percent()
-        if event is not None:
-            event.set()
 
         resCPU = physicalCoresCount, totalCoresCount, maxFreq, minFreq, currFreq, coresPercentage, totalPercentage
-
-        self.res.physicalCPUCores = physicalCoresCount
-        self.res.totalCPUCores = totalCoresCount
-        self.res.maxCPUFrequency = maxFreq
-        self.res.minCPUFrequency = minFreq
-        self.res.currentCPUFrequency = currFreq
-        self.res.currentTotalCPUUsagePerCore = coresPercentage
-        self.res.currentTotalCPUUsage = totalPercentage
+        self.__res.physicalCPUCores = physicalCoresCount
+        self.__res.totalCPUCores = totalCoresCount
+        self.__res.maxCPUFrequency = maxFreq
+        self.__res.minCPUFrequency = minFreq
+        self.__res.currentCPUFrequency = currFreq
+        self.__res.currentTotalCPUUsagePerCore = coresPercentage
+        self.__res.currentTotalCPUUsage = totalPercentage
+        event.set()
+        self.__res.currentTimestamp = datetime.now().timestamp()
         return resCPU
 
     def memory(self, event: threading.Event = None):
@@ -225,18 +164,18 @@ class SystemInfo:
         swapFreeMem = self.__getSize(swap.free)
         swapUsedMem = self.__getSize(swap.used)
         swapUsedPercentage = swap.percent
-        if event is not None:
-            event.set()
 
         resMemory = totalMem, availableMem, usedMem, usedPercentage, swapTotalMem, swapFreeMem, swapUsedMem, swapUsedPercentage
-        self.res.totalMemory = totalMem
-        self.res.availableMemory = availableMem
-        self.res.usedMemory = usedMem
-        self.res.usedMemoryPercentage = usedPercentage
-        self.res.totalSwapMemory = swapTotalMem
-        self.res.availableSwapMemory = swapFreeMem
-        self.res.usedSwapMemory = swapUsedMem
-        self.res.usedSwapMemoryPercentage = swapUsedPercentage
+        self.__res.totalMemory = totalMem
+        self.__res.availableMemory = availableMem
+        self.__res.usedMemory = usedMem
+        self.__res.usedMemoryPercentage = usedPercentage
+        self.__res.totalSwapMemory = swapTotalMem
+        self.__res.availableSwapMemory = swapFreeMem
+        self.__res.usedSwapMemory = swapUsedMem
+        self.__res.usedSwapMemoryPercentage = swapUsedPercentage
+        event.set()
+        self.__res.currentTimestamp = datetime.now().timestamp()
         return resMemory
 
     def disk(self, event: threading.Event = None):
@@ -263,12 +202,11 @@ class SystemInfo:
         diskIO = psutil.disk_io_counters()
         resPartitions.append(self.__getSize(diskIO.read_bytes))
         resPartitions.append(self.__getSize(diskIO.write_bytes))
-        if event is not None:
-            event.set()
-
         resDiskIO = self.__getSize(diskIO.read_bytes), self.__getSize(diskIO.write_bytes)
-        self.res.diskTotalRead = self.__getSize(diskIO.read_bytes)
-        self.res.diskTotalWrite = self.__getSize(diskIO.write_bytes)
+        self.__res.diskTotalRead = self.__getSize(diskIO.read_bytes)
+        self.__res.diskTotalWrite = self.__getSize(diskIO.write_bytes)
+        event.set()
+        self.__res.currentTimestamp = datetime.now().timestamp()
         return resDiskIO
 
     def network(self, event: threading.Event = None):
@@ -288,44 +226,29 @@ class SystemInfo:
                     resNetwork[interfaceName][5] = address.broadcast
         networkIO = psutil.net_io_counters()
         resNetwork['total'] = self.__getSize(networkIO.bytes_sent), self.__getSize(networkIO.bytes_recv)
-        if event is not None:
-            event.set()
-        resNerWorkIO = self.__getSize(networkIO.bytes_sent), self.__getSize(networkIO.bytes_recv)
-        self.res.networkTotalSent = self.__getSize(networkIO.bytes_sent)
-        self.res.networkTotalReceived = self.__getSize(networkIO.bytes_recv)
-        return resNerWorkIO
+        resNetworkIO = self.__getSize(networkIO.bytes_sent), self.__getSize(networkIO.bytes_recv)
+        self.__res.networkTotalSent = self.__getSize(networkIO.bytes_sent)
+        self.__res.networkTotalReceived = self.__getSize(networkIO.bytes_recv)
+        event.set()
+        self.__res.currentTimestamp = datetime.now().timestamp()
+        return resNetworkIO
 
     def gpu(self, event: threading.Event = None):
         gpus = GPUtil.getGPUs()
         resGPU = []
         for gpu in gpus:
-            # get the GPU id
-            gpuID = gpu.id
-            # name of GPU
-            gpuName = gpu.name
-            # get % percentage of GPU usage of that GPU
-            gpuLoad = f"{gpu.load * 100}%"
-            # get free memory in MB format
-            gpuFreeMemory = f"{gpu.memoryFree}MB"
-            # get used memory
-            gpuUsedMemory = f"{gpu.memoryUsed}MB"
-            # get total memory
-            gpuTotalMemory = f"{gpu.memoryTotal}MB"
-            # get GPU temperature in Celsius
-            gpuTemperature = f"{gpu.temperature} °C"
-            gpuUUID = gpu.uuid
             resGPU.append([
-                gpuID, gpuName, gpuLoad, gpuFreeMemory, gpuUsedMemory,
-                gpuTotalMemory, gpuTemperature, gpuUUID
+                gpu.id, gpu.name, gpu.load * 100, gpu.memoryFree, gpu.memoryUsed,
+                gpu.memoryTotal, gpu.temperature, gpu.uuid
             ])
-        if event is not None:
-            event.set()
-        self.res.gpus = resGPU
+        self.__res.gpus = resGPU
+        event.set()
+        self.__res.currentTimestamp = datetime.now().timestamp()
         return resGPU
 
-    def getAll(self):
+    def all(self):
 
-        events = []
+        events: List[threading.Event] = []
         for thread in self.threads:
             event = threading.Event()
             events.append(event)
@@ -336,64 +259,13 @@ class SystemInfo:
 
         for event in events:
             event.wait()
-
-        return self.res
-
-    def recordPerSeconds(self, seconds: float, nodeName: str):
-        threading.Thread(
-            target=self.__recordPerSeconds,
-            args=(seconds, nodeName)
-        ).start()
-
-    def __recordPerSeconds(self, seconds: float, nodeName: str):
-        self.getAll()
-        logPath = './log'
-        if not os.path.exists(logPath):
-            os.mkdir(logPath)
-
-        unchangingLog = '%s/log@unchanging@%s.csv' % (logPath, nodeName)
-        changingLog = '%s/log@changing@%s.csv' % (logPath, nodeName)
-
-        if not os.path.exists(unchangingLog):
-            f = open(unchangingLog, 'w')
-            title = self.res.keys(changing=False)
-            for name in title[:-1]:
-                f.write(name + ', ')
-            f.write(title[-1] + '\r\n')
-            while self.res.physicalCPUCores is None:
-                sleep(1)
-            values = self.res.values(changing=False)
-            for value in values[:-1]:
-                f.write(str(value) + ', ')
-            f.write(str(values[-1]) + '\r\n')
-            f.close()
-
-        if not os.path.exists(changingLog):
-            f = open(changingLog, 'w')
-            title = self.res.keys(changing=True)
-            for name in title[:-1]:
-                f.write(name + ', ')
-
-            f.write(title[-1] + '\r\n')
-            f.close()
-
-        while True:
-            if self.res.physicalCPUCores is None:
-                sleep(1)
-                continue
-            values = self.res.values(changing=True)
-            with open(changingLog, 'a') as logFile:
-                writer = csv.writer(logFile, quoting=csv.QUOTE_ALL)
-                writer.writerow(values)
-                logFile.close()
-            self.getAll()
-            sleep(seconds)
+        result = self.__res
+        for event in events:
+            event.clear()
+        return result
 
 
 if __name__ == '__main__':
-    sysInfo = SystemInfo(formatSize=True)
-    sysInfo.recordPerSeconds(5, 'testLog.csv')
-
-    print(sysInfo.getAll())
-    print(sysInfo.res.keys())
-    print(sysInfo.res.values())
+    resources = Resources()
+    resourcesAll = resources.all()
+    print(resourcesAll)

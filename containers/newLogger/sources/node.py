@@ -136,3 +136,5 @@ class Node:
             lastCollectTime = time()
             msg = {'type': 'nodeResources', 'resources': self.resources.all()}
             self.sendMessage(msg, self.loggerAddr)
+
+

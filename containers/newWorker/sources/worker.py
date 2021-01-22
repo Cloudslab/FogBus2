@@ -72,7 +72,7 @@ class Worker(Node):
             target=os.system,
             args=(
                 "cd tasks/%s && docker-compose run --rm %s %s %s %d %s %d "
-                "%d %s %s %s %s %d  > /dev/null 2>&1 &" % (
+                "%d %s %s %s %s %d > /dev/null 2>&1 &" % (
                     taskName,
                     self.camel_to_snake(taskName),
                     self.myAddr[0],
@@ -86,7 +86,7 @@ class Worker(Node):
                     token,
                     ','.join(childTaskTokens) if len(childTaskTokens) else 'None',
                     runningOnWorker,
-                    ),)
+                ),)
         ).start()
 
         # threading.Thread(
