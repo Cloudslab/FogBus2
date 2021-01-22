@@ -5,6 +5,7 @@ from connection import Message, Average
 from logger import get_logger
 from edge import Edge
 from typing import Dict, List, Tuple
+from resourcesInfo import ResourcesInfo, WorkerInfo
 
 
 class RemoteLogger(Node):
@@ -18,6 +19,10 @@ class RemoteLogger(Node):
         self.logLevel = logLevel
 
         self.edges: Dict[str, Edge] = {}
+        self.nodeResources: Dict[str, ResourcesInfo] = {}
+        self.averageProcessTime: Dict[str, float] = {}
+        self.averageRespondTime: Dict[str, float] = {}
+        self.imagesAndRunningContainers: Dict[str, float] = {}
 
     def run(self):
         self.role = 'RemoteLogger'
@@ -66,17 +71,25 @@ class RemoteLogger(Node):
             result.append((edgeName, item.average()))
         return result
 
-    def __handleAverageProcessTime(self, message: Message):
-        pass
-
     def __handleNodeResources(self, message: Message):
-        pass
+        nodeName = message.source.name
+        nodeResources = message.content['resources']
+        self.nodeResources[nodeName] = nodeResources
+
+    def __handleAverageProcessTime(self, message: Message):
+        workerName = message.source.name
+        averageProcessTime = message.content['averageProcessTime']
+        self.averageProcessTime[workerName] = averageProcessTime
 
     def __handleResponseTime(self, message: Message):
-        pass
+        userName = message.source.name
+        respondTime = message.content['respondTime']
+        self.averageRespondTime[userName] = respondTime
 
     def __handleImagesAndRunningContainers(self, message: Message):
-        pass
+        workerName = message.source.name
+        workerInfo = message.content['imagesAndRunningContainers']
+        self.imagesAndRunningContainers[workerName] = workerInfo
 
 
 if __name__ == '__main__':

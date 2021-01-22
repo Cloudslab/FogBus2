@@ -8,6 +8,7 @@ from exceptions import *
 from connection import Connection, Message
 from node import Node
 from logger import get_logger
+from resourcesInfo import WorkerInfo
 
 
 class Worker(Node):
@@ -154,10 +155,13 @@ class Worker(Node):
                 continue
             runningContainers.add(tags[0].split(':')[0])
 
+        imagesAndContainers = WorkerInfo(
+            images=imageNames,
+            containers=runningContainers
+        )
         msg = {
             'type': 'imagesAndRunningContainers',
-            'imageNames': imageNames,
-            'runningContainers': runningContainers}
+            'imagesAndRunningContainers': imagesAndContainers}
         self.sendMessage(msg, self.loggerAddr)
 
 

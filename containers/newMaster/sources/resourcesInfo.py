@@ -3,10 +3,20 @@ import psutil
 import platform
 import GPUtil
 import threading
-import numpy as np
 from datetime import datetime
 from pprint import pformat
-from typing import List
+from typing import List, Set
+
+
+class WorkerInfo:
+
+    def __init__(
+            self,
+            images: Set[str],
+            containers: Set[str],
+    ):
+        self.images: Set[str] = images
+        self.containers: Set[str] = containers
 
 
 class ResourcesInfo:
@@ -189,7 +199,7 @@ class Resources:
             try:
                 partitionUsage = psutil.disk_usage(partition.mountpoint)
             except PermissionError:
-                # this can be catched due to the disk that
+                # this can be caught due to the disk that
                 # isn't ready
                 continue
             res.append(self.__getSize(partitionUsage.total))
