@@ -3,6 +3,7 @@ import logging
 import threading
 import os
 import re
+import docker
 from exceptions import *
 from connection import Connection, Message
 from node import Node
@@ -21,10 +22,12 @@ class Worker(Node):
             myAddr=myAddr,
             masterAddr=masterAddr,
             loggerAddr=loggerAddr,
+            periodicTasks=[self.__uploadImagesList],
             logLevel=logLevel
         )
 
         self.isRegistered: threading.Event = threading.Event()
+        self.dockerClient = docker.from_env()
 
     def run(self):
         self.__register()
@@ -133,7 +136,18 @@ class Worker(Node):
         # ).start()
 
     def __uploadImagesList(self):
-        pass
+        imagesList = self.dockerClient.images.list()
+
+        imageNames = set()
+        for image in imagesList:
+            tags = image.tags
+            if not len(tags):
+                continue
+            imageNames.add(tags[0].split(':')[0])
+        msg = {
+            'type': 'imageNames',
+            'imageNames': imageNames}
+        self.sendMessage(msg, self.loggerAddr)
 
 
 if __name__ == '__main__':

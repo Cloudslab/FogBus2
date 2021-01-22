@@ -33,6 +33,8 @@ class RemoteLogger(Node):
             self.__handleResponseTime(message=message)
         elif message.type == 'roundTripDelay':
             self.__handleRoundTripDelay(message=message)
+        elif message.type == 'imageNames':
+            self.__handleImageNames(message=message)
 
     def __handleAverageReceivedPackageSize(self, message: Message):
         pass
@@ -48,6 +50,9 @@ class RemoteLogger(Node):
 
     def __handleRoundTripDelay(self, message: Message):
         pass
+
+    def __handleImageNames(self, message: Message):
+        self.logger.info(message.content)
 
 
 if __name__ == '__main__':
