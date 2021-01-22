@@ -22,7 +22,7 @@ class Worker(Node):
             myAddr=myAddr,
             masterAddr=masterAddr,
             loggerAddr=loggerAddr,
-            periodicTasks=[self.__uploadImagesList],
+            periodicTasks=[self.__uploadImagesAndRunningContainersList],
             logLevel=logLevel
         )
 
@@ -135,7 +135,7 @@ class Worker(Node):
         #     target=taskHandler_.run
         # ).start()
 
-    def __uploadImagesList(self):
+    def __uploadImagesAndRunningContainersList(self):
         imagesList = self.dockerClient.images.list()
 
         imageNames = set()
@@ -144,9 +144,20 @@ class Worker(Node):
             if not len(tags):
                 continue
             imageNames.add(tags[0].split(':')[0])
+
+        containerList = self.dockerClient.containers.list()
+
+        runningContainers = set()
+        for container in containerList:
+            tags = container.image.tags
+            if not len(tags):
+                continue
+            runningContainers.add(tags[0].split(':')[0])
+
         msg = {
-            'type': 'imageNames',
-            'imageNames': imageNames}
+            'type': 'imagesAndRunningContainers',
+            'imageNames': imageNames,
+            'runningContainers': runningContainers}
         self.sendMessage(msg, self.loggerAddr)
 
 
