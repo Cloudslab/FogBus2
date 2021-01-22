@@ -201,13 +201,13 @@ class TaskHandler(Client):
             taskHandlerID: int,
             taskName: str,
             token: str,
-            runningOnWorker: int,
+            runningOnWorker: str,
             connectionIO: ConnectionIO,
             user,
             name: str = None,
     ):
         if name is None:
-            name = 'TaskHandler-%d@%s' % (taskHandlerID, taskName)
+            name = 'TaskHandler-%d@%s@%s' % (taskHandlerID, taskName, runningOnWorker)
         super(TaskHandler, self).__init__(
             name=name,
             addr=addr,
@@ -217,7 +217,7 @@ class TaskHandler(Client):
         self.id: int = taskHandlerID
         self.taskName = taskName
         self.token = token
-        self.runningOnWorker: int = runningOnWorker
+        self.runningOnWorker: str = runningOnWorker
         self.user: User = user
         self.ready: threading.Event = threading.Event()
 

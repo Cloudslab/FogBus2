@@ -23,7 +23,7 @@ class TaskHandler(Node):
             taskName: str,
             token: str,
             childTaskTokens: List[str],
-            runningOnWorker: int,
+            runningOnWorker: str,
             logLevel=logging.DEBUG):
         super().__init__(
             myAddr=myAddr,
@@ -38,7 +38,7 @@ class TaskHandler(Node):
         self.taskName: str = taskName
         self.token: str = token
         self.childTaskTokens: List[str] = childTaskTokens
-        self.runningOnWorker: int = runningOnWorker
+        self.runningOnWorker: str = runningOnWorker
         self.isRegistered: threading.Event = threading.Event()
         self.childrenAddr: Dict[str, tuple] = {}
         self.processTime: Average = Average()
@@ -175,7 +175,7 @@ if __name__ == '__main__':
         childTaskTokens_ = []
     else:
         childTaskTokens_ = sys.argv[10].split(',')
-    runningOnWorker_ = int(sys.argv[11])
+    runningOnWorker_ = sys.argv[11]
 
     taskHandler_ = TaskHandler(
         myAddr=myAddr_,

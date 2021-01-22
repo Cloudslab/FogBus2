@@ -68,12 +68,12 @@ class Worker(Node):
         taskName = message.content['taskName']
         token = message.content['token']
         childTaskTokens = message.content['childTaskTokens']
-        runningOnWorker = self.id
+        runningOnWorker = self.name
         threading.Thread(
             target=os.system,
             args=(
                 "cd tasks/%s && docker-compose run --rm %s %s %s %d %s %d "
-                "%d %s %s %s %s %d > /dev/null 2>&1 &" % (
+                "%d %s %s %s %s %s > /dev/null 2>&1 &" % (
                     taskName,
                     self.camel_to_snake(taskName),
                     self.myAddr[0],
