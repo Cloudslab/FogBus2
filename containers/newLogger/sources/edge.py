@@ -10,5 +10,5 @@ class Edge:
     ):
         self.source: str = source
         self.destination: str = destination
-        self.averagePackageSize: float = averagePackageSize
+        self.averageReceivedPackageSize: float = averagePackageSize
         self.averageRoundTripDelay: float = averageRoundTripDelay

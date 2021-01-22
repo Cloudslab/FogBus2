@@ -4,7 +4,7 @@ from node import Node, Address
 from connection import Message, Average
 from logger import get_logger
 from edge import Edge
-from typing import Dict
+from typing import Dict, List, Tuple
 
 
 class RemoteLogger(Node):
@@ -41,18 +41,30 @@ class RemoteLogger(Node):
             self.__handleImagesAndRunningContainers(message=message)
 
     def __handleAverageReceivedPackageSize(self, message: Message):
-        for item in message.content['averageReceivedPackageSize'].values():
+        result = self.__handleEdgeAverage(message, 'averageReceivedPackageSize')
+        for edgeName, average in result:
+            self.edges[edgeName].averageReceivedPackageSize = average
+
+    def __handleRoundTripDelay(self, message: Message):
+        result = self.__handleEdgeAverage(message, 'roundTripDelay')
+        for edgeName, average in result:
+            self.edges[edgeName].averageRoundTripDelay = average
+
+    def __handleEdgeAverage(self, message: Message, keyName: str) -> List[Tuple[str, float]]:
+        result = []
+        for item in message.content[keyName].values():
             if not isinstance(item, Average):
                 continue
             if item.name is None:
                 continue
-            edgeName = '%s,%s' % (item.name, message.source.name)
+            edgeName = '%s,%s' % (message.source.name, item.name)
             if edgeName not in self.edges:
                 self.edges[edgeName] = Edge(
-                    source=item.name,
-                    destination=message.source.name,
+                    source=message.source.name,
+                    destination=item.name,
                 )
-            self.edges[edgeName].averagePackageSize = item.average()
+            result.append((edgeName, item.average()))
+        return result
 
     def __handleAverageProcessTime(self, message: Message):
         pass
@@ -61,9 +73,6 @@ class RemoteLogger(Node):
         pass
 
     def __handleResponseTime(self, message: Message):
-        pass
-
-    def __handleRoundTripDelay(self, message: Message):
         pass
 
     def __handleImagesAndRunningContainers(self, message: Message):
