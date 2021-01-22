@@ -168,4 +168,4 @@ class VideoOCR(ApplicationUserSide):
 
         result = self.result.get()
         print(result, '\r\n [*] The text is at above.')
-        os.killpg(os.getpgrp(), signal.SIGINT)
+        os._exit(0)

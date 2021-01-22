@@ -173,6 +173,7 @@ class Server:
 
     def __serve(self):
         try:
+            self.serverSocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             self.serverSocket.bind(self.addr)
             self.serverSocket.listen()
             while True:

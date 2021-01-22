@@ -8,18 +8,23 @@ from pprint import pformat
 from typing import List, Set
 
 
-class Dictionary(dict):
+class Dictionary:
 
-    def __init__(self):
+    def _dict(self):
         publicItems = {}
-        for key, value in vars(self).items():
+
+        for key, value in self.__dict__.items():
             if '_' == key[0]:
                 continue
             publicItems[key] = value
-        super().__init__(self)
+        return publicItems
 
-        for key, value in publicItems.items():
-            self.__setitem__(key, value)
+    def __repr__(self):
+        return self._dict().__repr__()
+
+    def __iter__(self):
+        for k, v in self._dict().items():
+            yield k, v
 
 
 class WorkerInfo:

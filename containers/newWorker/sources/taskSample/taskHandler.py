@@ -152,7 +152,7 @@ class TaskHandler(Node):
         msg = {'type': 'exit'}
         self.sendMessage(msg, self.masterAddr)
         self.logger.info('Exit.')
-        os.killpg(os.getpgrp(), signal.SIGINT)
+        os._exit(0)
 
 
 if __name__ == '__main__':

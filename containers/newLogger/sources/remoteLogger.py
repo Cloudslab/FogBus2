@@ -69,6 +69,7 @@ class RemoteLogger(Node):
                     destination=item.name,
                 )
             result.append((edgeName, item.average()))
+
         return result
 
     def __handleNodeResources(self, message: Message):
