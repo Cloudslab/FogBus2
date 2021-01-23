@@ -6,6 +6,7 @@ import threading
 from datetime import datetime
 from pprint import pformat
 from typing import List, Set
+from hashlib import sha256
 
 
 class Dictionary:
@@ -69,6 +70,7 @@ class ResourcesInfo(Dictionary):
                  networkTotalSent=None,
                  diskTotalRead=None,
                  diskTotalWrite=None,
+                 disk=None,
                  gpus=None):
         self.currentTimestamp = currentTimestamp
         self.bootTimeZone = bootTimeZone
@@ -99,6 +101,7 @@ class ResourcesInfo(Dictionary):
         self.networkTotalSent = networkTotalSent
         self.diskTotalRead = diskTotalRead
         self.diskTotalWrite = diskTotalWrite
+        self.disk = disk
         self.gpus = gpus
         Dictionary.__init__(self)
 
@@ -111,6 +114,7 @@ class Resources:
     def __init__(self, formatSize: bool = False):
         self.__formatSize = formatSize
         self.__res: ResourcesInfo = ResourcesInfo()
+        self.__uniqueID = None
 
         self.threads = [self.cpu,
                         self.bootTime,
@@ -225,7 +229,7 @@ class Resources:
             res.append(self.__getSize(partitionUsage.total))
             res.append(self.__getSize(partitionUsage.used))
             res.append(self.__getSize(partitionUsage.free))
-            res.append(self.__getSize(partitionUsage.percent))
+            res.append(partitionUsage.percent)
 
             resPartitions.append(res)
         # get IO statistics since boot
@@ -235,9 +239,10 @@ class Resources:
         resDiskIO = self.__getSize(diskIO.read_bytes), self.__getSize(diskIO.write_bytes)
         self.__res.diskTotalRead = self.__getSize(diskIO.read_bytes)
         self.__res.diskTotalWrite = self.__getSize(diskIO.write_bytes)
+        self.__res.disk = resPartitions[0]
         event.set()
         self.__res.currentTimestamp = datetime.now().timestamp()
-        return resDiskIO
+        return resDiskIO, resPartitions
 
     def network(self, event: threading.Event = None):
         resNetwork = {}
@@ -289,13 +294,37 @@ class Resources:
 
         for event in events:
             event.wait()
+        self.uniqueID(getInfo=False)
         result = self.__res
         for event in events:
             event.clear()
         return result
 
+    def uniqueID(self, getInfo=True):
+        if self.__uniqueID is not None:
+            return self.__uniqueID
+        if getInfo:
+            self.all()
+        items = [
+            self.__res.operatingSystemReleaseName,
+            self.__res.operatingSystemVersion,
+            self.__res.operatingSystemName,
+            self.__res.operatingSystemArch,
+            self.__res.physicalCPUCores,
+            self.__res.totalCPUCores,
+            self.__res.maxCPUFrequency,
+            self.__res.minCPUFrequency,
+            self.__res.totalMemory,
+            self.__res.totalSwapMemory,
+            self.__res.disk
+        ]
+        info = ''.join(str(items))
+        self.__uniqueID = sha256(info.encode('utf-8')).hexdigest()
+        return self.__uniqueID
+
 
 if __name__ == '__main__':
-    resources = Resources()
+    resources = Resources(formatSize=True)
     resourcesAll = resources.all()
-    print(resourcesAll)
+    uniqueID = resources.uniqueID()
+    print(uniqueID)
