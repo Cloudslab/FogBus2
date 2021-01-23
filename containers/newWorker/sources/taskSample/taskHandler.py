@@ -68,7 +68,6 @@ class TaskHandler(Node):
             'type': 'averageProcessTime',
             'averageProcessTime': self.processTime.average()}
         self.sendMessage(msg, self.loggerAddr)
-        self.logger.info(msg)
 
     def run(self):
         self.__register()
