@@ -31,6 +31,7 @@ class RemoteLogger(Profiler, Node):
         self.role = 'remoteLogger'
         self.id = 0
         self.name = '%s-%d' % (self.role, self.id)
+        self.gotName.set()
         self.logger = get_logger(self.name, self.logLevel)
         self.logger.info('Running ...')
 

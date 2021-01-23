@@ -70,6 +70,7 @@ class User(Node):
             raise RegisteredAsWrongRole
         self.id = message.content['id']
         self.name = message.content['name']
+        self.gotName.set()
         self.role = role
         self.logger = get_logger(self.name, self.logLevel)
         self.isRegistered.set()

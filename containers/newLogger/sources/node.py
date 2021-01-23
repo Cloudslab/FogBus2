@@ -26,6 +26,7 @@ class Node:
             periodicTasks: List[PeriodicTask] = None,
             logLevel=logging.DEBUG):
         self.name: str = None
+        self.gotName: threading.Event = threading.Event()
         self.role: str = None
         self.id: int = None
         self.myAddr = myAddr
@@ -143,6 +144,7 @@ class Node:
         self.sendMessage(msg, message.source.addr)
 
     def __periodic(self, runner: Callable, period: float):
+        self.gotName.wait()
         runner()
         lastCollectTime = time()
         while True:

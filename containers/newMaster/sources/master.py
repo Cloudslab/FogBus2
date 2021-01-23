@@ -36,6 +36,7 @@ class Master(Node, Profiler):
     def run(self):
         self.role = 'master'
         self.name = 'Master-%d' % self.id
+        self.gotName.set()
         self.logger = get_logger(self.name, self.logLevel)
         self.logger.info("Serving ...")
 
