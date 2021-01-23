@@ -26,14 +26,6 @@ class TaskHandler(Node):
             childTaskTokens: List[str],
             runningOnWorker: str,
             logLevel=logging.DEBUG):
-        super().__init__(
-            myAddr=myAddr,
-            masterAddr=masterAddr,
-            loggerAddr=loggerAddr,
-            periodicTasks=[
-                (self.__uploadAverageProcessTime, 10)],
-            logLevel=logLevel
-        )
 
         self.userID: int = userID
         self.userName: str = userName
@@ -44,6 +36,15 @@ class TaskHandler(Node):
         self.isRegistered: threading.Event = threading.Event()
         self.childrenAddr: Dict[str, tuple] = {}
         self.processTime: Average = Average()
+
+        super().__init__(
+            myAddr=myAddr,
+            masterAddr=masterAddr,
+            loggerAddr=loggerAddr,
+            periodicTasks=[
+                (self.__uploadAverageProcessTime, 10)],
+            logLevel=logLevel
+        )
 
         app = None
         if taskName == 'FaceDetection':
@@ -61,10 +62,13 @@ class TaskHandler(Node):
         self.app: TasksWorkerSide = app
 
     def __uploadAverageProcessTime(self):
+        if self.processTime.average() is None:
+            return
         msg = {
             'type': 'averageProcessTime',
             'averageProcessTime': self.processTime.average()}
         self.sendMessage(msg, self.loggerAddr)
+        self.logger.info(msg)
 
     def run(self):
         self.__register()

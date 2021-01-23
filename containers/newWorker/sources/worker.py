@@ -77,7 +77,7 @@ class Worker(Node):
             target=os.system,
             args=(
                 "cd tasks/%s && docker-compose run --rm %s %s %s %d %s %d "
-                "%d %s %s %s %s %s > /dev/null 2>&1 &" % (
+                "%d %s %s %s %s %s" % (
                     taskName,
                     self.camel_to_snake(taskName),
                     self.myAddr[0],

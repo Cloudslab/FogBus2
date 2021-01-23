@@ -118,6 +118,8 @@ class User(Node):
         self.app.result.put(result)
 
     def __uploadAverageRespondTime(self):
+        if self.respondTime.average() is None:
+            return
         msg = {
             'type': 'respondTime',
             'respondTime': self.respondTime.average()}
