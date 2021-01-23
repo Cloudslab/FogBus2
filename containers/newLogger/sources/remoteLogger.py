@@ -47,7 +47,7 @@ class RemoteLogger(Profiler, Node):
             self.__handleRoundTripDelay(message=message)
         elif message.type == 'imagesAndRunningContainers':
             self.__handleImagesAndRunningContainers(message=message)
-        elif message.type == '__requestProfiler':
+        elif message.type == 'requestProfiler':
             self.__handleRequestProfiler(message=message)
 
     def __handleAverageReceivedPackageSize(self, message: Message):
