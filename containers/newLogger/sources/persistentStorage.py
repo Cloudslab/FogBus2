@@ -75,11 +75,11 @@ class PersistentStorage:
         return obj
 
     def __writeDictToFileInJson(self, filename: str, content: Dict):
-        with open(
-                os.path.join(self.__folder, filename),
-                'w+') as file:
+        filename = os.path.join(self.__folder, filename)
+        with open(filename, 'w+') as file:
             json.dump(content, file)
             file.close()
+            os.chmod(filename, 0o666)
 
     def __readFromFileInJson(self, filename: str) -> Dict:
         filename = os.path.join(self.__folder, filename)

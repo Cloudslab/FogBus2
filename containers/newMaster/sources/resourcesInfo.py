@@ -314,7 +314,8 @@ class Resources:
             self.__res.totalCPUCores,
             self.__res.maxCPUFrequency,
             self.__res.minCPUFrequency,
-            self.__res.totalMemory,
+            # The total memory changes sometimes after reboot
+            self.__res.totalMemory // (1024 * 100),
             self.__res.totalSwapMemory,
             self.__res.disk[:4]
         ]
