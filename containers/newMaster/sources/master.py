@@ -31,13 +31,12 @@ class Master(Node, Profiler):
         )
 
         self.id = masterID
-        self.registry: Registry = Registry(logLevel=logLevel)
+        self.registry: Registry = Registry()
 
     def run(self):
         self.role = 'master'
-        self.name = 'Master-%d' % self.id
-        self.gotName.set()
-        self.logger = get_logger(self.name, self.logLevel)
+        self.setName()
+        self.logger = get_logger(self.nameLogPrinting, self.logLevel)
         self.logger.info("Serving ...")
 
     def handleMessage(self, message: Message):
@@ -59,7 +58,7 @@ class Master(Node, Profiler):
     def __handleRegister(self, message: Message):
         respond = self.registry.register(message=message)
         self.sendMessage(respond, message.source.addr)
-        self.logger.info('%s registered', respond['name'])
+        self.logger.info('%s registered', respond['nameLogPrinting'])
 
         if message.content['role'] == 'user':
             while self.registry.messageForWorker.qsize():

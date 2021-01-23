@@ -24,7 +24,7 @@ class TaskHandler(Node):
             taskName: str,
             token: str,
             childTaskTokens: List[str],
-            runningOnWorker: str,
+            workerID: int,
             logLevel=logging.DEBUG):
 
         self.userID: int = userID
@@ -32,7 +32,7 @@ class TaskHandler(Node):
         self.taskName: str = taskName
         self.token: str = token
         self.childTaskTokens: List[str] = childTaskTokens
-        self.runningOnWorker: str = runningOnWorker
+        self.workerID: int = workerID
         self.isRegistered: threading.Event = threading.Event()
         self.childrenAddr: Dict[str, tuple] = {}
         self.processTime: Average = Average()
@@ -79,8 +79,9 @@ class TaskHandler(Node):
             'role': 'taskHandler',
             'userID': self.userID,
             'taskName': self.taskName,
-            'runningOnWorker': self.runningOnWorker,
-            'token': self.token}
+            'workerID': self.workerID,
+            'token': self.token,
+            'machineID': self.machineID}
         self.sendMessage(message, self.masterAddr)
         self.isRegistered.wait()
         self.logger.info("Registered.")
@@ -114,10 +115,9 @@ class TaskHandler(Node):
         if not role == 'taskHandler':
             raise RegisteredAsWrongRole
         self.id = message.content['id']
-        self.name = message.content['name']
-        self.gotName.set()
         self.role = role
-        self.logger = get_logger(self.name, self.logLevel)
+        self.setName(message)
+        self.logger = get_logger(self.nameLogPrinting, self.logLevel)
         self.isRegistered.set()
 
     def __handleTaskHandlerInfo(self, message: Message):
@@ -181,7 +181,7 @@ if __name__ == '__main__':
         childTaskTokens_ = []
     else:
         childTaskTokens_ = sys.argv[10].split(',')
-    runningOnWorker_ = sys.argv[11]
+    workerID_ = int(sys.argv[11])
 
     taskHandler_ = TaskHandler(
         myAddr=myAddr_,
@@ -192,6 +192,6 @@ if __name__ == '__main__':
         taskName=taskName_,
         token=token_,
         childTaskTokens=childTaskTokens_,
-        runningOnWorker=runningOnWorker_
+        workerID=workerID_
     )
     taskHandler_.run()

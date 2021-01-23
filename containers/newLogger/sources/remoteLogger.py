@@ -30,9 +30,8 @@ class RemoteLogger(Profiler, Node):
     def run(self):
         self.role = 'remoteLogger'
         self.id = 0
-        self.name = '%s-%d' % (self.role, self.id)
-        self.gotName.set()
-        self.logger = get_logger(self.name, self.logLevel)
+        self.setName()
+        self.logger = get_logger(self.nameLogPrinting, self.logLevel)
         self.logger.info('Running ...')
 
     def handleMessage(self, message: Message):
@@ -66,35 +65,37 @@ class RemoteLogger(Profiler, Node):
         for item in message.content[keyName].values():
             if not isinstance(item, Average):
                 continue
-            if item.name is None:
+            if item.nameConsistent is None:
                 continue
-            edgeName = '%s,%s' % (message.source.name, item.name)
+            edgeName = '%s,%s' % (
+                message.source.nameConsistent,
+                item.nameConsistent)
             if edgeName not in self.edges:
                 self.edges[edgeName] = Edge(
-                    source=message.source.name,
-                    destination=item.name,
+                    source=message.source.nameConsistent,
+                    destination=item.nameConsistent,
                 )
             result.append((edgeName, item.average()))
 
         return result
 
     def __handleNodeResources(self, message: Message):
-        nodeName = message.source.name
+        nodeName = message.source.nameConsistent
         nodeResources = message.content['resources']
         self.nodeResources[nodeName] = nodeResources
 
     def __handleAverageProcessTime(self, message: Message):
-        workerName = message.source.name
+        workerName = message.source.nameConsistent
         averageProcessTime = message.content['averageProcessTime']
         self.averageProcessTime[workerName] = averageProcessTime
 
     def __handleResponseTime(self, message: Message):
-        userName = message.source.name
+        userName = message.source.nameConsistent
         respondTime = message.content['respondTime']
         self.averageRespondTime[userName] = respondTime
 
     def __handleImagesAndRunningContainers(self, message: Message):
-        workerName = message.source.name
+        workerName = message.source.nameConsistent
         workerInfo = message.content['imagesAndRunningContainers']
         self.imagesAndRunningContainers[workerName] = workerInfo
 

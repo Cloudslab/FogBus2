@@ -114,7 +114,7 @@ class Resources:
     def __init__(self, formatSize: bool = False):
         self.__formatSize = formatSize
         self.__res: ResourcesInfo = ResourcesInfo()
-        self.__uniqueID = None
+        self.__uniqueID: str = None
 
         self.threads = [self.cpu,
                         self.bootTime,
@@ -316,7 +316,7 @@ class Resources:
             self.__res.minCPUFrequency,
             self.__res.totalMemory,
             self.__res.totalSwapMemory,
-            self.__res.disk
+            self.__res.disk[:4]
         ]
         info = ''.join(str(items))
         self.__uniqueID = sha256(info.encode('utf-8')).hexdigest()

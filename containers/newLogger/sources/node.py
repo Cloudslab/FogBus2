@@ -25,10 +25,14 @@ class Node:
             loggerAddr: Address,
             periodicTasks: List[PeriodicTask] = None,
             logLevel=logging.DEBUG):
+        self.resources: Resources = Resources()
         self.name: str = None
-        self.gotName: threading.Event = threading.Event()
+        self.nameLogPrinting: str = None
+        self.nameConsistent: str = None
+        self.__gotName: threading.Event = threading.Event()
         self.role: str = None
         self.id: int = None
+        self.machineID: str = self.resources.uniqueID()
         self.myAddr = myAddr
         self.masterAddr = masterAddr
         self.loggerAddr = loggerAddr
@@ -45,7 +49,6 @@ class Node:
         # Node stats
         self.roundTripDelay: Dict[str, Average] = {}
         self.receivedPackageSize: Dict[str, Average] = {}
-        self.resources: Resources = Resources()
 
         defaultPeriodicTasks: List[PeriodicTask] = [
             (self.__uploadResources, 10),
@@ -62,6 +65,17 @@ class Node:
                 args=(runner, period)
             ).start()
 
+    def setName(self, message: Message = None):
+        if self.role in {'master', 'remoteLogger'}:
+            self.name = '%s' % self.role
+            self.nameLogPrinting = '%s-%d' % (self.name, self.id)
+            self.nameConsistent = '%s#%s' % (self.name, self.machineID)
+        else:
+            self.name = message.content['name']
+            self.nameLogPrinting = message.content['nameLogPrinting']
+            self.nameConsistent = message.content['nameConsistent']
+        self.__gotName.set()
+
     @abstractmethod
     def run(self):
         pass
@@ -72,9 +86,12 @@ class Node:
 
             if message.source.name not in self.receivedPackageSize:
                 receivedPackageSize = Average(
-                    name=message.source.name,
+                    name=self.name,
+                    nameLogPrinting=self.nameLogPrinting,
+                    nameConsistent=self.nameConsistent,
                     role=message.source.role,
-                    id_=message.source.id
+                    id_=message.source.id,
+                    machineID=message.source.machineID
                 )
                 self.receivedPackageSize[message.source.name] = receivedPackageSize
             self.receivedPackageSize[message.source.name].update(messageSize)
@@ -96,7 +113,10 @@ class Node:
             addr=self.myAddr,
             role=self.role,
             id_=self.id,
-            name=self.name
+            name=self.name,
+            nameLogPrinting=self.nameLogPrinting,
+            nameConsistent=self.nameConsistent,
+            machineID=self.machineID
         )
         message['source'] = source
         Connection(addr).send(message)
@@ -134,9 +154,12 @@ class Node:
         source = message.source
         if source.name not in self.roundTripDelay:
             roundTripDelay = Average(
-                name=source.name,
+                name=self.name,
+                nameLogPrinting=self.nameLogPrinting,
+                nameConsistent=self.nameConsistent,
                 role=source.role,
-                id_=source.id
+                id_=source.id,
+                machineID=source.machineID
             )
             self.roundTripDelay[source.name] = roundTripDelay
             return
@@ -149,7 +172,7 @@ class Node:
         self.sendMessage(msg, message.source.addr)
 
     def __periodic(self, runner: Callable, period: float):
-        self.gotName.wait()
+        self.__gotName.wait()
         runner()
         lastCollectTime = time()
         while True:

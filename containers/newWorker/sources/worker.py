@@ -37,7 +37,8 @@ class Worker(Node):
 
     def __register(self):
         message = {'type': 'register',
-                   'role': 'worker'}
+                   'role': 'worker',
+                   'machineID': self.machineID}
         self.sendMessage(message, self.masterAddr)
         self.isRegistered.wait()
         self.logger.info("Registered.")
@@ -53,10 +54,9 @@ class Worker(Node):
         if not role == 'worker':
             raise RegisteredAsWrongRole
         self.id = message.content['id']
-        self.name = message.content['name']
-        self.gotName.set()
         self.role = role
-        self.logger = get_logger(self.name, self.logLevel)
+        self.setName(message)
+        self.logger = get_logger(self.nameLogPrinting, self.logLevel)
         self.isRegistered.set()
 
     @staticmethod
@@ -72,12 +72,12 @@ class Worker(Node):
         taskName = message.content['taskName']
         token = message.content['token']
         childTaskTokens = message.content['childTaskTokens']
-        runningOnWorker = self.name
+        workerID = self.id
         threading.Thread(
             target=os.system,
             args=(
                 "cd tasks/%s && docker-compose run --rm %s %s %s %d %s %d "
-                "%d %s %s %s %s %s" % (
+                "%d %s %s %s %s %d" % (
                     taskName,
                     self.camel_to_snake(taskName),
                     self.myAddr[0],
@@ -90,7 +90,7 @@ class Worker(Node):
                     taskName,
                     token,
                     ','.join(childTaskTokens) if len(childTaskTokens) else 'None',
-                    runningOnWorker,
+                    workerID
                 ),)
         ).start()
 

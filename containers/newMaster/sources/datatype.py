@@ -1,11 +1,7 @@
-import socket
 import threading
 from queue import Queue
-from typing import List, Dict
-from abc import abstractmethod
-from time import time, sleep
+from typing import List, Dict, Tuple
 from secrets import token_urlsafe
-from connection import Connection
 
 
 class Client:
@@ -13,35 +9,36 @@ class Client:
     def __init__(
             self,
             name: str,
-            addr
-    ):
+            nameLogPrinting: str,
+            nameConsistent: str,
+            addr: Tuple[str, int],
+            machineID: str):
         self.name: str = name
+        self.nameLogPrinting: str = nameLogPrinting
+        self.nameConsistent: str = nameConsistent
         self.addr = addr
-
-
-class Master:
-
-    def __init__(self, host: str, port: int, masterID: int = 0):
-        self.host = host
-        self.port = port
-        self.masterID = masterID
+        self.machineID: str = machineID
 
 
 class Worker(Client):
 
     def __init__(
             self,
+            machineID: str,
             addr,
             name: str,
-            workerID: int,
-    ):
+            nameLogPrinting: str,
+            nameConsistent: str,
+            workerID: int):
         # TODO Containers info
         if name is None:
             name = "Worker-%d" % workerID
         super(Worker, self).__init__(
             name=name,
-            addr=addr
-        )
+            nameLogPrinting=nameLogPrinting,
+            nameConsistent=nameConsistent,
+            addr=addr,
+            machineID=machineID)
 
         self.id: int = workerID
 
@@ -50,25 +47,26 @@ class TaskHandler(Client):
 
     def __init__(
             self,
+            machineID: str,
             addr,
             taskHandlerID: int,
             taskName: str,
             token: str,
-            runningOnWorker: str,
+            worker: Worker,
             user,
-            name: str = None,
-    ):
-        if name is None:
-            name = 'TaskHandler-%d@%s@%s' % (taskHandlerID, taskName, runningOnWorker)
+            name: str,
+            nameLogPrinting: str,
+            nameConsistent: str):
         super(TaskHandler, self).__init__(
             name=name,
+            nameLogPrinting=nameLogPrinting,
+            nameConsistent=nameConsistent,
             addr=addr,
-        )
-
+            machineID=machineID)
         self.id: int = taskHandlerID
         self.taskName = taskName
         self.token = token
-        self.runningOnWorker: str = runningOnWorker
+        self.worker: Worker = worker
         self.user: User = user
         self.ready: threading.Event = threading.Event()
 
@@ -85,18 +83,23 @@ class User(Client):
 
     def __init__(
             self,
+            machineID: str,
             addr,
             userID: int,
             appName: int,
             name: str,
+            nameLogPrinting: str,
+            nameConsistent: str,
             taskHandlerByTaskName: dict[int, Worker] = None,
     ):
         if name is None:
             name = 'User-%d' % userID
         super(User, self).__init__(
             name=name,
-            addr=addr
-        )
+            nameLogPrinting=nameLogPrinting,
+            nameConsistent=nameConsistent,
+            addr=addr,
+            machineID=machineID)
         self.id = userID
         self.appName = appName
         self.taskNameTokenMap: Dict[str, UserTask] = {}

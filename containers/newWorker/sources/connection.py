@@ -28,11 +28,16 @@ class Identity:
             self,
             role: str,
             id_: int,
-            name: str
-    ):
+            name: str,
+            nameLogPrinting: str,
+            nameConsistent: str,
+            machineID: str):
         self.role: str = role
         self.id: int = id_
         self.name: str = name
+        self.nameLogPrinting: str = nameLogPrinting
+        self.nameConsistent: str = nameConsistent
+        self.machineID: str = machineID
 
 
 class Source(Identity):
@@ -42,24 +47,19 @@ class Source(Identity):
             role: str,
             id_: int,
             name: str,
+            nameLogPrinting: str,
+            nameConsistent: str,
+            machineID: str,
             addr: Tuple[str, int]):
-        super().__init__(role, id_, name)
+        super().__init__(
+            role=role,
+            id_=id_,
+            name=name,
+            nameLogPrinting=nameLogPrinting,
+            nameConsistent=nameConsistent,
+            machineID=machineID
+        )
         self.addr: Tuple[str, int] = addr
-
-
-class RoundTripDelay(Identity):
-
-    def __init__(
-            self,
-            role: str,
-            id_: int,
-            name: str,
-            delay: float):
-        super().__init__(role, id_, name)
-        self.delay: float = delay * 1000
-
-    def update(self, delay: float):
-        self.delay = (self.delay + delay * 1000) / 2
 
 
 class Average(Identity):
@@ -68,8 +68,18 @@ class Average(Identity):
             self,
             role: str = None,
             id_: int = None,
-            name: str = None):
-        super().__init__(role, id_, name)
+            name: str = None,
+            nameLogPrinting: str = None,
+            nameConsistent: str = None,
+            machineID: str = None):
+        super().__init__(
+            role=role,
+            id_=id_,
+            name=name,
+            nameLogPrinting=nameLogPrinting,
+            nameConsistent=nameConsistent,
+            machineID=machineID
+        )
         self.__maxRecordNumber = 100
         self.__index = 0
         self.__table: List[int] = [0 for _ in range(self.__maxRecordNumber)]

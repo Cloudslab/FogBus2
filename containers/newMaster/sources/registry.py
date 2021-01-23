@@ -11,9 +11,7 @@ from dependencies import loadDependencies, Application
 
 class Registry:
 
-    def __init__(
-            self,
-            logLevel=logging.DEBUG):
+    def __init__(self):
         self.__currentWorkerID: int = 0
         self.__lockCurrentWorkerID: Lock = Lock()
         self.__currentTaskHandlerID: int = 0
@@ -22,7 +20,6 @@ class Registry:
         self.__currentUserID: int = 0
         self.__lockCurrentUserID: Lock = Lock()
         self.users: Dict[int, User] = {}
-        self.clientBySocketID: Dict[int, Client] = {}
         self.workersQueue: Queue[Worker] = Queue()
         self.taskHandlerByToken: Dict[str, TaskHandler] = {}
 
@@ -30,7 +27,6 @@ class Registry:
 
         self.profiler = self.__loadProfilers()
         self.tasks, self.applications = self.profiler
-        self.logger = get_logger('Master-Registry', logLevel)
         self.messageForWorker: Queue[tuple[Dict, tuple[str, int]]] = Queue()
 
     @staticmethod
@@ -60,18 +56,26 @@ class Registry:
 
     def __addWorker(self, message: Message):
         workerID = self.__newWorkerID()
+        machineID = message.content['machineID']
 
+        name = 'Worker'
+        nameLogPrinting = '%s-%d' % (name, workerID)
+        nameConsistent = '%s#%s' % (name, machineID)
         worker = Worker(
-            name='Worker-%d' % workerID,
+            name=name,
+            nameLogPrinting=nameLogPrinting,
+            nameConsistent=nameConsistent,
             addr=message.source.addr,
-            workerID=workerID
-        )
+            workerID=workerID,
+            machineID=machineID)
 
         self.workers[workerID] = worker
         respond = {
             'type': 'registered',
             'role': 'worker',
             'name': worker.name,
+            'nameLogPrinting': worker.nameLogPrinting,
+            'nameConsistent': worker.nameConsistent,
             'id': workerID
         }
 
@@ -91,17 +95,29 @@ class Registry:
         userID = message.content['userID']
         taskName = message.content['taskName']
         token = message.content['token']
-        runningOnWorker = message.content['runningOnWorker']
+        workerID = message.content['workerID']
+
         user = self.users[userID]
+        worker = self.workers[workerID]
+
+        # To differentiate where this taskHandler is running on
+        # Thus use worker machineID as the taskHandler machineID
+        machineID = worker.machineID
+        name = '%s@TaskHandler' % taskName
+        nameLogPrinting = '%s-%d' % (name, taskHandlerID)
+        nameConsistent = '%s#%s' % (name, machineID)
 
         taskHandler = TaskHandler(
             taskHandlerID=taskHandlerID,
             addr=message.source.addr,
             token=token,
             taskName=taskName,
-            runningOnWorker=runningOnWorker,
-            user=user
-        )
+            worker=worker,
+            user=user,
+            name='%s@TaskHandler' % taskName,
+            nameLogPrinting=nameLogPrinting,
+            nameConsistent=nameConsistent,
+            machineID=machineID)
 
         isTaskValid = user.verifyTaskHandler(
             taskName=taskName,
@@ -121,6 +137,9 @@ class Registry:
             'role': 'taskHandler',
             'id': taskHandlerID,
             'name': taskHandler.name,
+            'nameLogPrinting': taskHandler.nameLogPrinting,
+            'nameConsistent': taskHandler.nameConsistent,
+            'workerMachineID': worker.machineID
         }
         return respond
 
@@ -135,20 +154,29 @@ class Registry:
         userID = self.__newUserID()
         appName = message.content['appName']
         label = message.content['label']
+        machineID = message.content['machineID']
+
+        name = '%s@%s@User' % (appName, label)
+        nameLogPrinting = '%s-%d' % (name, userID)
+        nameConsistent = '%s#%s' % (name, machineID)
 
         user = User(
-            name='%s@%s@User-%d' % (appName, label, userID),
+            name=name,
+            nameLogPrinting=nameLogPrinting,
+            nameConsistent=nameConsistent,
             addr=message.source.addr,
             userID=userID,
             appName=appName,
-        )
+            machineID=machineID)
         self.users[user.id] = user
         self.__handleRequest(user)
         respond = {
             'type': 'registered',
             'role': 'user',
             'id': userID,
-            'name': user.name
+            'name': user.name,
+            'nameLogPrinting': user.nameLogPrinting,
+            'nameConsistent': user.nameConsistent,
         }
         return respond
 

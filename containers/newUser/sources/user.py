@@ -51,7 +51,8 @@ class User(Node):
             'type': 'register',
             'role': 'user',
             'label': self.label,
-            'appName': self.appName}
+            'appName': self.appName,
+            'machineID': self.machineID}
         self.sendMessage(message, self.masterAddr)
         self.isRegistered.wait()
         self.logger.info("Registered.")
@@ -69,10 +70,9 @@ class User(Node):
         if not role == 'user':
             raise RegisteredAsWrongRole
         self.id = message.content['id']
-        self.name = message.content['name']
-        self.gotName.set()
         self.role = role
-        self.logger = get_logger(self.name, self.logLevel)
+        self.setName(message)
+        self.logger = get_logger(self.nameLogPrinting, self.logLevel)
         self.isRegistered.set()
 
     def __handleReady(self, message: Message):
