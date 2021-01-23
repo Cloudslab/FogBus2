@@ -132,7 +132,7 @@ class TaskHandler(Node):
         data = message.content['data']
         startTime = time()
         result = self.app.process(data)
-        self.processTime.update(time() - startTime)
+        self.processTime.update((time() - startTime) * 1000)
         if result is None:
             return
 

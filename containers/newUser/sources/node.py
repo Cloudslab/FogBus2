@@ -48,9 +48,10 @@ class Node:
 
         defaultPeriodicTasks: List[PeriodicTask] = [
             (self.__uploadResources, 10),
-            (self.__uploadAverageReceivedPackageSize, 10),
-            (self.__uploadRoundTripDelay, 10),
-        ]
+            (self.__uploadRoundTripDelay, 10)]
+        if not self.role == 'remoteLogger':
+            defaultPeriodicTasks.append(
+                (self.__uploadAverageReceivedPackageSize, 10))
         if periodicTasks is None:
             periodicTasks = []
         self.periodicTasks: List[PeriodicTask] = defaultPeriodicTasks + periodicTasks

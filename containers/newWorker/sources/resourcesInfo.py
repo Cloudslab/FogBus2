@@ -27,12 +27,12 @@ class Dictionary:
             yield k, v
 
 
-class WorkerInfo:
+class WorkerInfo(Dictionary):
 
     def __init__(
             self,
-            images: Set[str],
-            containers: Set[str],
+            images: Set[str] = None,
+            containers: Set[str] = None,
     ):
         self.images: Set[str] = images
         self.containers: Set[str] = containers

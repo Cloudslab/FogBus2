@@ -110,11 +110,11 @@ class RemoteLogger(Node):
         self.persistentStorage.write('imagesAndRunningContainers.json', self.imagesAndRunningContainers)
 
     def __readFromPersistentStorage(self):
-        self.persistentStorage.read('edges.json', self.edges)
-        self.persistentStorage.read('nodeResources.json', self.nodeResources)
-        self.persistentStorage.read('averageProcessTime.json', self.averageProcessTime)
-        self.persistentStorage.read('averageRespondTime.json', self.averageRespondTime)
-        self.persistentStorage.read('imagesAndRunningContainers.json', self.imagesAndRunningContainers)
+        self.edges = self.persistentStorage.read('edges')
+        self.nodeResources = self.persistentStorage.read('nodeResources', )
+        self.averageProcessTime = self.persistentStorage.read('averageProcessTime')
+        self.averageRespondTime = self.persistentStorage.read('averageRespondTime')
+        self.imagesAndRunningContainers = self.persistentStorage.read('imagesAndRunningContainers')
 
 
 if __name__ == '__main__':

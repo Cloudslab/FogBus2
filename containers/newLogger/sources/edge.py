@@ -5,8 +5,8 @@ class Edge(Dictionary):
 
     def __init__(
             self,
-            source: str,
-            destination: str,
+            source: str = None,
+            destination: str = None,
             averagePackageSize: float = None,
             averageRoundTripDelay: float = None,
 

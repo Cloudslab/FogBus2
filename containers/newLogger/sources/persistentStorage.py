@@ -25,16 +25,40 @@ class PersistentStorage:
             _dictCopy[key] = self.__covert(value)
 
         if self.__toFile:
-            self.__saveDictToFileInJson(filename, _dictCopy)
+            self.__writeDictToFileInJson(filename, _dictCopy)
 
-    def read(self, filename: str, _dict: Dict):
-        _dictCopy = deepcopy(_dict)
+    def read(self, name: str):
+        filename = name + '.json'
 
-        for key, value in _dictCopy.items():
-            _dictCopy[key] = self.__covert(value)
+        content = self.__readFromFileInJson(filename)
 
-        if self.__toFile:
-            self.__saveDictToFileInJson(filename, _dictCopy)
+        if content == {}:
+            return content
+
+        if name == 'edges':
+            return self.__recoverObject(content, Edge)
+
+        if name == 'nodeResources':
+            return self.__recoverObject(content, ResourcesInfo)
+
+        if name == 'imagesAndRunningContainers':
+            res = self.__recoverObject(content, WorkerInfo)
+            for k, v in res.items():
+                for kk, vv in v.__dict__.items():
+                    v.__dict__[kk] = set(vv)
+                res[k] = v
+            return res
+
+        return content
+
+    @staticmethod
+    def __recoverObject(content, objType):
+        res = {}
+
+        for k, v in content.items():
+            res[k] = objType()
+            res[k].__dict__ = v
+        return res
 
     @staticmethod
     def __covert(obj):
@@ -49,8 +73,16 @@ class PersistentStorage:
             return objDict
         return obj
 
-    def __saveDictToFileInJson(self, filename: str, content: Dict):
+    def __writeDictToFileInJson(self, filename: str, content: Dict):
         with open(
                 os.path.join(self.__folder, filename),
                 'w') as outfile:
             json.dump(content, outfile)
+
+    def __readFromFileInJson(self, filename: str) -> Dict:
+        if not os.path.exists(filename):
+            return {}
+        with open(
+                os.path.join(self.__folder, filename),
+                'r') as outfile:
+            return json.loads(outfile.read())
