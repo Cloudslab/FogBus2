@@ -143,7 +143,7 @@ class Message:
     def __lt__(self, other):
         if self.type == other.type:
             return False
-        if self.type == 'ping':
+        if self.type in {'ping', 'pong'}:
             return False
         return True
 
