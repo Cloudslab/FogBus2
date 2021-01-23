@@ -80,7 +80,11 @@ class Node:
             self.receivedPackageSize[message.source.name].update(messageSize)
 
             if message.type == 'ping':
-                self.__handleRoundTripDelay(message)
+                message.content['type'] = 'pong'
+                self.sendMessage(message.content, message.source.addr)
+                continue
+            elif message.type == 'pong':
+                self.__handlePong(message)
                 continue
             elif message.type == 'resourcesQuery':
                 self.__handleResourcesQuery(message)
@@ -97,8 +101,9 @@ class Node:
         message['source'] = source
         Connection(addr).send(message)
 
-        ping = {'type': 'ping', 'time': time(), 'source': source}
-        Connection(addr).send(ping)
+        if not message['type'] == 'pong':
+            ping = {'type': 'ping', 'time': time(), 'source': source}
+            Connection(addr).send(ping)
 
     @abstractmethod
     def handleMessage(self, message: Message):
@@ -124,7 +129,7 @@ class Node:
     def handleSignal(self):
         signal.signal(signal.SIGINT, self.__signalHandler)
 
-    def __handleRoundTripDelay(self, message: Message):
+    def __handlePong(self, message: Message):
         delay = time() - message.content['time']
         source = message.source
         if source.name not in self.roundTripDelay:
