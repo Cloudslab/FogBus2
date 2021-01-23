@@ -4,7 +4,7 @@ import os
 import signal
 import traceback
 from socket import error as SocketError
-from queue import Queue
+from queue import Queue, PriorityQueue
 from connection import Server, Message, Connection, Source, Average
 from abc import abstractmethod
 from typing import Dict, Tuple, List, Callable
@@ -31,7 +31,7 @@ class Node:
         self.myAddr = myAddr
         self.masterAddr = masterAddr
         self.loggerAddr = loggerAddr
-        self.receivedMessage: Queue[Tuple[Message, int]] = Queue()
+        self.receivedMessage: PriorityQueue[Tuple[Message, int]] = PriorityQueue()
         self.isRegistered: threading.Event = threading.Event()
         self.__myService = Server(
             self.myAddr,

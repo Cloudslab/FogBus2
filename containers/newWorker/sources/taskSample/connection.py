@@ -5,7 +5,7 @@ import traceback
 import pickle
 import os
 import signal
-from queue import Queue
+from queue import Queue, PriorityQueue
 from typing import Any, Dict, Tuple, List
 from exceptions import *
 
@@ -140,19 +140,26 @@ class Message:
         self.type = self.content['type']
         self.source: Source = self.content['source']
 
+    def __lt__(self, other):
+        if self.type == other.type:
+            return False
+        if self.type == 'ping':
+            return False
+        return True
+
 
 class Server:
 
     def __init__(
             self,
             addr,
-            messagesQueue: Queue[Tuple[Message, int]],
+            messagesQueue: PriorityQueue[Tuple[Message, int]],
             threadNumber: int = 20):
         self.addr = addr
         self.serverSocket = socket.socket(
             socket.AF_INET,
             socket.SOCK_STREAM)
-        self.messageQueue: Queue[Tuple[Message, int]] = messagesQueue
+        self.messageQueue: PriorityQueue[Tuple[Message, int]] = messagesQueue
 
         self.threadNumber: int = threadNumber
         self.requests: Queue[Request] = Queue()
@@ -187,11 +194,11 @@ class Server:
     def __handleThread(self):
         while True:
             request = self.requests.get()
-            message, messageSize = self.__receiveMessage(request.clientSocket)
-            if message is None:
+            content, messageSize = self.__receiveMessage(request.clientSocket)
+            if content is None:
                 continue
-            self.messageQueue.put(
-                (Message(content=message), messageSize))
+            message = Message(content=content)
+            self.messageQueue.put((message, messageSize))
 
     @staticmethod
     def __receiveMessage(clientSocket: socket.socket) -> Tuple[Dict, int]:
