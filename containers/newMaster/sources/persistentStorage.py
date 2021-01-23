@@ -79,7 +79,10 @@ class PersistentStorage:
         with open(filename, 'w+') as file:
             json.dump(content, file)
             file.close()
-            os.chmod(filename, 0o666)
+            try:
+                os.chmod(filename, 0o666)
+            except PermissionError:
+                pass
 
     def __readFromFileInJson(self, filename: str) -> Dict:
         filename = os.path.join(self.__folder, filename)

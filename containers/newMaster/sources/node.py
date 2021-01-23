@@ -51,11 +51,11 @@ class Node:
         self.receivedPackageSize: Dict[str, Average] = {}
 
         defaultPeriodicTasks: List[PeriodicTask] = [
-            (self.__uploadResources, 10),
-            (self.__uploadRoundTripDelay, 10)]
+            (self.__uploadResources, 10)]
         if not self.role == 'remoteLogger':
-            defaultPeriodicTasks.append(
-                (self.__uploadAverageReceivedPackageSize, 10))
+            defaultPeriodicTasks += [
+                (self.__uploadAverageReceivedPackageSize, 10),
+                (self.__uploadRoundTripDelay, 10)]
         if periodicTasks is None:
             periodicTasks = []
         self.periodicTasks: List[PeriodicTask] = defaultPeriodicTasks + periodicTasks
@@ -84,17 +84,18 @@ class Node:
         while True:
             message, messageSize = self.receivedMessage.get()
 
-            if message.source.name not in self.receivedPackageSize:
-                receivedPackageSize = Average(
-                    name=self.name,
-                    nameLogPrinting=self.nameLogPrinting,
-                    nameConsistent=self.nameConsistent,
-                    role=message.source.role,
-                    id_=message.source.id,
-                    machineID=message.source.machineID
-                )
-                self.receivedPackageSize[message.source.name] = receivedPackageSize
-            self.receivedPackageSize[message.source.name].update(messageSize)
+            if not message.source.nameConsistent == self.nameConsistent:
+                if message.source.name not in self.receivedPackageSize:
+                    receivedPackageSize = Average(
+                        name=message.source.name,
+                        nameLogPrinting=message.source.nameLogPrinting,
+                        nameConsistent=message.source.nameConsistent,
+                        role=message.source.role,
+                        id_=message.source.id,
+                        machineID=message.source.machineID
+                    )
+                    self.receivedPackageSize[message.source.name] = receivedPackageSize
+                self.receivedPackageSize[message.source.name].update(messageSize)
 
             if message.type == 'ping':
                 message.content['type'] = 'pong'
@@ -121,9 +122,15 @@ class Node:
         message['source'] = source
         Connection(addr).send(message)
 
-        if not message['type'] == 'pong':
-            ping = {'type': 'ping', 'time': time(), 'source': source}
-            Connection(addr).send(ping)
+        if message['type'] == 'pong':
+            return
+
+        if addr == self.myAddr:
+            # remoteLogger sends resources to itself
+            return
+        
+        ping = {'type': 'ping', 'time': time(), 'source': source}
+        Connection(addr).send(ping)
 
     @abstractmethod
     def handleMessage(self, message: Message):
@@ -152,18 +159,17 @@ class Node:
     def __handlePong(self, message: Message):
         delay = time() - message.content['time']
         source = message.source
-        if source.name not in self.roundTripDelay:
+        if source.nameConsistent not in self.roundTripDelay:
             roundTripDelay = Average(
-                name=self.name,
-                nameLogPrinting=self.nameLogPrinting,
-                nameConsistent=self.nameConsistent,
+                name=source.nameConsistent,
+                nameLogPrinting=source.nameLogPrinting,
+                nameConsistent=source.nameConsistent,
                 role=source.role,
                 id_=source.id,
                 machineID=source.machineID
             )
-            self.roundTripDelay[source.name] = roundTripDelay
-            return
-        self.roundTripDelay[source.name].update(delay * 1000)
+            self.roundTripDelay[source.nameConsistent] = roundTripDelay
+        self.roundTripDelay[source.nameConsistent].update(delay * 1000)
 
     def __handleResourcesQuery(self, message: Message):
         if not message.source.addr == self.masterAddr:

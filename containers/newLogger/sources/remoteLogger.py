@@ -63,6 +63,7 @@ class RemoteLogger(Profiler, Node):
     def __handleEdgeAverage(self, message: Message, keyName: str) -> List[Tuple[str, float]]:
         result = []
         for item in message.content[keyName].values():
+
             if not isinstance(item, Average):
                 continue
             if item.nameConsistent is None:
