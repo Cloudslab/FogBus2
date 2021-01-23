@@ -1,11 +1,13 @@
 import sys
 import logging
-from node import Node, Address, Pe
+import json
+from node import Node, Address
 from connection import Message, Average
 from logger import get_logger
 from edge import Edge
 from typing import Dict, List, Tuple
 from resourcesInfo import ResourcesInfo, WorkerInfo
+from persistentStorage import PersistentStorage
 
 
 class RemoteLogger(Node):
@@ -27,7 +29,8 @@ class RemoteLogger(Node):
         self.nodeResources: Dict[str, ResourcesInfo] = {}
         self.averageProcessTime: Dict[str, float] = {}
         self.averageRespondTime: Dict[str, float] = {}
-        self.imagesAndRunningContainers: Dict[str, float] = {}
+        self.imagesAndRunningContainers: Dict[str, WorkerInfo] = {}
+        self.persistentStorage: PersistentStorage = PersistentStorage()
 
     def run(self):
         self.role = 'remoteLogger'
@@ -98,7 +101,11 @@ class RemoteLogger(Node):
         self.imagesAndRunningContainers[workerName] = workerInfo
 
     def __saveToPersistentStorage(self):
-        pass
+        self.persistentStorage.save('edges.json', self.edges)
+        self.persistentStorage.save('nodeResources.json', self.nodeResources)
+        self.persistentStorage.save('averageProcessTime.json', self.averageProcessTime)
+        self.persistentStorage.save('averageRespondTime.json', self.averageRespondTime)
+        self.persistentStorage.save('imagesAndRunningContainers.json', self.imagesAndRunningContainers)
 
 
 if __name__ == '__main__':

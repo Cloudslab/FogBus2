@@ -27,7 +27,7 @@ class Dictionary:
             yield k, v
 
 
-class WorkerInfo:
+class WorkerInfo(Dictionary):
 
     def __init__(
             self,
