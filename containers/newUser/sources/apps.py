@@ -168,4 +168,3 @@ class VideoOCR(ApplicationUserSide):
 
         result = self.result.get()
         print(result, '\r\n [*] The text is at above.')
-        os._exit(0)

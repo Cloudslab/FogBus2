@@ -113,7 +113,7 @@ class User(Node):
 
     def __handleResult(self, message: Message):
         result = message.content['result']
-        self.respondTime.update(100 * time() - self.__lastDataSentTime)
+        self.respondTime.update((time() - self.__lastDataSentTime) * 1000)
         self.app.result.put(result)
 
     def __uploadAverageRespondTime(self):

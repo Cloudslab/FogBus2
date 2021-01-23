@@ -18,7 +18,16 @@ class PersistentStorage:
         if not os.path.exists(folder):
             os.mkdir(folder)
 
-    def save(self, filename: str, _dict: Dict):
+    def write(self, filename: str, _dict: Dict):
+        _dictCopy = deepcopy(_dict)
+
+        for key, value in _dictCopy.items():
+            _dictCopy[key] = self.__covert(value)
+
+        if self.__toFile:
+            self.__saveDictToFileInJson(filename, _dictCopy)
+
+    def read(self, filename: str, _dict: Dict):
         _dictCopy = deepcopy(_dict)
 
         for key, value in _dictCopy.items():

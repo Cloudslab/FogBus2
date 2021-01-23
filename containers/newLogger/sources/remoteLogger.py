@@ -30,7 +30,9 @@ class RemoteLogger(Node):
         self.averageProcessTime: Dict[str, float] = {}
         self.averageRespondTime: Dict[str, float] = {}
         self.imagesAndRunningContainers: Dict[str, WorkerInfo] = {}
+
         self.persistentStorage: PersistentStorage = PersistentStorage()
+        self.__readFromPersistentStorage()
 
     def run(self):
         self.role = 'remoteLogger'
@@ -101,11 +103,18 @@ class RemoteLogger(Node):
         self.imagesAndRunningContainers[workerName] = workerInfo
 
     def __saveToPersistentStorage(self):
-        self.persistentStorage.save('edges.json', self.edges)
-        self.persistentStorage.save('nodeResources.json', self.nodeResources)
-        self.persistentStorage.save('averageProcessTime.json', self.averageProcessTime)
-        self.persistentStorage.save('averageRespondTime.json', self.averageRespondTime)
-        self.persistentStorage.save('imagesAndRunningContainers.json', self.imagesAndRunningContainers)
+        self.persistentStorage.write('edges.json', self.edges)
+        self.persistentStorage.write('nodeResources.json', self.nodeResources)
+        self.persistentStorage.write('averageProcessTime.json', self.averageProcessTime)
+        self.persistentStorage.write('averageRespondTime.json', self.averageRespondTime)
+        self.persistentStorage.write('imagesAndRunningContainers.json', self.imagesAndRunningContainers)
+
+    def __readFromPersistentStorage(self):
+        self.persistentStorage.read('edges.json', self.edges)
+        self.persistentStorage.read('nodeResources.json', self.nodeResources)
+        self.persistentStorage.read('averageProcessTime.json', self.averageProcessTime)
+        self.persistentStorage.read('averageRespondTime.json', self.averageRespondTime)
+        self.persistentStorage.read('imagesAndRunningContainers.json', self.imagesAndRunningContainers)
 
 
 if __name__ == '__main__':
