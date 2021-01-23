@@ -17,13 +17,6 @@ class RemoteLogger(Node):
             masterAddr: Address,
             loggerAddr: Address,
             logLevel=logging.DEBUG):
-        super().__init__(
-            myAddr=myAddr,
-            masterAddr=masterAddr,
-            periodicTasks=[
-                (self.__saveToPersistentStorage, 2)],
-            loggerAddr=loggerAddr)
-        self.logLevel = logLevel
 
         self.edges: Dict[str, Edge] = {}
         self.nodeResources: Dict[str, ResourcesInfo] = {}
@@ -33,6 +26,14 @@ class RemoteLogger(Node):
 
         self.persistentStorage: PersistentStorage = PersistentStorage()
         self.__readFromPersistentStorage()
+
+        super().__init__(
+            myAddr=myAddr,
+            masterAddr=masterAddr,
+            periodicTasks=[
+                (self.__saveToPersistentStorage, 2)],
+            loggerAddr=loggerAddr)
+        self.logLevel = logLevel
 
     def run(self):
         self.role = 'remoteLogger'
@@ -103,11 +104,11 @@ class RemoteLogger(Node):
         self.imagesAndRunningContainers[workerName] = workerInfo
 
     def __saveToPersistentStorage(self):
-        self.persistentStorage.write('edges.json', self.edges)
-        self.persistentStorage.write('nodeResources.json', self.nodeResources)
-        self.persistentStorage.write('averageProcessTime.json', self.averageProcessTime)
-        self.persistentStorage.write('averageRespondTime.json', self.averageRespondTime)
-        self.persistentStorage.write('imagesAndRunningContainers.json', self.imagesAndRunningContainers)
+        self.persistentStorage.write('edges', self.edges)
+        self.persistentStorage.write('nodeResources', self.nodeResources)
+        self.persistentStorage.write('averageProcessTime', self.averageProcessTime)
+        self.persistentStorage.write('averageRespondTime', self.averageRespondTime)
+        self.persistentStorage.write('imagesAndRunningContainers', self.imagesAndRunningContainers)
 
     def __readFromPersistentStorage(self):
         self.edges = self.persistentStorage.read('edges')

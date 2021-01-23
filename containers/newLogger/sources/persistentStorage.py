@@ -18,7 +18,8 @@ class PersistentStorage:
         if not os.path.exists(folder):
             os.mkdir(folder)
 
-    def write(self, filename: str, _dict: Dict):
+    def write(self, name: str, _dict: Dict):
+        filename = name + '.json'
         _dictCopy = deepcopy(_dict)
 
         for key, value in _dictCopy.items():
@@ -80,9 +81,8 @@ class PersistentStorage:
             json.dump(content, outfile)
 
     def __readFromFileInJson(self, filename: str) -> Dict:
+        filename = os.path.join(self.__folder, filename)
         if not os.path.exists(filename):
             return {}
-        with open(
-                os.path.join(self.__folder, filename),
-                'r') as outfile:
+        with open(filename, 'r') as outfile:
             return json.loads(outfile.read())
