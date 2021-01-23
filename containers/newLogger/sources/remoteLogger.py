@@ -6,33 +6,25 @@ from connection import Message, Average
 from logger import get_logger
 from edge import Edge
 from typing import Dict, List, Tuple
-from resourcesInfo import ResourcesInfo, WorkerInfo
-from persistentStorage import PersistentStorage
+from profilerManage import Profiler
 
 
-class RemoteLogger(Node):
+class RemoteLogger(Profiler, Node):
     def __init__(
             self,
             myAddr: Address,
             masterAddr: Address,
             loggerAddr: Address,
             logLevel=logging.DEBUG):
-
-        self.edges: Dict[str, Edge] = {}
-        self.nodeResources: Dict[str, ResourcesInfo] = {}
-        self.averageProcessTime: Dict[str, float] = {}
-        self.averageRespondTime: Dict[str, float] = {}
-        self.imagesAndRunningContainers: Dict[str, WorkerInfo] = {}
-
-        self.persistentStorage: PersistentStorage = PersistentStorage()
-        self.__readFromPersistentStorage()
-
-        super().__init__(
+        Profiler.__init__(self)
+        Node.__init__(
+            self,
             myAddr=myAddr,
             masterAddr=masterAddr,
             periodicTasks=[
-                (self.__saveToPersistentStorage, 2)],
+                (self._Profiler__saveToPersistentStorage, 2)],
             loggerAddr=loggerAddr)
+
         self.logLevel = logLevel
 
     def run(self):
@@ -55,6 +47,8 @@ class RemoteLogger(Node):
             self.__handleRoundTripDelay(message=message)
         elif message.type == 'imagesAndRunningContainers':
             self.__handleImagesAndRunningContainers(message=message)
+        elif message.type == '__requestProfiler':
+            self.__handleRequestProfiler(message=message)
 
     def __handleAverageReceivedPackageSize(self, message: Message):
         result = self.__handleEdgeAverage(message, 'averageReceivedPackageSize')
@@ -103,19 +97,19 @@ class RemoteLogger(Node):
         workerInfo = message.content['imagesAndRunningContainers']
         self.imagesAndRunningContainers[workerName] = workerInfo
 
-    def __saveToPersistentStorage(self):
-        self.persistentStorage.write('edges', self.edges)
-        self.persistentStorage.write('nodeResources', self.nodeResources)
-        self.persistentStorage.write('averageProcessTime', self.averageProcessTime)
-        self.persistentStorage.write('averageRespondTime', self.averageRespondTime)
-        self.persistentStorage.write('imagesAndRunningContainers', self.imagesAndRunningContainers)
-
-    def __readFromPersistentStorage(self):
-        self.edges = self.persistentStorage.read('edges')
-        self.nodeResources = self.persistentStorage.read('nodeResources', )
-        self.averageProcessTime = self.persistentStorage.read('averageProcessTime')
-        self.averageRespondTime = self.persistentStorage.read('averageRespondTime')
-        self.imagesAndRunningContainers = self.persistentStorage.read('imagesAndRunningContainers')
+    def __handleRequestProfiler(self, message: Message):
+        if not message.source.role == 'master':
+            return
+        msg = {
+            'type': 'profiler',
+            'profiler': [
+                self.edges,
+                self.nodeResources,
+                self.averageProcessTime,
+                self.averageRespondTime,
+                self.imagesAndRunningContainers,
+            ]}
+        self.sendMessage(msg, message.source.addr)
 
 
 if __name__ == '__main__':

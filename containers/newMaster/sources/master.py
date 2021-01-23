@@ -5,10 +5,10 @@ from logger import get_logger
 from registry import Registry
 from connection import Server, Message
 from node import Node
-from datatype import User
+from profilerManage import Profiler
 
 
-class Master(Node):
+class Master(Node, Profiler):
 
     def __init__(
             self,
@@ -18,10 +18,15 @@ class Master(Node):
             masterID: int = 0,
             logLevel=logging.DEBUG):
 
-        super().__init__(
+        Profiler.__init__(self)
+        Node.__init__(
+            self,
             myAddr=myAddr,
             masterAddr=masterAddr,
             loggerAddr=loggerAddr,
+            periodicTasks=[
+                (self._Profiler__saveToPersistentStorage, 2),
+                (self.__requestProfiler, 2)],
             logLevel=logLevel
         )
 
@@ -47,6 +52,8 @@ class Master(Node):
             self.__handleReady(message=message)
         elif message.type == 'exit':
             self.__handleExit(message=message)
+        elif message.type == 'profiler':
+            self.__handleProfiler(message=message)
 
     def __handleRegister(self, message: Message):
         respond = self.registry.register(message=message)
@@ -128,6 +135,19 @@ class Master(Node):
             del self.registry.workers[message.source.id]
 
         self.logger.info('%s exit.', message.source.name)
+
+    def __handleProfiler(self, message: Message):
+        profilers = message.content['profiler']
+        # Merge
+        self.edges.__dict__ = profilers[0].__dict__
+        self.nodeResources.__dict__ = profilers[1].__dict__
+        self.averageProcessTime.__dict__ = profilers[2].__dict__
+        self.averageRespondTime.__dict__ = profilers[3].__dict__
+        self.imagesAndRunningContainers.__dict__ = profilers[4].__dict__
+
+    def __requestProfiler(self):
+        msg = {'type': 'requestProfiler'}
+        self.sendMessage(msg, self.loggerAddr)
 
 
 if __name__ == '__main__':

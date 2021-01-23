@@ -143,6 +143,7 @@ class Node:
         self.sendMessage(msg, message.source.addr)
 
     def __periodic(self, runner: Callable, period: float):
+        runner()
         lastCollectTime = time()
         while True:
             timeToSleep = lastCollectTime + period - time()

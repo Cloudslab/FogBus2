@@ -5,8 +5,8 @@ import os
 import re
 import docker
 from exceptions import *
-from connection import Connection, Message
-from node import Node, PeriodicTask
+from connection import Message
+from node import Node
 from logger import get_logger
 from resourcesInfo import WorkerInfo
 
@@ -19,6 +19,10 @@ class Worker(Node):
             masterAddr,
             loggerAddr,
             logLevel=logging.DEBUG):
+
+        self.isRegistered: threading.Event = threading.Event()
+        self.dockerClient = docker.from_env()
+
         super().__init__(
             myAddr=myAddr,
             masterAddr=masterAddr,
@@ -27,9 +31,6 @@ class Worker(Node):
                 (self.__uploadImagesAndRunningContainersList, 10)],
             logLevel=logLevel
         )
-
-        self.isRegistered: threading.Event = threading.Event()
-        self.dockerClient = docker.from_env()
 
     def run(self):
         self.__register()

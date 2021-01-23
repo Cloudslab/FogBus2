@@ -26,14 +26,6 @@ class User(Node):
             appName,
             label,
             logLevel=logging.DEBUG):
-        super().__init__(
-            myAddr=myAddr,
-            masterAddr=masterAddr,
-            loggerAddr=loggerAddr,
-            periodicTasks=[
-                (self.__uploadAverageRespondTime, 10)],
-            logLevel=logLevel
-        )
 
         self.isRegistered: threading.Event = threading.Event()
         self.appName = appName
@@ -42,6 +34,14 @@ class User(Node):
 
         self.__lastDataSentTime = time()
         self.respondTime: Average = Average()
+        super().__init__(
+            myAddr=myAddr,
+            masterAddr=masterAddr,
+            loggerAddr=loggerAddr,
+            periodicTasks=[
+                (self.__uploadAverageRespondTime, 10)],
+            logLevel=logLevel
+        )
 
     def run(self):
         self.__register()

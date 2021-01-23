@@ -2,15 +2,11 @@ import logging
 from threading import Lock
 from queue import Queue
 from logger import get_logger
-from datatype import Worker, User, NodeSpecs, ConnectionIO
+from datatype import Worker, User
 from datatype import Client, TaskHandler
-from exceptions import *
-from time import sleep, time
-from connection import Message, Connection
-
+from connection import Message
 from typing import Dict
-from dependencies import loadDependencies, Application, Task, Dependency
-from weights import loadEdgeWeights, loadTaskWeights
+from dependencies import loadDependencies, Application
 
 
 class Registry:
@@ -33,16 +29,14 @@ class Registry:
         self.taskHandlers: Dict[int, TaskHandler] = {}
 
         self.profiler = self.__loadProfilers()
-        self.tasks, self.applications, self.edgeWeights, self.taskWeights = self.profiler
+        self.tasks, self.applications = self.profiler
         self.logger = get_logger('Master-Registry', logLevel)
         self.messageForWorker: Queue[tuple[Dict, tuple[str, int]]] = Queue()
 
     @staticmethod
     def __loadProfilers():
         tasks, applications = loadDependencies()
-        edgeWeights = loadEdgeWeights(applications)
-        taskWeights = loadTaskWeights(tasks, applications)
-        return tasks, applications, edgeWeights, taskWeights
+        return tasks, applications
 
     @staticmethod
     def __loadDependencies():
@@ -70,8 +64,7 @@ class Registry:
         worker = Worker(
             name='Worker-%d' % workerID,
             addr=message.source.addr,
-            workerID=workerID,
-            connectionIO=ConnectionIO()
+            workerID=workerID
         )
 
         self.workers[workerID] = worker
@@ -107,7 +100,6 @@ class Registry:
             token=token,
             taskName=taskName,
             runningOnWorker=runningOnWorker,
-            connectionIO=ConnectionIO(),
             user=user
         )
 
@@ -149,7 +141,6 @@ class Registry:
             addr=message.source.addr,
             userID=userID,
             appName=appName,
-            connectionIO=ConnectionIO()
         )
         self.users[user.id] = user
         self.__handleRequest(user)
