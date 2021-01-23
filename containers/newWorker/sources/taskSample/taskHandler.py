@@ -30,7 +30,8 @@ class TaskHandler(Node):
             myAddr=myAddr,
             masterAddr=masterAddr,
             loggerAddr=loggerAddr,
-            periodicTasks=[self.__uploadAverageProcessTime],
+            periodicTasks=[
+                (self.__uploadAverageProcessTime, 10)],
             logLevel=logLevel
         )
 

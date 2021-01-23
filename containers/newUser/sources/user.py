@@ -1,6 +1,5 @@
 import logging
 import sys
-import signal
 from apps import *
 from node import Node
 from connection import Message, Average
@@ -31,7 +30,8 @@ class User(Node):
             myAddr=myAddr,
             masterAddr=masterAddr,
             loggerAddr=loggerAddr,
-            periodicTasks=[self.__uploadAverageRespondTime],
+            periodicTasks=[
+                (self.__uploadAverageRespondTime, 10)],
             logLevel=logLevel
         )
 

@@ -6,7 +6,7 @@ import re
 import docker
 from exceptions import *
 from connection import Connection, Message
-from node import Node
+from node import Node, PeriodicTask
 from logger import get_logger
 from resourcesInfo import WorkerInfo
 
@@ -23,7 +23,8 @@ class Worker(Node):
             myAddr=myAddr,
             masterAddr=masterAddr,
             loggerAddr=loggerAddr,
-            periodicTasks=[self.__uploadImagesAndRunningContainersList],
+            periodicTasks=[
+                (self.__uploadImagesAndRunningContainersList, 10)],
             logLevel=logLevel
         )
 

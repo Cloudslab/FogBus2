@@ -13,6 +13,7 @@ from time import time, sleep
 from resourcesInfo import Resources
 
 Address = Tuple[str, int]
+PeriodicTask = Tuple[Callable, float]
 
 
 class Node:
@@ -22,7 +23,7 @@ class Node:
             myAddr: Address,
             masterAddr: Address,
             loggerAddr: Address,
-            periodicTasks=None,
+            periodicTasks: List[PeriodicTask] = None,
             logLevel=logging.DEBUG):
         self.name: str = None
         self.role: str = None
@@ -45,18 +46,18 @@ class Node:
         self.receivedPackageSize: Dict[str, Average] = {}
         self.resources: Resources = Resources()
 
-        defaultPeriodicTasks = [
-            self.__uploadResources,
-            self.__uploadAverageReceivedPackageSize,
-            self.__uploadRoundTripDelay,
+        defaultPeriodicTasks: List[PeriodicTask] = [
+            (self.__uploadResources, 10),
+            (self.__uploadAverageReceivedPackageSize, 10),
+            (self.__uploadRoundTripDelay, 10),
         ]
         if periodicTasks is None:
             periodicTasks = []
-        self.periodicTasks: List[Callable] = defaultPeriodicTasks + periodicTasks
-        for runner in self.periodicTasks:
+        self.periodicTasks: List[PeriodicTask] = defaultPeriodicTasks + periodicTasks
+        for runner, period in self.periodicTasks:
             threading.Thread(
                 target=self.__periodic,
-                args=(runner,)
+                args=(runner, period)
             ).start()
 
     @abstractmethod
@@ -91,15 +92,11 @@ class Node:
             id_=self.id,
             name=self.name
         )
-        try:
-            message['source'] = source
-            Connection(addr).send(message)
+        message['source'] = source
+        Connection(addr).send(message)
 
-            ping = {'type': 'ping', 'time': time(), 'source': source}
-            Connection(addr).send(ping)
-        except SocketError:
-            self.logger.info('Failed to send message to %s:%d', addr[0], addr[1])
-            os._exit(-1)
+        ping = {'type': 'ping', 'time': time(), 'source': source}
+        Connection(addr).send(ping)
 
     @abstractmethod
     def handleMessage(self, message: Message):
@@ -144,10 +141,10 @@ class Node:
         msg = {'type': 'nodeResources', 'resources': self.resources.all()}
         self.sendMessage(msg, message.source.addr)
 
-    def __periodic(self, runner: Callable):
+    def __periodic(self, runner: Callable, period: float):
         lastCollectTime = time()
         while True:
-            timeToSleep = lastCollectTime + 10 - time()
+            timeToSleep = lastCollectTime + period - time()
             sleep(0 if timeToSleep < 0 else timeToSleep)
             if self.role is None:
                 continue

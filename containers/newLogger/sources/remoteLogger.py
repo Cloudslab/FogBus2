@@ -1,6 +1,6 @@
 import sys
 import logging
-from node import Node, Address
+from node import Node, Address, Pe
 from connection import Message, Average
 from logger import get_logger
 from edge import Edge
@@ -15,7 +15,12 @@ class RemoteLogger(Node):
             masterAddr: Address,
             loggerAddr: Address,
             logLevel=logging.DEBUG):
-        super().__init__(myAddr, masterAddr, loggerAddr)
+        super().__init__(
+            myAddr=myAddr,
+            masterAddr=masterAddr,
+            periodicTasks=[
+                (self.__saveToPersistentStorage, 2)],
+            loggerAddr=loggerAddr)
         self.logLevel = logLevel
 
         self.edges: Dict[str, Edge] = {}
@@ -91,6 +96,9 @@ class RemoteLogger(Node):
         workerName = message.source.name
         workerInfo = message.content['imagesAndRunningContainers']
         self.imagesAndRunningContainers[workerName] = workerInfo
+
+    def __saveToPersistentStorage(self):
+        pass
 
 
 if __name__ == '__main__':
