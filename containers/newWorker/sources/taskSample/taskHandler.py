@@ -107,8 +107,6 @@ class TaskHandler(Node):
             self.__handleTaskHandlerInfo(message)
         elif message.type == 'data':
             self.__handleData(message)
-        elif message.type == 'stop':
-            self.__handleStop(message)
 
     def __handleRegistered(self, message: Message):
         role = message.content['role']
@@ -152,12 +150,6 @@ class TaskHandler(Node):
         msg['result'] = result
 
         self.sendMessage(msg, self.masterAddr)
-
-    def __handleStop(self, message: Message):
-        msg = {'type': 'exit'}
-        self.sendMessage(msg, self.masterAddr)
-        self.logger.info('Exit.')
-        os._exit(0)
 
 
 if __name__ == '__main__':

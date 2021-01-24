@@ -108,6 +108,9 @@ class Node:
             elif message.type == 'resourcesQuery':
                 self.__handleResourcesQuery(message)
                 continue
+            elif message.type == 'stop':
+                self.__handleStop(message)
+                continue
             self.handleMessage(message)
 
     def sendMessage(self, message: Dict, addr):
@@ -148,7 +151,7 @@ class Node:
     def __signalHandler(self, sig, frame):
         # https://stackoverflow.com/questions/1112343
         if self.role not in {'Master', 'RemoteLogger'}:
-            message = {'type': 'exit'}
+            message = {'type': 'exit', 'reason': 'Manually interrupted.'}
             self.sendMessage(message, self.masterAddr)
         self.__myService.serverSocket.close()
         print('[*] Bye.')
@@ -178,6 +181,17 @@ class Node:
             return
         msg = {'type': 'nodeResources', 'resources': self.resources.all()}
         self.sendMessage(msg, message.source.addr)
+
+    def __handleStop(self, message: Message):
+        reasonFormatted = '%s asks me to stop. ' \
+                          'Reason: %s' % (
+                              message.source.name,
+                              message.content['reason'])
+        msg = {'type': 'exit', 'reason': reasonFormatted}
+        self.sendMessage(msg, self.masterAddr)
+        self.logger.warning(reasonFormatted)
+        self.logger.info('Exit.')
+        os._exit(0)
 
     def __periodic(self, runner: Callable, period: float):
         self.__gotName.wait()

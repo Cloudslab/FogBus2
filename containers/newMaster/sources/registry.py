@@ -51,6 +51,7 @@ class Registry:
             return self.__addWorker(message)
         if targetRole == 'TaskHandler':
             return self.__addTaskHandler(message)
+        return None
 
     def __newWorkerID(self):
         self.__lockCurrentWorkerID.acquire()

@@ -74,6 +74,10 @@ class Master(Node, Profiler):
 
     def __handleRegister(self, message: Message):
         respond = self.registry.register(message=message)
+        if respond is None:
+            return self.__stopClient(
+                message.source.addr,
+                'No such role: %s' % message.content['role'])
         self.sendMessage(respond, message.source.addr)
         self.logger.info('%s registered', respond['nameLogPrinting'])
 
@@ -85,10 +89,14 @@ class Master(Node, Profiler):
     def __handleData(self, message: Message):
         userID = message.content['userID']
         if userID not in self.registry.users:
-            return
+            return self.__stopClient(
+                message.source.addr,
+                'User-%d does not exist' % userID)
         user = self.registry.users[userID]
         if not user.addr == message.source.addr:
-            return
+            return self.__stopClient(
+                message.source.addr,
+                'You are not User-%d' % userID)
 
         for taskName in user.entranceTasksByName:
             taskHandlerToken = user.taskNameTokenMap[taskName].token
@@ -98,14 +106,18 @@ class Master(Node, Profiler):
     def __handleResult(self, message: Message):
         userID = message.content['userID']
         if userID not in self.registry.users:
-            return
+            return self.__stopClient(
+                message.source.addr,
+                'User-%d does not exist' % userID)
         user = self.registry.users[userID]
         self.sendMessage(message.content, user.addr)
 
     def __handleLookup(self, message: Message):
         taskHandlerToken = message.content['token']
         if taskHandlerToken not in self.registry.taskHandlerByToken:
-            return
+            return self.__stopClient(
+                message.source.addr,
+                'TaskHandler does not exist by token: %s' % taskHandlerToken)
         taskHandler = self.registry.taskHandlerByToken[taskHandlerToken]
         respond = {
             'type': 'taskHandlerInfo',
@@ -116,7 +128,9 @@ class Master(Node, Profiler):
 
     def __handleReady(self, message: Message):
         if not message.source.role == 'TaskHandler':
-            return
+            return self.__stopClient(
+                message.source.addr,
+                'You are not TaskHandler')
 
         taskHandlerToken = message.content['token']
         taskHandler = self.registry.taskHandlerByToken[taskHandlerToken]
@@ -137,6 +151,11 @@ class Master(Node, Profiler):
         user.lock.release()
 
     def __handleExit(self, message: Message):
+        self.logger.info(
+            '%s at %s exit with reason: %s',
+            message.source.nameLogPrinting,
+            str(message.source.addr),
+            message.content['reason'])
         if message.source.machineID not in self.registry.clients:
             return
         if message.source.role == 'user':
@@ -155,7 +174,6 @@ class Master(Node, Profiler):
 
         if message.source.machineID in self.registry.clients:
             del self.registry.clients[message.source.machineID]
-        self.logger.info('%s exit.', message.source.name)
 
     def __handleProfiler(self, message: Message):
         profilers = message.content['profiler']
@@ -170,8 +188,9 @@ class Master(Node, Profiler):
         self.scheduler.edges = self.edges
         self.scheduler.averageProcessTime = self.averageProcessTime
 
-    def __stopClient(self, addr: Address):
-        pass
+    def __stopClient(self, addr: Address, reason: str = 'No reason'):
+        msg = {'type': 'stop', 'reason': reason}
+        self.sendMessage(msg, addr)
 
     def __requestProfiler(self):
         msg = {'type': 'requestProfiler'}
