@@ -5,7 +5,7 @@ from logger import get_logger
 from datatype import Worker, User
 from datatype import Client, TaskHandler
 from connection import Message
-from typing import Dict
+from typing import Dict, Union
 from dependencies import loadDependencies, Application
 
 
@@ -19,6 +19,7 @@ class Registry:
         self.workers: Dict[int, Worker] = {}
         self.__currentUserID: int = 0
         self.__lockCurrentUserID: Lock = Lock()
+        self.clients: Dict[str, Union[User, Worker, TaskHandler]] = {}
         self.users: Dict[int, User] = {}
         self.workersQueue: Queue[Worker] = Queue()
         self.taskHandlerByToken: Dict[str, TaskHandler] = {}
@@ -70,6 +71,7 @@ class Registry:
             machineID=machineID)
 
         self.workers[workerID] = worker
+        self.clients[worker.machineID] = worker
         respond = {
             'type': 'registered',
             'role': 'worker',
@@ -132,6 +134,7 @@ class Registry:
 
         self.taskHandlers[taskHandler.id] = taskHandler
         self.taskHandlerByToken[taskHandler.token] = taskHandler
+        self.clients[taskHandler.machineID] = taskHandler
         respond = {
             'type': 'registered',
             'role': 'taskHandler',
@@ -169,6 +172,7 @@ class Registry:
             appName=appName,
             machineID=machineID)
         self.users[user.id] = user
+        self.clients[user.machineID] = user
         self.__handleRequest(user)
         respond = {
             'type': 'registered',

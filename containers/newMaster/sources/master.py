@@ -134,6 +134,8 @@ class Master(Node, Profiler):
         elif message.source.role == 'worker':
             del self.registry.workers[message.source.id]
 
+        if message.source.machineID in self.registry.clients:
+            del self.registry.clients[message.source.machineID]
         self.logger.info('%s exit.', message.source.name)
 
     def __handleProfiler(self, message: Message):
