@@ -5,7 +5,7 @@ from datatype import TaskHandler
 from connection import Message
 from typing import Dict, Union, List, Tuple
 from dependencies import loadDependencies, Application
-from scheduling import Scheduler
+from scheduling import Scheduler, Decision
 
 Address = Tuple[str, int]
 
@@ -221,7 +221,7 @@ class Registry:
                 applicationName=user.appName,
                 label=user.label,
                 userMachineID=user.machineID)
-            print(decision)
+            messageForWorkers = self.__parseDecision(decision, user)
         except (KeyError, TypeError):
             # has not seen this user or
             # this is the first time fot this user
@@ -231,6 +231,25 @@ class Registry:
             messageForWorkers = self.__randomlySchedule(user)
         for message, addr in messageForWorkers:
             self.messageForWorker.put((message, addr))
+
+    def __parseDecision(self, decision: Decision, user: User):
+        messageForWorkers = []
+        for machineName, machineID in decision.machines.items():
+            nameSplit = machineName.split('@')
+            machineRole = nameSplit[-1]
+            taskName = nameSplit[0]
+            if machineRole == 'TaskHandler':
+                userTask = user.taskNameTokenMap[taskName]
+                message = {
+                    'type': 'runTaskHandler',
+                    'userID': user.id,
+                    'userName': user.name,
+                    'taskName': taskName,
+                    'token': userTask.token,
+                    'childTaskTokens': userTask.childTaskTokens}
+                worker = self.clients[machineID]
+                messageForWorkers.append((message, worker.addr))
+        return messageForWorkers
 
     def __randomlySchedule(self, user) -> List[Tuple[Dict, Address]]:
 
@@ -249,7 +268,7 @@ class Registry:
                 'userName': user.name,
                 'taskName': taskName,
                 'token': token,
-                'childTaskTokens': childTaskTokens, }
+                'childTaskTokens': childTaskTokens}
             messageForWorkers.append((message, worker.addr))
             self.workersQueue.put(worker)
         return messageForWorkers
