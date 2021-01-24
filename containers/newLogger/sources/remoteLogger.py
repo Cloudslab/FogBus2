@@ -22,7 +22,7 @@ class RemoteLogger(Profiler, Node):
             myAddr=myAddr,
             masterAddr=masterAddr,
             periodicTasks=[
-                (self._Profiler__saveToPersistentStorage, 2)],
+                (self._saveToPersistentStorage, 2)],
             loggerAddr=loggerAddr)
 
         self.logLevel = logLevel

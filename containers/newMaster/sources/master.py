@@ -7,6 +7,9 @@ from connection import Message
 from node import Node
 from profilerManage import Profiler
 from scheduling import Scheduler, NSGA3
+from typing import Tuple
+
+Address = Tuple[str, int]
 
 
 class Master(Node, Profiler):
@@ -27,7 +30,7 @@ class Master(Node, Profiler):
             masterAddr=masterAddr,
             loggerAddr=loggerAddr,
             periodicTasks=[
-                (self._Profiler__saveToPersistentStorage, 2),
+                (self._saveToPersistentStorage, 2),
                 (self.__requestProfiler, 2)],
             logLevel=logLevel
         )
@@ -166,6 +169,9 @@ class Master(Node, Profiler):
         # update
         self.scheduler.edges = self.edges
         self.scheduler.averageProcessTime = self.averageProcessTime
+
+    def __stopClient(self, addr: Address):
+        pass
 
     def __requestProfiler(self):
         msg = {'type': 'requestProfiler'}

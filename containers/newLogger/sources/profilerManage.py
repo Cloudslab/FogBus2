@@ -15,7 +15,7 @@ class Profiler:
         self.persistentStorage: PersistentStorage = PersistentStorage()
         self.__readFromPersistentStorage()
 
-    def __saveToPersistentStorage(self):
+    def _saveToPersistentStorage(self):
         self.persistentStorage.write('edges', self.edges)
         self.persistentStorage.write('nodeResources', self.nodeResources)
         self.persistentStorage.write('averageProcessTime', self.averageProcessTime)
