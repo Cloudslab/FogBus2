@@ -45,7 +45,7 @@ class Registry:
             return self.__addUser(message)
         if targetRole == 'worker':
             return self.__addWorker(message)
-        if targetRole == 'taskHandler':
+        if targetRole == 'TaskHandler':
             return self.__addTaskHandler(message)
 
     def __newWorkerID(self):
@@ -105,7 +105,7 @@ class Registry:
         # To differentiate where this taskHandler is running on
         # Thus use worker machineID as the taskHandler machineID
         machineID = worker.machineID
-        name = '%s@TaskHandler' % taskName
+        name = '%s@%s@TaskHandler' % (taskName, user.label)
         nameLogPrinting = '%s-%d' % (name, taskHandlerID)
         nameConsistent = '%s#%s' % (name, machineID)
 
@@ -137,7 +137,7 @@ class Registry:
         self.clients[taskHandler.machineID] = taskHandler
         respond = {
             'type': 'registered',
-            'role': 'taskHandler',
+            'role': 'TaskHandler',
             'id': taskHandlerID,
             'name': taskHandler.name,
             'nameLogPrinting': taskHandler.nameLogPrinting,
@@ -170,6 +170,7 @@ class Registry:
             addr=message.source.addr,
             userID=userID,
             appName=appName,
+            label=label,
             machineID=machineID)
         self.users[user.id] = user
         self.clients[user.machineID] = user
@@ -207,19 +208,20 @@ class Registry:
 
         app: Application = self.applications[user.appName]
 
+        skipRoles = {'Sensor', 'Actor', 'RemoteLogger'}
         for taskName, dependency in app.dependencies.items():
-            if taskName in ['Sensor', 'Actor', 'RemoteLogger']:
+            if taskName in skipRoles:
                 if taskName == 'Sensor':
                     user.entranceTasksByName = dependency.childTaskList
                 continue
             user.generateToken(taskName)
 
         for taskName, dependency in app.dependencies.items():
-            if taskName in ['Sensor', 'Actor', 'RemoteLogger']:
+            if taskName in skipRoles:
                 continue
             childTaskTokens = []
             for childTaskName in dependency.childTaskList:
-                if childTaskName in ['Sensor', 'Actor', 'RemoteLogger']:
+                if childTaskName in skipRoles:
                     continue
                 childTaskTokens.append(user.taskNameTokenMap[childTaskName].token)
             user.taskNameTokenMap[taskName].childTaskTokens = childTaskTokens

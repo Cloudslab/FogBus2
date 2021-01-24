@@ -28,7 +28,7 @@ class RemoteLogger(Profiler, Node):
         self.logLevel = logLevel
 
     def run(self):
-        self.role = 'remoteLogger'
+        self.role = 'RemoteLogger'
         self.id = 0
         self.setName()
         self.logger = get_logger(self.nameLogPrinting, self.logLevel)
@@ -101,7 +101,7 @@ class RemoteLogger(Profiler, Node):
         self.imagesAndRunningContainers[workerName] = workerInfo
 
     def __handleRequestProfiler(self, message: Message):
-        if not message.source.role == 'master':
+        if not message.source.role == 'Master':
             return
         msg = {
             'type': 'profiler',

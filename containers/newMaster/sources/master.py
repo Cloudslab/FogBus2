@@ -34,7 +34,7 @@ class Master(Node, Profiler):
         self.registry: Registry = Registry()
 
     def run(self):
-        self.role = 'master'
+        self.role = 'Master'
         self.setName()
         self.logger = get_logger(self.nameLogPrinting, self.logLevel)
         self.logger.info("Serving ...")
@@ -98,7 +98,7 @@ class Master(Node, Profiler):
         self.sendMessage(respond, message.source.addr)
 
     def __handleReady(self, message: Message):
-        if not message.source.role == 'taskHandler':
+        if not message.source.role == 'TaskHandler':
             return
 
         taskHandlerToken = message.content['token']
@@ -126,7 +126,7 @@ class Master(Node, Profiler):
             for taskHandler in user.taskHandlerByTaskName.values():
                 self.sendMessage(msg, taskHandler.addr)
             del self.registry.users[message.source.id]
-        elif message.source.role == 'taskHandler':
+        elif message.source.role == 'TaskHandler':
             if message.source.id in self.registry.taskHandlers:
                 taskHandler = self.registry.taskHandlers[message.source.id]
                 del self.registry.taskHandlerByToken[taskHandler.token]

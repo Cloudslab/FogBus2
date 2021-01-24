@@ -76,7 +76,7 @@ class TaskHandler(Node):
     def __register(self):
         message = {
             'type': 'register',
-            'role': 'taskHandler',
+            'role': 'TaskHandler',
             'userID': self.userID,
             'taskName': self.taskName,
             'workerID': self.workerID,
@@ -112,7 +112,7 @@ class TaskHandler(Node):
 
     def __handleRegistered(self, message: Message):
         role = message.content['role']
-        if not role == 'taskHandler':
+        if not role == 'TaskHandler':
             raise RegisteredAsWrongRole
         self.id = message.content['id']
         self.role = role

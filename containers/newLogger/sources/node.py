@@ -52,7 +52,7 @@ class Node:
 
         defaultPeriodicTasks: List[PeriodicTask] = [
             (self.__uploadResources, 10)]
-        if not self.role == 'remoteLogger':
+        if not self.role == 'RemoteLogger':
             defaultPeriodicTasks += [
                 (self.__uploadAverageReceivedPackageSize, 10),
                 (self.__uploadRoundTripDelay, 10)]
@@ -66,7 +66,7 @@ class Node:
             ).start()
 
     def setName(self, message: Message = None):
-        if self.role in {'master', 'remoteLogger'}:
+        if self.role in {'Master', 'RemoteLogger'}:
             self.name = '%s' % self.role
             self.nameLogPrinting = '%s-%d' % (self.name, self.id)
             self.nameConsistent = '%s#%s' % (self.name, self.machineID)
@@ -147,7 +147,7 @@ class Node:
 
     def __signalHandler(self, sig, frame):
         # https://stackoverflow.com/questions/1112343
-        if self.role not in {'master', 'remoteLogger'}:
+        if self.role not in {'Master', 'RemoteLogger'}:
             message = {'type': 'exit'}
             self.sendMessage(message, self.masterAddr)
         self.__myService.serverSocket.close()

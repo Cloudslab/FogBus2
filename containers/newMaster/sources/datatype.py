@@ -86,7 +86,8 @@ class User(Client):
             machineID: str,
             addr,
             userID: int,
-            appName: int,
+            appName: str,
+            label: str,
             name: str,
             nameLogPrinting: str,
             nameConsistent: str,
@@ -101,7 +102,8 @@ class User(Client):
             addr=addr,
             machineID=machineID)
         self.id = userID
-        self.appName = appName
+        self.appName: str = appName
+        self.label: str = label
         self.taskNameTokenMap: Dict[str, UserTask] = {}
         if taskHandlerByTaskName is None:
             self.taskHandlerByTaskName: dict[str, TaskHandler] = {}
