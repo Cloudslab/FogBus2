@@ -9,6 +9,8 @@ from queue import Queue, PriorityQueue
 from typing import Any, Dict, Tuple, List
 from exceptions import *
 
+Address = Tuple[str, int]
+
 
 def encrypt(obj) -> bytes:
     data = pickle.dumps(obj, 0)
@@ -28,12 +30,14 @@ class Identity:
             self,
             role: str,
             id_: int,
+            addr: Address,
             name: str,
             nameLogPrinting: str,
             nameConsistent: str,
             machineID: str):
         self.role: str = role
         self.id: int = id_
+        self.addr: Address = addr
         self.name: str = name
         self.nameLogPrinting: str = nameLogPrinting
         self.nameConsistent: str = nameConsistent
@@ -50,16 +54,16 @@ class Source(Identity):
             nameLogPrinting: str,
             nameConsistent: str,
             machineID: str,
-            addr: Tuple[str, int]):
+            addr: Address):
         super().__init__(
             role=role,
             id_=id_,
             name=name,
+            addr=addr,
             nameLogPrinting=nameLogPrinting,
             nameConsistent=nameConsistent,
             machineID=machineID
         )
-        self.addr: Tuple[str, int] = addr
 
 
 class Average(Identity):
@@ -68,6 +72,7 @@ class Average(Identity):
             self,
             role: str = None,
             id_: int = None,
+            addr: Address = None,
             name: str = None,
             nameLogPrinting: str = None,
             nameConsistent: str = None,
@@ -75,6 +80,7 @@ class Average(Identity):
         super().__init__(
             role=role,
             id_=id_,
+            addr=addr,
             name=name,
             nameLogPrinting=nameLogPrinting,
             nameConsistent=nameConsistent,

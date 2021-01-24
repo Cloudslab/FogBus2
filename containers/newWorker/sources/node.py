@@ -2,8 +2,6 @@ import threading
 import logging
 import os
 import signal
-import traceback
-from socket import error as SocketError
 from queue import Queue, PriorityQueue
 from connection import Server, Message, Connection, Source, Average
 from abc import abstractmethod
@@ -25,7 +23,11 @@ class Node:
             loggerAddr: Address,
             periodicTasks: List[PeriodicTask] = None,
             logLevel=logging.DEBUG):
-        self.resources: Resources = Resources()
+        self.myAddr = myAddr
+        self.masterAddr = masterAddr
+        self.loggerAddr = loggerAddr
+        self.resources: Resources = Resources(
+            addr=self.myAddr)
         self.name: str = None
         self.nameLogPrinting: str = None
         self.nameConsistent: str = None
@@ -33,9 +35,7 @@ class Node:
         self.role: str = None
         self.id: int = None
         self.machineID: str = self.resources.uniqueID()
-        self.myAddr = myAddr
-        self.masterAddr = masterAddr
-        self.loggerAddr = loggerAddr
+
         self.receivedMessage: PriorityQueue[Tuple[Message, int]] = PriorityQueue()
         self.isRegistered: threading.Event = threading.Event()
         self.__myService = Server(
@@ -87,6 +87,7 @@ class Node:
             if not message.source.nameConsistent == self.nameConsistent:
                 if message.source.name not in self.receivedPackageSize:
                     receivedPackageSize = Average(
+                        addr=message.source.addr,
                         name=message.source.name,
                         nameLogPrinting=message.source.nameLogPrinting,
                         nameConsistent=message.source.nameConsistent,
@@ -111,9 +112,9 @@ class Node:
 
     def sendMessage(self, message: Dict, addr):
         source = Source(
-            addr=self.myAddr,
             role=self.role,
             id_=self.id,
+            addr=self.myAddr,
             name=self.name,
             nameLogPrinting=self.nameLogPrinting,
             nameConsistent=self.nameConsistent,
@@ -161,6 +162,7 @@ class Node:
         source = message.source
         if source.nameConsistent not in self.roundTripDelay:
             roundTripDelay = Average(
+                addr=message.source.addr,
                 name=source.nameConsistent,
                 nameLogPrinting=source.nameLogPrinting,
                 nameConsistent=source.nameConsistent,

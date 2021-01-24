@@ -7,6 +7,7 @@ from datetime import datetime
 from pprint import pformat
 from typing import List, Set
 from hashlib import sha256
+from typing import Tuple
 
 
 class Dictionary:
@@ -111,7 +112,8 @@ class ResourcesInfo(Dictionary):
 
 class Resources:
 
-    def __init__(self, formatSize: bool = False):
+    def __init__(self, addr: Tuple[str, int], formatSize: bool = False):
+        self.__addr: Tuple[str, int] = addr
         self.__formatSize = formatSize
         self.__res: ResourcesInfo = ResourcesInfo()
         self.__uniqueID: str = None
@@ -306,6 +308,7 @@ class Resources:
         if getInfo:
             self.all()
         items = [
+            str(self.__addr),
             self.__res.operatingSystemReleaseName,
             self.__res.operatingSystemVersion,
             self.__res.operatingSystemName,
