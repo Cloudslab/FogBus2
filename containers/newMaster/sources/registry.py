@@ -222,7 +222,7 @@ class Registry:
                 label=user.label,
                 userMachineID=user.machineID)
             print(decision)
-        except KeyError:
+        except (KeyError, TypeError):
             # has not seen this user or
             # this is the first time fot this user
             # to request the app

@@ -157,11 +157,15 @@ class Master(Node, Profiler):
     def __handleProfiler(self, message: Message):
         profilers = message.content['profiler']
         # Merge
-        self.edges = {**profilers[0], **self.edges}
-        self.nodeResources = {**profilers[1], **self.nodeResources}
-        self.averageProcessTime = {**profilers[2], **self.averageProcessTime}
-        self.averageRespondTime = {**profilers[3], **self.averageRespondTime}
-        self.imagesAndRunningContainers = {**profilers[4], **self.imagesAndRunningContainers}
+        self.edges = {**self.edges, **profilers[0]}
+        self.nodeResources = {**self.nodeResources, **profilers[1]}
+        self.averageProcessTime = {**self.averageProcessTime, **profilers[2]}
+        self.averageRespondTime = {**self.averageRespondTime, **profilers[3]}
+        self.imagesAndRunningContainers = {**self.imagesAndRunningContainers, **profilers[4]}
+
+        # update
+        self.scheduler.edges = self.edges
+        self.scheduler.averageProcessTime = self.averageProcessTime
 
     def __requestProfiler(self):
         msg = {'type': 'requestProfiler'}
