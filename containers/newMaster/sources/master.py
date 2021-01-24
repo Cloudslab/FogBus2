@@ -1,12 +1,12 @@
 import logging
 import sys
-
+import os
 from logger import get_logger
 from registry import Registry
-from connection import Server, Message
+from connection import Message
 from node import Node
 from profilerManage import Profiler
-from scheduling import NSGA3
+from scheduling import Scheduler, NSGA3
 
 
 class Master(Node, Profiler):
@@ -16,6 +16,7 @@ class Master(Node, Profiler):
             myAddr,
             masterAddr,
             loggerAddr,
+            schedulerName: str = None,
             masterID: int = 0,
             logLevel=logging.DEBUG):
 
@@ -32,12 +33,19 @@ class Master(Node, Profiler):
         )
 
         self.id = masterID
-        self.scheduler = NSGA3(
-            edges=self.edges,
-            averageProcessTime=self.averageProcessTime,
-            generationNum=10)
+        self.scheduler: Scheduler = self.__getScheduler(
+            schedulerName=schedulerName)
         self.registry: Registry = Registry(
             scheduler=self.scheduler)
+
+    def __getScheduler(self, schedulerName: str) -> Scheduler:
+        if schedulerName in {None, 'NSGA3'}:
+            return NSGA3(
+                edges=self.edges,
+                averageProcessTime=self.averageProcessTime,
+                generationNum=10)
+        self.logger.warning('Unknown scheduler: %s', schedulerName)
+        os._exit(0)
 
     def run(self):
         self.role = 'Master'
@@ -126,6 +134,8 @@ class Master(Node, Profiler):
         user.lock.release()
 
     def __handleExit(self, message: Message):
+        if message.source.machineID not in self.registry.clients:
+            return
         if message.source.role == 'user':
             user = self.registry.users[message.source.id]
             msg = {'type': 'stop'}

@@ -308,7 +308,7 @@ class Resources:
         if getInfo:
             self.all()
         items = [
-            str(self.__addr),
+            self.__addr[0],
             self.__res.operatingSystemReleaseName,
             self.__res.operatingSystemVersion,
             self.__res.operatingSystemName,

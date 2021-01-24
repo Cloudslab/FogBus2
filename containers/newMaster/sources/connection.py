@@ -117,7 +117,9 @@ class Connection:
 
     def __send(self, message: bytes, retries: int = 3):
         if not retries:
-            raise socket.timeout
+            # TODO: remove
+            # raise socket.timeout
+            return
         clientSocket = socket.socket(
             socket.AF_INET,
             socket.SOCK_STREAM)

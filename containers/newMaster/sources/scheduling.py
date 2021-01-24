@@ -10,15 +10,15 @@ from pymoo.optimize import minimize
 from persistentStorage import PersistentStorage
 from abc import abstractmethod
 from pymoo.model.problem import Problem
-from typing import Dict, DefaultDict, List
+from typing import Dict, List
 from edge import Edge
 from dependencies import loadDependencies, Task, Application
 from copy import deepcopy
 from collections import defaultdict
 from pprint import pformat
 
-EdgesByName = DefaultDict[str, List[str]]
-MachinesByName = DefaultDict[str, List[str]]
+EdgesByName = Dict[str, List[str]]
+MachinesByName = Dict[str, List[str]]
 
 
 class Decision:
@@ -66,10 +66,10 @@ class Scheduler:
             applicationName=applicationName,
             label=label,
             userMachineID=userMachineID)
-        return self.__schedule(edgesByName, machinesByName)
+        return self._schedule(edgesByName, machinesByName)
 
     @abstractmethod
-    def __schedule(
+    def _schedule(
             self,
             edgesByName: EdgesByName,
             machinesByName: MachinesByName) -> Decision:
@@ -111,13 +111,13 @@ class Scheduler:
         edgesByName['Master'].update({userAppName})
         edgesByName[userAppName] = {'Master'}
 
-        # lowercase all
         res = defaultdict(lambda: set([]))
+        result = {}
         for k, v in edgesByName.items():
             for name in v:
                 res[k].update([name])
-            res[k] = list(res[k])
-        return res
+            result[k] = list(res[k])
+        return result
 
     def __getMachinesByName(
             self,
@@ -137,9 +137,10 @@ class Scheduler:
                 if not machineID == userMachineID:
                     continue
             res[name].update([machineID])
+        result = {}
         for k, v in res.items():
-            res[k] = list(v)
-        return res
+            result[k] = list(v)
+        return result
 
 
 class NSGA3Problem(Problem):
@@ -228,9 +229,8 @@ class NSGA3(Scheduler):
             pop_size=populationSize,
             ref_dirs=self.__refDirs,
             eliminate_duplicates=True)
-        self._SchedulingMethod__schedule = self.__schedule
 
-    def __schedule(
+    def _schedule(
             self,
             edgesByName: EdgesByName,
             machinesByName: MachinesByName) -> Decision:

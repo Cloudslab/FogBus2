@@ -1,9 +1,7 @@
-import logging
 from threading import Lock
 from queue import Queue
-from logger import get_logger
 from datatype import Worker, User
-from datatype import Client, TaskHandler
+from datatype import TaskHandler
 from connection import Message
 from typing import Dict, Union, List, Tuple
 from dependencies import loadDependencies, Application
@@ -61,6 +59,20 @@ class Registry:
         self.__lockCurrentWorkerID.release()
         return workerID
 
+    def __newUserID(self):
+        self.__lockCurrentUserID.acquire()
+        self.__currentUserID += 1
+        userID = self.__currentUserID
+        self.__lockCurrentUserID.release()
+        return userID
+
+    def __newTaskID(self):
+        self.__lockCurrentTaskHandlerID.acquire()
+        self.__currentTaskHandlerID += 1
+        taskHandlerID = self.__currentTaskHandlerID
+        self.__lockCurrentTaskHandlerID.release()
+        return taskHandlerID
+
     def __addWorker(self, message: Message):
         workerID = self.__newWorkerID()
         machineID = message.content['machineID']
@@ -90,12 +102,37 @@ class Registry:
         self.workersQueue.put(worker)
         return respond
 
-    def __newTaskID(self):
-        self.__lockCurrentTaskHandlerID.acquire()
-        self.__currentTaskHandlerID += 1
-        taskHandlerID = self.__currentTaskHandlerID
-        self.__lockCurrentTaskHandlerID.release()
-        return taskHandlerID
+    def __addUser(self, message: Message):
+        userID = self.__newUserID()
+        appName = message.content['appName']
+        label = message.content['label']
+        machineID = message.content['machineID']
+
+        name = '%s@%s@User' % (appName, label)
+        nameLogPrinting = '%s-%d' % (name, userID)
+        nameConsistent = '%s#%s' % (name, machineID)
+
+        user = User(
+            name=name,
+            nameLogPrinting=nameLogPrinting,
+            nameConsistent=nameConsistent,
+            addr=message.source.addr,
+            userID=userID,
+            appName=appName,
+            label=label,
+            machineID=machineID)
+        self.users[user.id] = user
+        self.clients[user.machineID] = user
+        self.__handleRequest(user)
+        respond = {
+            'type': 'registered',
+            'role': 'user',
+            'id': userID,
+            'name': user.name,
+            'nameLogPrinting': user.nameLogPrinting,
+            'nameConsistent': user.nameConsistent,
+        }
+        return respond
 
     def __addTaskHandler(self, message: Message):
         taskHandlerID = self.__newTaskID()
@@ -152,57 +189,45 @@ class Registry:
         }
         return respond
 
-    def __newUserID(self):
-        self.__lockCurrentUserID.acquire()
-        self.__currentUserID += 1
-        userID = self.__currentUserID
-        self.__lockCurrentUserID.release()
-        return userID
+    def __handleRequest(self, user: User):
 
-    def __addUser(self, message: Message):
-        userID = self.__newUserID()
-        appName = message.content['appName']
-        label = message.content['label']
-        machineID = message.content['machineID']
+        app: Application = self.applications[user.appName]
 
-        name = '%s@%s@User' % (appName, label)
-        nameLogPrinting = '%s-%d' % (name, userID)
-        nameConsistent = '%s#%s' % (name, machineID)
+        skipRoles = {'Sensor', 'Actor', 'RemoteLogger'}
+        for taskName, dependency in app.dependencies.items():
+            if taskName in skipRoles:
+                if taskName == 'Sensor':
+                    user.entranceTasksByName = dependency.childTaskList
+                continue
+            user.generateToken(taskName)
 
-        user = User(
-            name=name,
-            nameLogPrinting=nameLogPrinting,
-            nameConsistent=nameConsistent,
-            addr=message.source.addr,
-            userID=userID,
-            appName=appName,
-            label=label,
-            machineID=machineID)
-        self.users[user.id] = user
-        self.clients[user.machineID] = user
-        self.__handleRequest(user)
-        respond = {
-            'type': 'registered',
-            'role': 'user',
-            'id': userID,
-            'name': user.name,
-            'nameLogPrinting': user.nameLogPrinting,
-            'nameConsistent': user.nameConsistent,
-        }
-        return respond
+        for taskName, dependency in app.dependencies.items():
+            if taskName in skipRoles:
+                continue
+            childTaskTokens = []
+            for childTaskName in dependency.childTaskList:
+                if childTaskName in skipRoles:
+                    continue
+                childTaskTokens.append(user.taskNameTokenMap[childTaskName].token)
+            user.taskNameTokenMap[taskName].childTaskTokens = childTaskTokens
+
+        self.__schedule(user)
 
     def __schedule(self, user):
         messageForWorkers = []
         try:
             # TODO
-            self.scheduler.schedule(
+            decision = self.scheduler.schedule(
                 applicationName=user.appName,
                 label=user.label,
                 userMachineID=user.machineID)
+            print(decision)
         except KeyError:
             # has not seen this user or
             # this is the first time fot this user
             # to request the app
+            import traceback
+            traceback.print_exc()
             messageForWorkers = self.__randomlySchedule(user)
         for message, addr in messageForWorkers:
             self.messageForWorker.put((message, addr))
@@ -228,27 +253,3 @@ class Registry:
             messageForWorkers.append((message, worker.addr))
             self.workersQueue.put(worker)
         return messageForWorkers
-
-    def __handleRequest(self, user: User):
-
-        app: Application = self.applications[user.appName]
-
-        skipRoles = {'Sensor', 'Actor', 'RemoteLogger'}
-        for taskName, dependency in app.dependencies.items():
-            if taskName in skipRoles:
-                if taskName == 'Sensor':
-                    user.entranceTasksByName = dependency.childTaskList
-                continue
-            user.generateToken(taskName)
-
-        for taskName, dependency in app.dependencies.items():
-            if taskName in skipRoles:
-                continue
-            childTaskTokens = []
-            for childTaskName in dependency.childTaskList:
-                if childTaskName in skipRoles:
-                    continue
-                childTaskTokens.append(user.taskNameTokenMap[childTaskName].token)
-            user.taskNameTokenMap[taskName].childTaskTokens = childTaskTokens
-
-        self.__schedule(user)
