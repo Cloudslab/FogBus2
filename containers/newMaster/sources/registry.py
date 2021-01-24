@@ -5,13 +5,18 @@ from logger import get_logger
 from datatype import Worker, User
 from datatype import Client, TaskHandler
 from connection import Message
-from typing import Dict, Union
+from typing import Dict, Union, List, Tuple
 from dependencies import loadDependencies, Application
+from scheduling import Scheduler
+
+Address = Tuple[str, int]
 
 
 class Registry:
 
-    def __init__(self):
+    def __init__(
+            self,
+            scheduler: Scheduler):
         self.__currentWorkerID: int = 0
         self.__lockCurrentWorkerID: Lock = Lock()
         self.__currentTaskHandlerID: int = 0
@@ -29,6 +34,7 @@ class Registry:
         self.profiler = self.__loadProfilers()
         self.tasks, self.applications = self.profiler
         self.messageForWorker: Queue[tuple[Dict, tuple[str, int]]] = Queue()
+        self.scheduler: Scheduler = scheduler
 
     @staticmethod
     def __loadProfilers():
@@ -186,6 +192,24 @@ class Registry:
         return respond
 
     def __schedule(self, user):
+        messageForWorkers = []
+        try:
+            # TODO
+            self.scheduler.schedule(
+                applicationName=user.appName,
+                label=user.label,
+                userMachineID=user.machineID)
+        except KeyError:
+            # has not seen this user or
+            # this is the first time fot this user
+            # to request the app
+            messageForWorkers = self.__randomlySchedule(user)
+        for message, addr in messageForWorkers:
+            self.messageForWorker.put((message, addr))
+
+    def __randomlySchedule(self, user) -> List[Tuple[Dict, Address]]:
+
+        messageForWorkers = []
         for taskName, userTask in user.taskNameTokenMap.items():
             token = userTask.token
             childTaskTokens = userTask.childTaskTokens
@@ -201,8 +225,9 @@ class Registry:
                 'taskName': taskName,
                 'token': token,
                 'childTaskTokens': childTaskTokens, }
-            self.messageForWorker.put((message, worker.addr))
+            messageForWorkers.append((message, worker.addr))
             self.workersQueue.put(worker)
+        return messageForWorkers
 
     def __handleRequest(self, user: User):
 

@@ -3,6 +3,8 @@ from queue import Queue
 from typing import List, Dict, Tuple
 from secrets import token_urlsafe
 
+Address = Tuple[str, int]
+
 
 class Client:
 
@@ -11,12 +13,12 @@ class Client:
             name: str,
             nameLogPrinting: str,
             nameConsistent: str,
-            addr: Tuple[str, int],
+            addr: Address,
             machineID: str):
         self.name: str = name
         self.nameLogPrinting: str = nameLogPrinting
         self.nameConsistent: str = nameConsistent
-        self.addr = addr
+        self.addr: Address = addr
         self.machineID: str = machineID
 
 

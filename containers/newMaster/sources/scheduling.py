@@ -42,7 +42,7 @@ class Decision:
             indent=3)
 
 
-class SchedulingMethod:
+class Scheduler:
 
     def __init__(
             self,
@@ -207,7 +207,7 @@ class NSGA3Problem(Problem):
         return res
 
 
-class NSGA3(SchedulingMethod):
+class NSGA3(Scheduler):
     def __init__(
             self,
             edges: Dict[str, Edge],

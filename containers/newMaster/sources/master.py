@@ -6,6 +6,7 @@ from registry import Registry
 from connection import Server, Message
 from node import Node
 from profilerManage import Profiler
+from scheduling import NSGA3
 
 
 class Master(Node, Profiler):
@@ -31,7 +32,12 @@ class Master(Node, Profiler):
         )
 
         self.id = masterID
-        self.registry: Registry = Registry()
+        self.scheduler = NSGA3(
+            edges=self.edges,
+            averageProcessTime=self.averageProcessTime,
+            generationNum=10)
+        self.registry: Registry = Registry(
+            scheduler=self.scheduler)
 
     def run(self):
         self.role = 'Master'
