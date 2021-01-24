@@ -8,6 +8,9 @@ RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.tuna.tsinghua.edu.cn/g' /etc/apk/re
 RUN apk add --no-cache \
     make automake gcc g++ subversion \
     linux-headers
+RUN apk add --no-cache \
+    gfortran openblas-dev lapack-dev \
+    zlib
 ADD sources/requirements.txt /workplace/requirements.txt
 RUN python -m pip install -r requirements.txt --no-cache-dir
 
