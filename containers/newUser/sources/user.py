@@ -1,12 +1,15 @@
 import logging
 import sys
+import os
 from apps import *
 from node import Node
 from connection import Message, Average
 from exceptions import *
 from logger import get_logger
 from time import time
-from typing import List
+from typing import List, Tuple
+
+Address = Tuple[str, int]
 
 
 class ResponseTime:
@@ -16,25 +19,62 @@ class ResponseTime:
         self.__sentTimeTable: List[float] = [0 for _ in range(self.__maxRecordNumber)]
 
 
-class User(Node):
+class User(Node, FaceDetection, FaceAndEyeDetection, ColorTracking, VideoOCR):
 
     def __init__(
             self,
-            myAddr,
-            masterAddr,
-            loggerAddr,
-            appName,
-            label,
+            myAddr: Address,
+            masterAddr: Address,
+            loggerAddr: Address,
+            appName: str,
+            showWindow: bool,
+            label: str,
+            videoPath: str,
             logLevel=logging.DEBUG):
 
         self.isRegistered: threading.Event = threading.Event()
-        self.appName = appName
-        self.label = label
-        self.app: ApplicationUserSide = None
+        self.appName: str = appName
+        self.label: str = label
+        self.showWindow: bool = showWindow
+        self.videoPath: str = videoPath
 
         self.__lastDataSentTime = time()
         self.respondTime: Average = Average()
-        super().__init__(
+
+        if self.appName == 'FaceDetection':
+            FaceDetection.__init__(
+                self,
+                appName=self.appName,
+                videoPath=self.videoPath,
+                targetWidth=int(self.label),
+                showWindow=self.showWindow)
+        elif self.appName == 'FaceAndEyeDetection':
+            FaceAndEyeDetection.__init__(
+                self,
+                appName=self.appName,
+                videoPath=self.videoPath,
+                targetWidth=int(self.label),
+                showWindow=self.showWindow)
+        elif self.appName == 'ColorTracking':
+            ColorTracking.__init__(
+                self,
+                appName=self.appName,
+                videoPath=self.videoPath,
+                targetWidth=int(self.label),
+                showWindow=self.showWindow)
+        elif self.appName == 'VideoOCR':
+            VideoOCR.__init__(
+                self,
+                appName=self.appName,
+                videoPath=self.videoPath,
+                targetWidth=int(self.label),
+                showWindow=self.showWindow)
+        else:
+            self.logger.info('Application does not exist: %s', self.appName)
+            os._exit(0)
+
+        Node.__init__(
+            self,
             myAddr=myAddr,
             masterAddr=masterAddr,
             loggerAddr=loggerAddr,
@@ -53,6 +93,7 @@ class User(Node):
             'label': self.label,
             'appName': self.appName,
             'machineID': self.machineID}
+        print(message)
         self.sendMessage(message, self.masterAddr)
         self.isRegistered.wait()
         self.logger.info("Registered.")
@@ -80,31 +121,11 @@ class User(Node):
 
     def __ready(self):
         self.logger.info("Resources is ready.")
-        videoPath = sys.argv[8] if len(sys.argv) > 8 else None
-        if self.appName == 'FaceDetection':
-            self.app = FaceDetection(
-                videoPath=videoPath,
-                targetWidth=int(self.label))
-        elif self.appName == 'FaceAndEyeDetection':
-            self.app = FaceAndEyeDetection(
-                videoPath=videoPath,
-                targetWidth=int(self.label))
-        elif self.appName == 'ColorTracking':
-            self.app = ColorTracking(
-                videoPath=videoPath,
-                targetWidth=int(self.label))
-        elif self.appName == 'VideoOCR':
-            self.app = VideoOCR(
-                videoPath=videoPath,
-                targetWidth=int(self.label))
-        if self.app is None:
-            self.logger.info('Application does not exist.')
-            os.killpg(os.getpgrp(), signal.SIGINT)
         self.logger.info('Running ...')
-        self.app.run()
+        self._runApp()
 
         while True:
-            data = self.app.dataToSubmit.get()
+            data = self.dataToSubmit.get()
             message = {
                 'type': 'data',
                 'userID': self.id,
@@ -115,7 +136,7 @@ class User(Node):
     def __handleResult(self, message: Message):
         result = message.content['result']
         self.respondTime.update((time() - self.__lastDataSentTime) * 1000)
-        self.app.result.put(result)
+        self.result.put(result)
 
     def __uploadAverageRespondTime(self):
         if self.respondTime.average() is None:
@@ -138,13 +159,16 @@ if __name__ == "__main__":
     myAddr_ = (sys.argv[1], port)
     masterAddr_ = (sys.argv[2], int(sys.argv[3]))
     loggerAddr_ = (sys.argv[4], int(sys.argv[5]))
-    appName = sys.argv[6]
-    label = sys.argv[7]
+    appName_ = sys.argv[6]
+    showWindow_ = sys.argv[7]
+    label_ = sys.argv[8]
+    videoPath_ = sys.argv[9] if len(sys.argv) > 9 else None
     user_ = User(
         myAddr=myAddr_,
         masterAddr=masterAddr_,
         loggerAddr=loggerAddr_,
-        appName=appName,
-        label=label,
-    )
+        appName=appName_,
+        label=label_,
+        showWindow=True if showWindow_ == 'show' else False,
+        videoPath=videoPath_)
     user_.run()
