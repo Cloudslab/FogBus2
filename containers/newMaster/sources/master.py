@@ -160,7 +160,7 @@ class Master(Node, Profiler):
             return
         if message.source.role == 'user':
             user = self.registry.users[message.source.id]
-            msg = {'type': 'stop'}
+            msg = {'type': 'stop', 'reason': 'Your User has exited.'}
             for taskHandler in user.taskHandlerByTaskName.values():
                 self.sendMessage(msg, taskHandler.addr)
             del self.registry.users[message.source.id]
