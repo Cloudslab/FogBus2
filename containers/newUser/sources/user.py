@@ -93,10 +93,9 @@ class User(Node, FaceDetection, FaceAndEyeDetection, ColorTracking, VideoOCR):
             'label': self.label,
             'appName': self.appName,
             'machineID': self.machineID}
-        print(message)
         self.sendMessage(message, self.masterAddr)
         self.isRegistered.wait()
-        self.logger.info("Registered.")
+        self.logger.info("Registered. Waiting for resources to be ready ...")
 
     def handleMessage(self, message: Message):
         if message.type == 'registered':

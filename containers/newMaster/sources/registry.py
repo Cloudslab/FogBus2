@@ -227,8 +227,6 @@ class Registry:
             # has not seen this user or
             # this is the first time fot this user
             # to request the app
-            import traceback
-            traceback.print_exc()
             messageForWorkers = self.__randomlySchedule(user)
         for message, addr in messageForWorkers:
             self.messageForWorker.put((message, addr))

@@ -46,6 +46,7 @@ class Master(Node, Profiler):
             return NSGA3(
                 edges=self.edges,
                 averageProcessTime=self.averageProcessTime,
+                populationSize=10,
                 generationNum=10)
         self.logger.warning('Unknown scheduler: %s', schedulerName)
         os._exit(0)
