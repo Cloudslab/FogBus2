@@ -38,10 +38,7 @@ class Master(Node, Profiler):
         self.id = masterID
         self.scheduler: Scheduler = self.__getScheduler(
             schedulerName=schedulerName)
-        self.registry: Registry = Registry(
-            masterName=self.nameLogPrinting,
-            scheduler=self.scheduler,
-            logLevel=self.logLevel)
+        self.registry: Registry = Registry(scheduler=self.scheduler)
 
     def __getScheduler(self, schedulerName: str) -> Scheduler:
         if schedulerName in {None, 'NSGA3'}:
@@ -56,7 +53,12 @@ class Master(Node, Profiler):
     def run(self):
         self.role = 'Master'
         self.setName()
-        self.logger = get_logger(self.nameLogPrinting, self.logLevel)
+        self.registry.logger = get_logger(
+            logger_name='%s-Registry' % self.nameLogPrinting,
+            level_name=self.logLevel)
+        self.logger = get_logger(
+            logger_name=self.nameLogPrinting,
+            level_name=self.logLevel)
         self.logger.info("Serving ...")
 
     def handleMessage(self, message: Message):

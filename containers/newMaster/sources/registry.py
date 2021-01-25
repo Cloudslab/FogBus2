@@ -15,9 +15,7 @@ class Registry:
 
     def __init__(
             self,
-            masterName: str,
-            scheduler: Scheduler,
-            logLevel: int):
+            scheduler: Scheduler):
         self.__currentWorkerID: int = 0
         self.__lockCurrentWorkerID: Lock = Lock()
         self.__currentTaskHandlerID: int = 0
@@ -36,9 +34,7 @@ class Registry:
         self.tasks, self.applications = self.profiler
         self.messageForWorker: Queue[tuple[Dict, tuple[str, int]]] = Queue()
         self.scheduler: Scheduler = scheduler
-        self.logger = get_logger(
-            '%s-Registry' % masterName,
-            level_name=logLevel)
+        self.logger = None
 
     @staticmethod
     def __loadProfilers():
@@ -231,6 +227,7 @@ class Registry:
             messageForWorkers = self.__parseDecision(decision, user)
             self.logger.info(
                 'Scheduled by %s.' % self.scheduler.name)
+            self.logger.debug(messageForWorkers)
         except (KeyError, TypeError):
             # has not seen this user or
             # this is the first time fot this user
