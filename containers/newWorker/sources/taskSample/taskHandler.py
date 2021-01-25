@@ -99,6 +99,7 @@ class TaskHandler(Node):
         msg = {'type': 'ready', 'token': self.token}
         self.sendMessage(msg, self.masterAddr)
         self.logger.info('Got children\'s addr')
+        self.logger.info(self.childTaskTokens)
 
     def handleMessage(self, message: Message):
         if message.type == 'registered':

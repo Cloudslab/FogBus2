@@ -227,13 +227,13 @@ class Registry:
             messageForWorkers = self.__parseDecision(decision, user)
             self.logger.info(
                 'Scheduled by %s.' % self.scheduler.name)
-            self.logger.debug(messageForWorkers)
         except (KeyError, TypeError):
             # has not seen this user or
             # this is the first time fot this user
             # to request the app
             messageForWorkers = self.__randomlySchedule(user)
             self.logger.info('Scheduled randomly.')
+        self.logger.debug(messageForWorkers)
         for message, addr in messageForWorkers:
             self.messageForWorker.put((message, addr))
 

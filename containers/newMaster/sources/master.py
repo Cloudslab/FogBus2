@@ -120,6 +120,7 @@ class Master(Node, Profiler):
     def __handleLookup(self, message: Message):
         taskHandlerToken = message.content['token']
         if taskHandlerToken not in self.registry.taskHandlerByToken:
+            self.logger.info(message.content)
             return
         taskHandler = self.registry.taskHandlerByToken[taskHandlerToken]
         respond = {
