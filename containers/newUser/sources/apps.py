@@ -29,7 +29,7 @@ class ApplicationUserSide:
         resizedWidth = int(width * self.targetWidth / height)
         return cv2.resize(frame, (resizedWidth, self.targetWidth))
 
-    def _runApp(self):
+    def run(self):
         threading.Thread(target=self._run).start()
 
     @staticmethod

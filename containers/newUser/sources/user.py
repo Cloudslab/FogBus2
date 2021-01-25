@@ -19,7 +19,7 @@ class ResponseTime:
         self.__sentTimeTable: List[float] = [0 for _ in range(self.__maxRecordNumber)]
 
 
-class User(Node, FaceDetection, FaceAndEyeDetection, ColorTracking, VideoOCR):
+class User(Node):
 
     def __init__(
             self,
@@ -31,6 +31,15 @@ class User(Node, FaceDetection, FaceAndEyeDetection, ColorTracking, VideoOCR):
             label: str,
             videoPath: str,
             logLevel=logging.DEBUG):
+        Node.__init__(
+            self,
+            myAddr=myAddr,
+            masterAddr=masterAddr,
+            loggerAddr=loggerAddr,
+            periodicTasks=[
+                (self.__uploadAverageRespondTime, 10)],
+            logLevel=logLevel
+        )
 
         self.isRegistered: threading.Event = threading.Event()
         self.appName: str = appName
@@ -42,29 +51,25 @@ class User(Node, FaceDetection, FaceAndEyeDetection, ColorTracking, VideoOCR):
         self.respondTime: Average = Average()
 
         if self.appName == 'FaceDetection':
-            FaceDetection.__init__(
-                self,
+            self.app: ApplicationUserSide = FaceDetection(
                 appName=self.appName,
                 videoPath=self.videoPath,
                 targetWidth=int(self.label),
                 showWindow=self.showWindow)
         elif self.appName == 'FaceAndEyeDetection':
-            FaceAndEyeDetection.__init__(
-                self,
+            self.app: ApplicationUserSide = FaceAndEyeDetection(
                 appName=self.appName,
                 videoPath=self.videoPath,
                 targetWidth=int(self.label),
                 showWindow=self.showWindow)
         elif self.appName == 'ColorTracking':
-            ColorTracking.__init__(
-                self,
+            self.app: ApplicationUserSide = ColorTracking(
                 appName=self.appName,
                 videoPath=self.videoPath,
                 targetWidth=int(self.label),
                 showWindow=self.showWindow)
         elif self.appName == 'VideoOCR':
-            VideoOCR.__init__(
-                self,
+            self.app: ApplicationUserSide = VideoOCR(
                 appName=self.appName,
                 videoPath=self.videoPath,
                 targetWidth=int(self.label),
@@ -72,16 +77,6 @@ class User(Node, FaceDetection, FaceAndEyeDetection, ColorTracking, VideoOCR):
         else:
             self.logger.info('Application does not exist: %s', self.appName)
             os._exit(0)
-
-        Node.__init__(
-            self,
-            myAddr=myAddr,
-            masterAddr=masterAddr,
-            loggerAddr=loggerAddr,
-            periodicTasks=[
-                (self.__uploadAverageRespondTime, 10)],
-            logLevel=logLevel
-        )
 
     def run(self):
         self.__register()
@@ -121,10 +116,10 @@ class User(Node, FaceDetection, FaceAndEyeDetection, ColorTracking, VideoOCR):
     def __ready(self):
         self.logger.info("Resources is ready.")
         self.logger.info('Running ...')
-        self._runApp()
+        self.app.run()
 
         while True:
-            data = self.dataToSubmit.get()
+            data = self.app.dataToSubmit.get()
             message = {
                 'type': 'data',
                 'userID': self.id,
@@ -135,7 +130,7 @@ class User(Node, FaceDetection, FaceAndEyeDetection, ColorTracking, VideoOCR):
     def __handleResult(self, message: Message):
         result = message.content['result']
         self.respondTime.update((time() - self.__lastDataSentTime) * 1000)
-        self.result.put(result)
+        self.app.result.put(result)
 
     def __uploadAverageRespondTime(self):
         if self.respondTime.average() is None:
