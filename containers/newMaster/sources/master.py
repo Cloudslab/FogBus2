@@ -115,9 +115,7 @@ class Master(Node, Profiler):
     def __handleLookup(self, message: Message):
         taskHandlerToken = message.content['token']
         if taskHandlerToken not in self.registry.taskHandlerByToken:
-            return self.__stopClient(
-                message.source.addr,
-                'TaskHandler does not exist by token: %s' % taskHandlerToken)
+            return
         taskHandler = self.registry.taskHandlerByToken[taskHandlerToken]
         respond = {
             'type': 'taskHandlerInfo',

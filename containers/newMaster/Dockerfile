@@ -10,7 +10,7 @@ RUN apk add --no-cache \
     linux-headers
 RUN apk add --no-cache \
     gfortran openblas-dev lapack-dev \
-    zlib
+    jpeg-dev zlib-dev
 ADD sources/requirements.txt /workplace/requirements.txt
 RUN python -m pip install -U --force-reinstall pip
 RUN python -m pip install -r requirements.txt --no-cache-dir
