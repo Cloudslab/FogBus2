@@ -1,29 +1,47 @@
-from logger import get_logger
+import logging
+import os
+from abc import ABC
 from threading import Lock
+from node import Node
+from profilerManage import Profiler
 from queue import Queue
 from datatype import Worker, User
 from datatype import TaskHandler
 from connection import Message
 from typing import Dict, Union, List, Tuple
 from dependencies import loadDependencies, Application
-from scheduling import Scheduler, Decision
+from scheduling import Scheduler, Decision, NSGA3
 
 Address = Tuple[str, int]
 
 
-class Registry:
+class Registry(Profiler, Node, ABC):
 
     def __init__(
             self,
-            scheduler: Scheduler):
+            myAddr,
+            masterAddr,
+            loggerAddr,
+            schedulerName: str = None,
+            logLevel=logging.DEBUG):
+        Profiler.__init__(self)
+        Node.__init__(
+            self,
+            myAddr=myAddr,
+            masterAddr=masterAddr,
+            loggerAddr=loggerAddr,
+            periodicTasks=[
+                (self._saveToPersistentStorage, 2),
+                (self.__requestProfiler, 2)],
+            logLevel=logLevel
+        )
         self.__currentWorkerID: int = 0
         self.__lockCurrentWorkerID: Lock = Lock()
         self.__currentTaskHandlerID: int = 0
         self.__lockCurrentTaskHandlerID: Lock = Lock()
-        self.workers: Dict[int, Worker] = {}
+        self.workers: Dict[Union[int, str], Worker] = {}
         self.__currentUserID: int = 0
         self.__lockCurrentUserID: Lock = Lock()
-        self.clients: Dict[str, Union[User, Worker, TaskHandler]] = {}
         self.users: Dict[int, User] = {}
         self.workersQueue: Queue[Worker] = Queue()
         self.taskHandlerByToken: Dict[str, TaskHandler] = {}
@@ -32,8 +50,8 @@ class Registry:
 
         self.profiler = self.__loadProfilers()
         self.tasks, self.applications = self.profiler
-        self.messageForWorker: Queue[tuple[Dict, tuple[str, int]]] = Queue()
-        self.scheduler: Scheduler = scheduler
+        self.scheduler: Scheduler = self.__getScheduler(
+            schedulerName=schedulerName)
         self.logger = None
 
     @staticmethod
@@ -45,7 +63,17 @@ class Registry:
     def __loadDependencies():
         return loadDependencies()
 
-    def register(self, message: Message):
+    def __getScheduler(self, schedulerName: str) -> Scheduler:
+        if schedulerName in {None, 'NSGA3'}:
+            return NSGA3(
+                edges=self.edges,
+                averageProcessTime=self.averageProcessTime,
+                populationSize=10,
+                generationNum=10)
+        self.logger.warning('Unknown scheduler: %s', schedulerName)
+        os._exit(0)
+
+    def registerClient(self, message: Message):
         targetRole = message.content['role']
         if targetRole == 'user':
             return self.__addUser(message)
@@ -92,7 +120,7 @@ class Registry:
             machineID=machineID)
 
         self.workers[workerID] = worker
-        self.clients[worker.machineID] = worker
+        self.workers[worker.machineID] = worker
         respond = {
             'type': 'registered',
             'role': 'worker',
@@ -125,7 +153,6 @@ class Registry:
             label=label,
             machineID=machineID)
         self.users[user.id] = user
-        self.clients[user.machineID] = user
         self.__handleRequest(user)
         respond = {
             'type': 'registered',
@@ -180,7 +207,6 @@ class Registry:
 
         self.taskHandlers[taskHandler.id] = taskHandler
         self.taskHandlerByToken[taskHandler.token] = taskHandler
-        self.clients[taskHandler.machineID] = taskHandler
         respond = {
             'type': 'registered',
             'role': 'TaskHandler',
@@ -217,7 +243,6 @@ class Registry:
         self.__schedule(user)
 
     def __schedule(self, user):
-        messageForWorkers = []
         try:
             # TODO
             decision = self.scheduler.schedule(
@@ -233,9 +258,8 @@ class Registry:
             # to request the app
             messageForWorkers = self.__randomlySchedule(user)
             self.logger.info('Scheduled randomly.')
-        self.logger.debug(messageForWorkers)
         for message, addr in messageForWorkers:
-            self.messageForWorker.put((message, addr))
+            self.sendMessage(message, addr)
 
     def __parseDecision(self, decision: Decision, user: User):
         messageForWorkers = []
@@ -252,7 +276,7 @@ class Registry:
                     'taskName': taskName,
                     'token': userTask.token,
                     'childTaskTokens': userTask.childTaskTokens}
-                worker = self.clients[machineID]
+                worker = self.workers[machineID]
                 messageForWorkers.append((message, worker.addr))
         return messageForWorkers
 
@@ -277,3 +301,7 @@ class Registry:
             messageForWorkers.append((message, worker.addr))
             self.workersQueue.put(worker)
         return messageForWorkers
+
+    def __requestProfiler(self):
+        msg = {'type': 'requestProfiler'}
+        self.sendMessage(msg, self.loggerAddr)

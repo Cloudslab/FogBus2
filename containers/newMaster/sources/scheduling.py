@@ -16,7 +16,9 @@ from dependencies import loadDependencies, Task, Application
 from copy import deepcopy
 from collections import defaultdict
 from pprint import pformat
+from pymoo.configuration import Configuration
 
+Configuration.show_compile_hint = False
 EdgesByName = Dict[str, List[str]]
 MachinesByName = Dict[str, List[str]]
 

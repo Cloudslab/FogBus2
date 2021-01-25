@@ -59,14 +59,7 @@ class Worker(Node):
         self.logger = get_logger(self.nameLogPrinting, self.logLevel)
         self.isRegistered.set()
 
-    @staticmethod
-    def camel_to_snake(name):
-        # https://stackoverflow.com/questions/1175208
-        name = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', name)
-        return re.sub('([a-z0-9])([A-Z])', r'\1_\2', name).lower()
-
     def __handleRunTaskHandler(self, message: Message):
-
         userID = message.content['userID']
         userName = message.content['userName']
         taskName = message.content['taskName']
@@ -140,6 +133,12 @@ class Worker(Node):
         # ).start()
 
         self.logger.info('Ran %s', taskName)
+
+    @staticmethod
+    def camel_to_snake(name):
+        # https://stackoverflow.com/questions/1175208
+        name = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', name)
+        return re.sub('([a-z0-9])([A-Z])', r'\1_\2', name).lower()
 
     def __uploadImagesAndRunningContainersList(self):
         imagesList = self.dockerClient.images.list()
