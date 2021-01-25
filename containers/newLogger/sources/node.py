@@ -185,7 +185,7 @@ class Node:
     def __handleStop(self, message: Message):
         reasonFormatted = '%s asks me to stop. ' \
                           'Reason: %s' % (
-                              message.source.name,
+                              message.source.nameLogPrinting,
                               message.content['reason'])
         msg = {'type': 'exit', 'reason': reasonFormatted}
         self.sendMessage(msg, self.masterAddr)
