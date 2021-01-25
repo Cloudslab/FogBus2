@@ -1,3 +1,4 @@
+from logger import get_logger
 from threading import Lock
 from queue import Queue
 from datatype import Worker, User
@@ -14,7 +15,9 @@ class Registry:
 
     def __init__(
             self,
-            scheduler: Scheduler):
+            masterName: str,
+            scheduler: Scheduler,
+            logLevel: int):
         self.__currentWorkerID: int = 0
         self.__lockCurrentWorkerID: Lock = Lock()
         self.__currentTaskHandlerID: int = 0
@@ -33,6 +36,9 @@ class Registry:
         self.tasks, self.applications = self.profiler
         self.messageForWorker: Queue[tuple[Dict, tuple[str, int]]] = Queue()
         self.scheduler: Scheduler = scheduler
+        self.logger = get_logger(
+            '%s-Registry' % masterName,
+            level_name=logLevel)
 
     @staticmethod
     def __loadProfilers():
@@ -223,11 +229,14 @@ class Registry:
                 label=user.label,
                 userMachineID=user.machineID)
             messageForWorkers = self.__parseDecision(decision, user)
+            self.logger.info(
+                'Scheduled by %s.' % self.scheduler.name)
         except (KeyError, TypeError):
             # has not seen this user or
             # this is the first time fot this user
             # to request the app
             messageForWorkers = self.__randomlySchedule(user)
+            self.logger.info('Scheduled randomly.')
         for message, addr in messageForWorkers:
             self.messageForWorker.put((message, addr))
 

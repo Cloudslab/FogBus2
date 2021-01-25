@@ -39,7 +39,9 @@ class Master(Node, Profiler):
         self.scheduler: Scheduler = self.__getScheduler(
             schedulerName=schedulerName)
         self.registry: Registry = Registry(
-            scheduler=self.scheduler)
+            masterName=self.nameLogPrinting,
+            scheduler=self.scheduler,
+            logLevel=self.logLevel)
 
     def __getScheduler(self, schedulerName: str) -> Scheduler:
         if schedulerName in {None, 'NSGA3'}:

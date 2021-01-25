@@ -2,7 +2,7 @@ import threading
 import logging
 import os
 import signal
-from queue import Queue, PriorityQueue
+from queue import PriorityQueue
 from connection import Server, Message, Connection, Source, Average
 from abc import abstractmethod
 from typing import Dict, Tuple, List, Callable

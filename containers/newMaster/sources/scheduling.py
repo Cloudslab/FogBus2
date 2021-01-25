@@ -46,8 +46,10 @@ class Scheduler:
 
     def __init__(
             self,
+            name: str,
             edges: Dict[str, Edge],
             averageProcessTime: Dict[str, float]):
+        self.name: str = name
         self.edges: Dict[str, Edge] = edges
         self.averageProcessTime: Dict[str, float] = averageProcessTime
         tasksAndApps = loadDependencies()
@@ -219,6 +221,7 @@ class NSGA3(Scheduler):
     ):
         self.__generationNum: int = generationNum
         super().__init__(
+            name='NSGA3',
             edges=edges,
             averageProcessTime=averageProcessTime)
         self.__refDirs = get_reference_directions(
