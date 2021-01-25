@@ -89,7 +89,6 @@ class Master(Registry):
     def __handleLookup(self, message: Message):
         taskHandlerToken = message.content['token']
         if taskHandlerToken not in self.taskHandlerByToken:
-            self.logger.info(message.content)
             return
         taskHandler = self.taskHandlerByToken[taskHandlerToken]
         respond = {
