@@ -120,7 +120,7 @@ class Connection:
             socket.AF_INET,
             socket.SOCK_STREAM)
         try:
-            clientSocket.settimeout(1)
+            clientSocket.settimeout(3)
             clientSocket.connect(self.addr)
             package = struct.pack(">L", len(message)) + message
             clientSocket.sendall(package)
