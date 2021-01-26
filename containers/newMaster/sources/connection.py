@@ -120,7 +120,7 @@ class Connection:
             socket.AF_INET,
             socket.SOCK_STREAM)
         try:
-            clientSocket.settimeout(1)
+            clientSocket.settimeout(3)
             clientSocket.connect(self.addr)
             package = struct.pack(">L", len(message)) + message
             clientSocket.sendall(package)
@@ -130,11 +130,15 @@ class Connection:
             clientSocket.close()
             if retries:
                 self.__send(message=message, retries=retries - 1)
+                return
+            print(addr_)
             raise OSError
         except ConnectionRefusedError:
             clientSocket.close()
             if retries:
                 self.__send(message=message, retries=retries - 1)
+                return
+            print(addr_)
             raise ConnectionRefusedError
 
     def send(self, message: Dict, retries: int = 3):
