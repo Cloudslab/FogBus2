@@ -32,18 +32,18 @@ class GameOfLife:
         return points
 
     def startWithText(self, text):
-        position = (self.height // 4, self.width // 4)
-        fontScale = 1
         color = (255, 0, 0)
-        thickness = 1
+        textSize = cv2.getTextSize(text, 0, 1, 2)[0]
+        positionX = (self.world.shape[1] - textSize[0]) // 2
+        positionY = (self.world.shape[0] + textSize[1]) // 2
         world = cv2.putText(
             self.world,
             text,
-            position,
+            (positionX, positionY),
             0,
-            fontScale,
+            1,
             color,
-            thickness,
+            1,
             cv2.LINE_AA)
         _, self.world = cv2.threshold(world, 127, 255, cv2.THRESH_BINARY)
 
@@ -54,6 +54,7 @@ class GameOfLife:
                 (self.width * self.__resizeFactor,
                  self.height * self.__resizeFactor),
                 interpolation=cv2.INTER_AREA))
+        print('[*] This is your initial world, press any key to start.')
         cv2.waitKey(0)
 
     def setPoints(self, points):
@@ -143,7 +144,8 @@ class GameOfLife:
 if __name__ == '__main__':
     game = GameOfLife(
         height=1024,
-        width=2048)
+        width=2048,
+        resizeFactor=8)
     game.startWithText('Qifan Deng')
     # game.setPoints(game.examplePoints())
     game.run()
