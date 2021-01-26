@@ -76,6 +76,7 @@ class GameOfLife:
     def run(self):
         gen = 0
         preUpdateTime = time()
+        count = 10
         while True:
             cv2.imshow(
                 'Game of Life',
@@ -91,6 +92,10 @@ class GameOfLife:
             self.changeStates()
             gen += 1
             print('\r[*] Generation %d' % gen, end='')
+            if count >= 0:
+                count -= 1
+                sleep(2)
+                continue
             timeDiff = time() - preUpdateTime
             if timeDiff < self.frameUpdateGap:
                 sleep(self.frameUpdateGap - timeDiff)
