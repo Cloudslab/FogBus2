@@ -54,14 +54,8 @@ class GameOfLife:
                 (self.width * self.__resizeFactor,
                  self.height * self.__resizeFactor),
                 interpolation=cv2.INTER_AREA))
-        print('[*] This is your initial world, press any key to start.')
+        print('[*] This is your initial world. Press \'Space\' to start.')
         cv2.waitKey(0)
-
-    def setPoints(self, points):
-        self.boundaries = [list(points[0]), list(points[0])]
-        for i, j in points:
-            self.world[i % self.height][j % self.width] = 255
-            self.updateBoundaries(i, j)
 
     def updateBoundaries(self, i, j):
         # change boundaries
@@ -145,7 +139,7 @@ if __name__ == '__main__':
     game = GameOfLife(
         height=1024,
         width=2048,
-        resizeFactor=8)
+        resizeFactor=3)
     game.startWithText('Qifan Deng')
     # game.setPoints(game.examplePoints())
     game.run()
