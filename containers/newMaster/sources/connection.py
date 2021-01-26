@@ -116,10 +116,6 @@ class Connection:
         self.addr = addr
 
     def __send(self, message: bytes, retries: int = 3):
-        if not retries:
-            # TODO: remove
-            # raise socket.timeout
-            return
         clientSocket = socket.socket(
             socket.AF_INET,
             socket.SOCK_STREAM)
@@ -130,9 +126,16 @@ class Connection:
             clientSocket.sendall(package)
             clientSocket.settimeout(None)
             clientSocket.close()
-        except (OSError, ConnectionRefusedError):
+        except OSError:
             clientSocket.close()
-            self.__send(message=message, retries=retries - 1)
+            if retries:
+                self.__send(message=message, retries=retries - 1)
+            raise OSError
+        except ConnectionRefusedError:
+            clientSocket.close()
+            if retries:
+                self.__send(message=message, retries=retries - 1)
+            raise ConnectionRefusedError
 
     def send(self, message: Dict, retries: int = 3):
         self.__send(encrypt(message), retries=retries)
