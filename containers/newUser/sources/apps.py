@@ -242,3 +242,134 @@ class VideoOCR(ApplicationUserSide):
 
         result = self.result.get()
         print(result, '\r\n [*] The text is at above.')
+
+
+class GameOfLifeSerialised(ApplicationUserSide):
+
+    def __init__(
+            self,
+            appName: str,
+            videoPath: str,
+            targetWidth: int,
+            showWindow: bool):
+        super().__init__(
+            appName=appName,
+            videoPath=videoPath,
+            targetWidth=targetWidth,
+            showWindow=showWindow)
+
+        self.__resizeFactor = 8
+        self.height = 1024 // self.__resizeFactor
+        self.width = 2048 // self.__resizeFactor
+        self.generationNumber = None
+        self.world = np.zeros((self.height, self.width, 1), np.uint8)
+        self.newStates = []
+        self.frameUpdateGap = 1 / 60
+        self.mayChange = set([])
+
+    def _run(self):
+        self.initMayChange()
+        while True:
+            cv2.imshow(
+                'Game of Life',
+                cv2.resize(
+                    self.world,
+                    (self.width * self.__resizeFactor,
+                     self.height * self.__resizeFactor),
+                    interpolation=cv2.INTER_AREA))
+            # cv2.waitKey(0)
+            if cv2.waitKey(1) == ord('q'):
+                break
+            inputData = (
+                self.world,
+                self.height,
+                self.width,
+                self.mayChange,
+                set([]),
+                set([]))
+            self.dataToSubmit.put(inputData)
+            result = self.result.get()
+            self.newStates = result[0]
+            self.mayChange = result[1]
+            self.changeStates()
+
+        print('[*] Bye')
+
+    def startWithText(self):
+        text = 'Qifan Deng'
+        color = (255, 0, 0)
+        textSize = cv2.getTextSize(text, 0, 1, 2)[0]
+        positionX = (self.world.shape[1] - textSize[0]) // 2
+        positionY = (self.world.shape[0] + textSize[1]) // 2
+        world = cv2.putText(
+            self.world,
+            text,
+            (positionX, positionY),
+            0,
+            1,
+            color,
+            1,
+            cv2.LINE_AA)
+        _, self.world = cv2.threshold(world, 127, 255, cv2.THRESH_BINARY)
+        self.initMayChange()
+        cv2.imshow(
+            'Game of Life',
+            cv2.resize(
+                self.world,
+                (self.width * self.__resizeFactor,
+                 self.height * self.__resizeFactor),
+                interpolation=cv2.INTER_AREA))
+        print('[*] This is your initial world. Press \'Space\' to start.')
+        cv2.waitKey(0)
+
+    def initMayChange(self):
+        self.mayChange = set([])
+        for i in range(0, self.height):
+            for j in range(0, self.width):
+                if not self.doesChange(i, j):
+                    continue
+                neighbours = self.affectedNeighbours(i, j)
+                self.mayChange.update(neighbours)
+
+    def doesChange(self, i, j) -> bool:
+        count = self.neighboursCount(i, j)
+        if count == 2:
+            return False
+        if count == 3:
+            return not self.world[i][j] == 255
+        return not self.world[i][j] == 0
+
+    def neighboursCount(self, i, j):
+        count = 0
+        neighbours = self.getNeighbours(i, j)
+        for i, j in neighbours:
+            count += 1 if self.world[i][j] else 0
+        return count
+
+    def getNeighbours(self, i, j):
+        neighbours = [
+            (i - 1, j - 1),
+            (i - 1, j),
+            (i - 1, (j + 1) % self.width),
+            (i, j - 1),
+            (i, (j + 1) % self.width),
+            ((i + 1) % self.height, j - 1),
+            ((i + 1) % self.height, j),
+            ((i + 1) % self.height, (j + 1) % self.width)]
+        return neighbours
+
+    def affectedNeighbours(self, i, j):
+        neighbours = set([])
+        wide = 2
+        for iNeighbour in range(i - wide, i + wide):
+            for jNeighbour in range(j - wide, j + wide):
+                neighbours.update([(iNeighbour % self.height, jNeighbour % self.width)])
+        return neighbours
+
+    def changeStates(self):
+        for i, j in self.newStates:
+            if self.world[i][j] == 0:
+                self.world[i][j] = 255
+                continue
+            self.world[i][j] = 0
+        self.newStates = []

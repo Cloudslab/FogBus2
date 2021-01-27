@@ -74,6 +74,12 @@ class User(Node):
                 videoPath=self.videoPath,
                 targetWidth=int(self.label),
                 showWindow=self.showWindow)
+        elif self.appName == 'GameOfLifeSerialised':
+            self.app: ApplicationUserSide = GameOfLifeSerialised(
+                appName=self.appName,
+                videoPath=self.videoPath,
+                targetWidth=int(self.label),
+                showWindow=self.showWindow)
         else:
             self.logger.info('Application does not exist: %s', self.appName)
             os._exit(0)

@@ -34,223 +34,255 @@
     },
     "GameOfLife0": {
       "id": 42,
-      "name": "GameOfLifeSerialised"
+      "name": "GameOfLife0"
     },
     "GameOfLife1": {
       "id": 43,
-      "name": "GameOfLifeSerialised"
+      "name": "GameOfLife1"
     },
     "GameOfLife2": {
       "id": 44,
-      "name": "GameOfLifeSerialised"
+      "name": "GameOfLife2"
     },
     "GameOfLife3": {
       "id": 45,
-      "name": "GameOfLifeSerialised"
+      "name": "GameOfLife3"
     },
     "GameOfLife4": {
       "id": 46,
-      "name": "GameOfLifeSerialised"
+      "name": "GameOfLife4"
     },
     "GameOfLife5": {
       "id": 47,
-      "name": "GameOfLifeSerialised"
+      "name": "GameOfLife5"
     },
     "GameOfLife6": {
       "id": 48,
-      "name": "GameOfLifeSerialised"
+      "name": "GameOfLife6"
     },
     "GameOfLife7": {
       "id": 49,
-      "name": "GameOfLifeSerialised"
+      "name": "GameOfLife7"
     },
     "GameOfLife8": {
       "id": 50,
-      "name": "GameOfLifeSerialised"
+      "name": "GameOfLife8"
     },
     "GameOfLife9": {
       "id": 51,
-      "name": "GameOfLifeSerialised"
+      "name": "GameOfLife9"
     },
     "GameOfLife10": {
       "id": 52,
-      "name": "GameOfLifeSerialised"
+      "name": "GameOfLife10"
     },
     "GameOfLife11": {
       "id": 53,
-      "name": "GameOfLifeSerialised"
+      "name": "GameOfLife11"
     },
     "GameOfLife12": {
       "id": 54,
-      "name": "GameOfLifeSerialised"
+      "name": "GameOfLife12"
     },
     "GameOfLife13": {
       "id": 55,
-      "name": "GameOfLifeSerialised"
+      "name": "GameOfLife13"
     },
     "GameOfLife14": {
       "id": 56,
-      "name": "GameOfLifeSerialised"
+      "name": "GameOfLife14"
     },
     "GameOfLife15": {
       "id": 57,
-      "name": "GameOfLifeSerialised"
+      "name": "GameOfLife15"
     },
     "GameOfLife16": {
       "id": 58,
-      "name": "GameOfLifeSerialised"
+      "name": "GameOfLife16"
     },
     "GameOfLife17": {
       "id": 59,
-      "name": "GameOfLifeSerialised"
+      "name": "GameOfLife17"
     },
     "GameOfLife18": {
       "id": 60,
-      "name": "GameOfLifeSerialised"
+      "name": "GameOfLife18"
     },
     "GameOfLife19": {
       "id": 61,
-      "name": "GameOfLifeSerialised"
+      "name": "GameOfLife19"
     },
     "GameOfLife20": {
       "id": 62,
-      "name": "GameOfLifeSerialised"
+      "name": "GameOfLife20"
     },
     "GameOfLife21": {
       "id": 63,
-      "name": "GameOfLifeSerialised"
+      "name": "GameOfLife21"
     },
     "GameOfLife22": {
       "id": 64,
-      "name": "GameOfLifeSerialised"
+      "name": "GameOfLife22"
     },
     "GameOfLife23": {
       "id": 65,
-      "name": "GameOfLifeSerialised"
+      "name": "GameOfLife23"
     },
     "GameOfLife24": {
       "id": 66,
-      "name": "GameOfLifeSerialised"
+      "name": "GameOfLife24"
     },
     "GameOfLife25": {
       "id": 67,
-      "name": "GameOfLifeSerialised"
+      "name": "GameOfLife25"
     },
     "GameOfLife26": {
       "id": 68,
-      "name": "GameOfLifeSerialised"
+      "name": "GameOfLife26"
     },
     "GameOfLife27": {
       "id": 69,
-      "name": "GameOfLifeSerialised"
+      "name": "GameOfLife27"
     },
     "GameOfLife28": {
       "id": 70,
-      "name": "GameOfLifeSerialised"
+      "name": "GameOfLife28"
     },
     "GameOfLife29": {
       "id": 71,
-      "name": "GameOfLifeSerialised"
+      "name": "GameOfLife29"
     },
     "GameOfLife30": {
       "id": 72,
-      "name": "GameOfLifeSerialised"
+      "name": "GameOfLife30"
     },
     "GameOfLife31": {
       "id": 73,
-      "name": "GameOfLifeSerialised"
+      "name": "GameOfLife31"
     },
     "GameOfLife32": {
       "id": 74,
-      "name": "GameOfLifeSerialised"
+      "name": "GameOfLife32"
     },
     "GameOfLife33": {
       "id": 75,
-      "name": "GameOfLifeSerialised"
+      "name": "GameOfLife33"
     },
     "GameOfLife34": {
       "id": 76,
-      "name": "GameOfLifeSerialised"
+      "name": "GameOfLife34"
     },
     "GameOfLife35": {
       "id": 77,
-      "name": "GameOfLifeSerialised"
+      "name": "GameOfLife35"
     },
     "GameOfLife36": {
       "id": 78,
-      "name": "GameOfLifeSerialised"
+      "name": "GameOfLife36"
     },
     "GameOfLife37": {
       "id": 79,
-      "name": "GameOfLifeSerialised"
+      "name": "GameOfLife37"
     },
     "GameOfLife38": {
       "id": 80,
-      "name": "GameOfLifeSerialised"
+      "name": "GameOfLife38"
     },
     "GameOfLife39": {
       "id": 81,
-      "name": "GameOfLifeSerialised"
+      "name": "GameOfLife39"
     },
     "GameOfLife40": {
       "id": 82,
-      "name": "GameOfLifeSerialised"
+      "name": "GameOfLife40"
     },
     "GameOfLife41": {
       "id": 83,
-      "name": "GameOfLifeSerialised"
+      "name": "GameOfLife41"
     },
     "GameOfLife42": {
       "id": 84,
-      "name": "GameOfLifeSerialised"
+      "name": "GameOfLife42"
     },
     "GameOfLife43": {
       "id": 85,
-      "name": "GameOfLifeSerialised"
+      "name": "GameOfLife43"
     },
     "GameOfLife44": {
       "id": 86,
-      "name": "GameOfLifeSerialised"
+      "name": "GameOfLife44"
     },
     "GameOfLife45": {
       "id": 87,
-      "name": "GameOfLifeSerialised"
+      "name": "GameOfLife45"
     },
     "GameOfLife46": {
       "id": 88,
-      "name": "GameOfLifeSerialised"
+      "name": "GameOfLife46"
     },
     "GameOfLife47": {
       "id": 89,
-      "name": "GameOfLifeSerialised"
+      "name": "GameOfLife47"
     },
     "GameOfLife48": {
       "id": 90,
-      "name": "GameOfLifeSerialised"
+      "name": "GameOfLife48"
     },
     "GameOfLife49": {
       "id": 91,
-      "name": "GameOfLifeSerialised"
+      "name": "GameOfLife49"
     },
     "GameOfLife50": {
       "id": 92,
-      "name": "GameOfLifeSerialised"
+      "name": "GameOfLife50"
     },
     "GameOfLife51": {
       "id": 93,
-      "name": "GameOfLifeSerialised"
+      "name": "GameOfLife51"
     },
     "GameOfLife52": {
       "id": 94,
-      "name": "GameOfLifeSerialised"
+      "name": "GameOfLife52"
     },
     "GameOfLife53": {
       "id": 95,
-      "name": "GameOfLifeSerialised"
+      "name": "GameOfLife53"
     },
     "GameOfLife54": {
       "id": 96,
-      "name": "GameOfLifeSerialised"
+      "name": "GameOfLife54"
+    },
+    "GameOfLife55": {
+      "id": 97,
+      "name": "GameOfLife55"
+    },
+    "GameOfLife56": {
+      "id": 98,
+      "name": "GameOfLife56"
+    },
+    "GameOfLife57": {
+      "id": 99,
+      "name": "GameOfLife57"
+    },
+    "GameOfLife58": {
+      "id": 100,
+      "name": "GameOfLife58"
+    },
+    "GameOfLife59": {
+      "id": 101,
+      "name": "GameOfLife59"
+    },
+    "GameOfLife60": {
+      "id": 102,
+      "name": "GameOfLife60"
+    },
+    "GameOfLife61": {
+      "id": 103,
+      "name": "GameOfLife61"
+    },
+    "GameOfLife62": {
+      "id": 104,
+      "name": "GameOfLife62"
     }
   },
   "applications": {
@@ -416,8 +448,8 @@
             "Sensor"
           ],
           "children": [
-            "GameOfLife1",
-            "RemoteLogger"
+            "RemoteLogger",
+            "GameOfLife1"
           ]
         },
         "GameOfLife1": {
@@ -425,8 +457,8 @@
             "GameOfLife0"
           ],
           "children": [
-            "GameOfLife2",
-            "RemoteLogger"
+            "RemoteLogger",
+            "GameOfLife2"
           ]
         },
         "GameOfLife2": {
@@ -434,8 +466,8 @@
             "GameOfLife1"
           ],
           "children": [
-            "GameOfLife3",
-            "RemoteLogger"
+            "RemoteLogger",
+            "GameOfLife3"
           ]
         },
         "GameOfLife3": {
@@ -443,8 +475,8 @@
             "GameOfLife2"
           ],
           "children": [
-            "GameOfLife4",
-            "RemoteLogger"
+            "RemoteLogger",
+            "GameOfLife4"
           ]
         },
         "GameOfLife4": {
@@ -452,8 +484,8 @@
             "GameOfLife3"
           ],
           "children": [
-            "GameOfLife5",
-            "RemoteLogger"
+            "RemoteLogger",
+            "GameOfLife5"
           ]
         },
         "GameOfLife5": {
@@ -461,8 +493,8 @@
             "GameOfLife4"
           ],
           "children": [
-            "GameOfLife6",
-            "RemoteLogger"
+            "RemoteLogger",
+            "GameOfLife6"
           ]
         },
         "GameOfLife6": {
@@ -470,8 +502,8 @@
             "GameOfLife5"
           ],
           "children": [
-            "GameOfLife7",
-            "RemoteLogger"
+            "RemoteLogger",
+            "GameOfLife7"
           ]
         },
         "GameOfLife7": {
@@ -479,8 +511,8 @@
             "GameOfLife6"
           ],
           "children": [
-            "GameOfLife8",
-            "RemoteLogger"
+            "RemoteLogger",
+            "GameOfLife8"
           ]
         },
         "GameOfLife8": {
@@ -488,8 +520,8 @@
             "GameOfLife7"
           ],
           "children": [
-            "GameOfLife9",
-            "RemoteLogger"
+            "RemoteLogger",
+            "GameOfLife9"
           ]
         },
         "GameOfLife9": {
@@ -497,8 +529,8 @@
             "GameOfLife8"
           ],
           "children": [
-            "GameOfLife10",
-            "RemoteLogger"
+            "RemoteLogger",
+            "GameOfLife10"
           ]
         },
         "GameOfLife10": {
@@ -506,8 +538,8 @@
             "GameOfLife9"
           ],
           "children": [
-            "GameOfLife11",
-            "RemoteLogger"
+            "RemoteLogger",
+            "GameOfLife11"
           ]
         },
         "GameOfLife11": {
@@ -515,8 +547,8 @@
             "GameOfLife10"
           ],
           "children": [
-            "GameOfLife12",
-            "RemoteLogger"
+            "RemoteLogger",
+            "GameOfLife12"
           ]
         },
         "GameOfLife12": {
@@ -524,8 +556,8 @@
             "GameOfLife11"
           ],
           "children": [
-            "GameOfLife13",
-            "RemoteLogger"
+            "RemoteLogger",
+            "GameOfLife13"
           ]
         },
         "GameOfLife13": {
@@ -533,8 +565,8 @@
             "GameOfLife12"
           ],
           "children": [
-            "GameOfLife14",
-            "RemoteLogger"
+            "RemoteLogger",
+            "GameOfLife14"
           ]
         },
         "GameOfLife14": {
@@ -542,8 +574,8 @@
             "GameOfLife13"
           ],
           "children": [
-            "GameOfLife15",
-            "RemoteLogger"
+            "RemoteLogger",
+            "GameOfLife15"
           ]
         },
         "GameOfLife15": {
@@ -551,8 +583,8 @@
             "GameOfLife14"
           ],
           "children": [
-            "GameOfLife16",
-            "RemoteLogger"
+            "RemoteLogger",
+            "GameOfLife16"
           ]
         },
         "GameOfLife16": {
@@ -560,8 +592,8 @@
             "GameOfLife15"
           ],
           "children": [
-            "GameOfLife17",
-            "RemoteLogger"
+            "RemoteLogger",
+            "GameOfLife17"
           ]
         },
         "GameOfLife17": {
@@ -569,8 +601,8 @@
             "GameOfLife16"
           ],
           "children": [
-            "GameOfLife18",
-            "RemoteLogger"
+            "RemoteLogger",
+            "GameOfLife18"
           ]
         },
         "GameOfLife18": {
@@ -578,8 +610,8 @@
             "GameOfLife17"
           ],
           "children": [
-            "GameOfLife19",
-            "RemoteLogger"
+            "RemoteLogger",
+            "GameOfLife19"
           ]
         },
         "GameOfLife19": {
@@ -587,8 +619,8 @@
             "GameOfLife18"
           ],
           "children": [
-            "GameOfLife20",
-            "RemoteLogger"
+            "RemoteLogger",
+            "GameOfLife20"
           ]
         },
         "GameOfLife20": {
@@ -596,8 +628,8 @@
             "GameOfLife19"
           ],
           "children": [
-            "GameOfLife21",
-            "RemoteLogger"
+            "RemoteLogger",
+            "GameOfLife21"
           ]
         },
         "GameOfLife21": {
@@ -605,8 +637,8 @@
             "GameOfLife20"
           ],
           "children": [
-            "GameOfLife22",
-            "RemoteLogger"
+            "RemoteLogger",
+            "GameOfLife22"
           ]
         },
         "GameOfLife22": {
@@ -614,8 +646,8 @@
             "GameOfLife21"
           ],
           "children": [
-            "GameOfLife23",
-            "RemoteLogger"
+            "RemoteLogger",
+            "GameOfLife23"
           ]
         },
         "GameOfLife23": {
@@ -623,8 +655,8 @@
             "GameOfLife22"
           ],
           "children": [
-            "GameOfLife24",
-            "RemoteLogger"
+            "RemoteLogger",
+            "GameOfLife24"
           ]
         },
         "GameOfLife24": {
@@ -632,8 +664,8 @@
             "GameOfLife23"
           ],
           "children": [
-            "GameOfLife25",
-            "RemoteLogger"
+            "RemoteLogger",
+            "GameOfLife25"
           ]
         },
         "GameOfLife25": {
@@ -641,8 +673,8 @@
             "GameOfLife24"
           ],
           "children": [
-            "GameOfLife26",
-            "RemoteLogger"
+            "RemoteLogger",
+            "GameOfLife26"
           ]
         },
         "GameOfLife26": {
@@ -650,8 +682,8 @@
             "GameOfLife25"
           ],
           "children": [
-            "GameOfLife27",
-            "RemoteLogger"
+            "RemoteLogger",
+            "GameOfLife27"
           ]
         },
         "GameOfLife27": {
@@ -659,8 +691,8 @@
             "GameOfLife26"
           ],
           "children": [
-            "GameOfLife28",
-            "RemoteLogger"
+            "RemoteLogger",
+            "GameOfLife28"
           ]
         },
         "GameOfLife28": {
@@ -668,8 +700,8 @@
             "GameOfLife27"
           ],
           "children": [
-            "GameOfLife29",
-            "RemoteLogger"
+            "RemoteLogger",
+            "GameOfLife29"
           ]
         },
         "GameOfLife29": {
@@ -677,8 +709,8 @@
             "GameOfLife28"
           ],
           "children": [
-            "GameOfLife30",
-            "RemoteLogger"
+            "RemoteLogger",
+            "GameOfLife30"
           ]
         },
         "GameOfLife30": {
@@ -686,8 +718,8 @@
             "GameOfLife29"
           ],
           "children": [
-            "GameOfLife31",
-            "RemoteLogger"
+            "RemoteLogger",
+            "GameOfLife31"
           ]
         },
         "GameOfLife31": {
@@ -695,8 +727,8 @@
             "GameOfLife30"
           ],
           "children": [
-            "GameOfLife32",
-            "RemoteLogger"
+            "RemoteLogger",
+            "GameOfLife32"
           ]
         },
         "GameOfLife32": {
@@ -704,8 +736,8 @@
             "GameOfLife31"
           ],
           "children": [
-            "GameOfLife33",
-            "RemoteLogger"
+            "RemoteLogger",
+            "GameOfLife33"
           ]
         },
         "GameOfLife33": {
@@ -713,8 +745,8 @@
             "GameOfLife32"
           ],
           "children": [
-            "GameOfLife34",
-            "RemoteLogger"
+            "RemoteLogger",
+            "GameOfLife34"
           ]
         },
         "GameOfLife34": {
@@ -722,8 +754,8 @@
             "GameOfLife33"
           ],
           "children": [
-            "GameOfLife35",
-            "RemoteLogger"
+            "RemoteLogger",
+            "GameOfLife35"
           ]
         },
         "GameOfLife35": {
@@ -731,8 +763,8 @@
             "GameOfLife34"
           ],
           "children": [
-            "GameOfLife36",
-            "RemoteLogger"
+            "RemoteLogger",
+            "GameOfLife36"
           ]
         },
         "GameOfLife36": {
@@ -740,8 +772,8 @@
             "GameOfLife35"
           ],
           "children": [
-            "GameOfLife37",
-            "RemoteLogger"
+            "RemoteLogger",
+            "GameOfLife37"
           ]
         },
         "GameOfLife37": {
@@ -749,8 +781,8 @@
             "GameOfLife36"
           ],
           "children": [
-            "GameOfLife38",
-            "RemoteLogger"
+            "RemoteLogger",
+            "GameOfLife38"
           ]
         },
         "GameOfLife38": {
@@ -758,8 +790,8 @@
             "GameOfLife37"
           ],
           "children": [
-            "GameOfLife39",
-            "RemoteLogger"
+            "RemoteLogger",
+            "GameOfLife39"
           ]
         },
         "GameOfLife39": {
@@ -767,8 +799,8 @@
             "GameOfLife38"
           ],
           "children": [
-            "GameOfLife40",
-            "RemoteLogger"
+            "RemoteLogger",
+            "GameOfLife40"
           ]
         },
         "GameOfLife40": {
@@ -776,8 +808,8 @@
             "GameOfLife39"
           ],
           "children": [
-            "GameOfLife41",
-            "RemoteLogger"
+            "RemoteLogger",
+            "GameOfLife41"
           ]
         },
         "GameOfLife41": {
@@ -785,8 +817,8 @@
             "GameOfLife40"
           ],
           "children": [
-            "GameOfLife42",
-            "RemoteLogger"
+            "RemoteLogger",
+            "GameOfLife42"
           ]
         },
         "GameOfLife42": {
@@ -794,8 +826,8 @@
             "GameOfLife41"
           ],
           "children": [
-            "GameOfLife43",
-            "RemoteLogger"
+            "RemoteLogger",
+            "GameOfLife43"
           ]
         },
         "GameOfLife43": {
@@ -803,8 +835,8 @@
             "GameOfLife42"
           ],
           "children": [
-            "GameOfLife44",
-            "RemoteLogger"
+            "RemoteLogger",
+            "GameOfLife44"
           ]
         },
         "GameOfLife44": {
@@ -812,8 +844,8 @@
             "GameOfLife43"
           ],
           "children": [
-            "GameOfLife45",
-            "RemoteLogger"
+            "RemoteLogger",
+            "GameOfLife45"
           ]
         },
         "GameOfLife45": {
@@ -821,8 +853,8 @@
             "GameOfLife44"
           ],
           "children": [
-            "GameOfLife46",
-            "RemoteLogger"
+            "RemoteLogger",
+            "GameOfLife46"
           ]
         },
         "GameOfLife46": {
@@ -830,8 +862,8 @@
             "GameOfLife45"
           ],
           "children": [
-            "GameOfLife47",
-            "RemoteLogger"
+            "RemoteLogger",
+            "GameOfLife47"
           ]
         },
         "GameOfLife47": {
@@ -839,8 +871,8 @@
             "GameOfLife46"
           ],
           "children": [
-            "GameOfLife48",
-            "RemoteLogger"
+            "RemoteLogger",
+            "GameOfLife48"
           ]
         },
         "GameOfLife48": {
@@ -848,8 +880,8 @@
             "GameOfLife47"
           ],
           "children": [
-            "GameOfLife49",
-            "RemoteLogger"
+            "RemoteLogger",
+            "GameOfLife49"
           ]
         },
         "GameOfLife49": {
@@ -857,8 +889,8 @@
             "GameOfLife48"
           ],
           "children": [
-            "GameOfLife50",
-            "RemoteLogger"
+            "RemoteLogger",
+            "GameOfLife50"
           ]
         },
         "GameOfLife50": {
@@ -866,8 +898,8 @@
             "GameOfLife49"
           ],
           "children": [
-            "GameOfLife51",
-            "RemoteLogger"
+            "RemoteLogger",
+            "GameOfLife51"
           ]
         },
         "GameOfLife51": {
@@ -875,8 +907,8 @@
             "GameOfLife50"
           ],
           "children": [
-            "GameOfLife52",
-            "RemoteLogger"
+            "RemoteLogger",
+            "GameOfLife52"
           ]
         },
         "GameOfLife52": {
@@ -884,8 +916,8 @@
             "GameOfLife51"
           ],
           "children": [
-            "GameOfLife53",
-            "RemoteLogger"
+            "RemoteLogger",
+            "GameOfLife53"
           ]
         },
         "GameOfLife53": {
@@ -893,8 +925,8 @@
             "GameOfLife52"
           ],
           "children": [
-            "GameOfLife54",
-            "RemoteLogger"
+            "RemoteLogger",
+            "GameOfLife54"
           ]
         },
         "GameOfLife54": {
@@ -902,8 +934,80 @@
             "GameOfLife53"
           ],
           "children": [
-            "Actor",
-            "RemoteLogger"
+            "RemoteLogger",
+            "GameOfLife55"
+          ]
+        },
+        "GameOfLife55": {
+          "parents": [
+            "GameOfLife54"
+          ],
+          "children": [
+            "RemoteLogger",
+            "GameOfLife56"
+          ]
+        },
+        "GameOfLife56": {
+          "parents": [
+            "GameOfLife55"
+          ],
+          "children": [
+            "RemoteLogger",
+            "GameOfLife57"
+          ]
+        },
+        "GameOfLife57": {
+          "parents": [
+            "GameOfLife56"
+          ],
+          "children": [
+            "RemoteLogger",
+            "GameOfLife58"
+          ]
+        },
+        "GameOfLife58": {
+          "parents": [
+            "GameOfLife57"
+          ],
+          "children": [
+            "RemoteLogger",
+            "GameOfLife59"
+          ]
+        },
+        "GameOfLife59": {
+          "parents": [
+            "GameOfLife58"
+          ],
+          "children": [
+            "RemoteLogger",
+            "GameOfLife60"
+          ]
+        },
+        "GameOfLife60": {
+          "parents": [
+            "GameOfLife59"
+          ],
+          "children": [
+            "RemoteLogger",
+            "GameOfLife61"
+          ]
+        },
+        "GameOfLife61": {
+          "parents": [
+            "GameOfLife60"
+          ],
+          "children": [
+            "RemoteLogger",
+            "GameOfLife62"
+          ]
+        },
+        "GameOfLife62": {
+          "parents": [
+            "GameOfLife61"
+          ],
+          "children": [
+            "RemoteLogger",
+            "Actor"
           ]
         }
       }

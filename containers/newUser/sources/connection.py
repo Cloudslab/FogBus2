@@ -131,7 +131,7 @@ class Connection:
             if retries:
                 self.__send(message=message, retries=retries - 1)
                 return
-            print(addr_)
+            print(self.addr)
             raise OSError
         except ConnectionRefusedError:
             clientSocket.close()
