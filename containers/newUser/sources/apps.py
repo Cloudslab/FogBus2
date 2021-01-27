@@ -318,7 +318,7 @@ class GameOfLifeSerialised(ApplicationUserSide):
             1,
             cv2.LINE_AA)
         _, self.world = cv2.threshold(world, 127, 255, cv2.THRESH_BINARY)
-        self.initMayChange()
+        self.initMayChange(theWholeWorld=True)
         cv2.imshow(
             'Game of Life',
             cv2.resize(
@@ -329,10 +329,13 @@ class GameOfLifeSerialised(ApplicationUserSide):
         print('[*] This is your initial world. Press \'Space\' to start.')
         cv2.waitKey(0)
 
-    def initMayChange(self):
+    def initMayChange(self, theWholeWorld=False):
         self.mayChange = set([])
         for i in range(0, self.height):
             for j in range(0, self.width):
+                if theWholeWorld:
+                    self.mayChange.update([(i, j)])
+                    continue
                 if not self.doesChange(i, j):
                     continue
                 neighbours = self.affectedNeighbours(i, j)
