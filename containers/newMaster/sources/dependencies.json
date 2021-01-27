@@ -997,17 +997,7 @@
             "GameOfLife60"
           ],
           "children": [
-            "RemoteLogger",
-            "GameOfLife62"
-          ]
-        },
-        "GameOfLife62": {
-          "parents": [
-            "GameOfLife61"
-          ],
-          "children": [
-            "RemoteLogger",
-            "Actor"
+            "RemoteLogger"
           ]
         }
       }

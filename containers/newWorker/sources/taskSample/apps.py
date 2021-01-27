@@ -223,7 +223,7 @@ class GameOfLife(TasksWorkerSide):
                 neighbours = self.affectedNeighbours(i, j)
                 mayChangeInNextRound.update(neighbours)
 
-        return self.world, self.height, self.width, newStates, mayChangeInNextRound
+        return self.world, self.height, self.width, mayChange, newStates, mayChangeInNextRound
 
     def hitMyFocus(self, i, j) -> bool:
         if i < self.focusArea[0][0]:
@@ -273,8 +273,8 @@ class GameOfLife(TasksWorkerSide):
 
 
 class GameOfLife62(TasksWorkerSide):
-    def __init__(self, taskID: int, taskName: str):
-        super().__init__(104, taskName)
+    def __init__(self):
+        super().__init__(104, 'GameOfLife62')
         self.count = 0
         self.newStates = set([])
         self.mayChange = set([])
@@ -283,13 +283,10 @@ class GameOfLife62(TasksWorkerSide):
     #           newStates, mayChangeInNextRound
 
     def process(self, inputData):
-        self.count += 1
         newStates = inputData[3]
         mayChange = inputData[4]
         self.newStates.update(newStates)
         self.mayChange.update(mayChange)
-        if self.count < 62:
-            return None
         ret = self.newStates, self.mayChange
         self.newStates = set([])
         self.mayChange = set([])

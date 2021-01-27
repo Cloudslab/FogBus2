@@ -162,6 +162,6 @@ if __name__ == '__main__':
         height=1024,
         width=2048,
         resizeFactor=8)
-    game.startWithText('Qifan Deng')
+    game.startWithText('BBaBB')
     # game.setPoints(game.examplePoints())
     game.run()

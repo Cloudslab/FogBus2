@@ -57,9 +57,139 @@ class TaskHandler(Node):
             app = BlurAndPHash()
         elif taskName == 'OCR':
             app = OCR()
+        elif taskName == 'GameOfLife0':
+            app = GameOfLife0()
+        elif taskName == 'GameOfLife1':
+            app = GameOfLife1()
+        elif taskName == 'GameOfLife2':
+            app = GameOfLife2()
+        elif taskName == 'GameOfLife3':
+            app = GameOfLife3()
+        elif taskName == 'GameOfLife4':
+            app = GameOfLife4()
+        elif taskName == 'GameOfLife5':
+            app = GameOfLife5()
+        elif taskName == 'GameOfLife6':
+            app = GameOfLife6()
+        elif taskName == 'GameOfLife7':
+            app = GameOfLife7()
+        elif taskName == 'GameOfLife8':
+            app = GameOfLife8()
+        elif taskName == 'GameOfLife9':
+            app = GameOfLife9()
+        elif taskName == 'GameOfLife10':
+            app = GameOfLife10()
+        elif taskName == 'GameOfLife11':
+            app = GameOfLife11()
+        elif taskName == 'GameOfLife12':
+            app = GameOfLife12()
+        elif taskName == 'GameOfLife13':
+            app = GameOfLife13()
+        elif taskName == 'GameOfLife14':
+            app = GameOfLife14()
+        elif taskName == 'GameOfLife15':
+            app = GameOfLife15()
+        elif taskName == 'GameOfLife16':
+            app = GameOfLife16()
+        elif taskName == 'GameOfLife17':
+            app = GameOfLife17()
+        elif taskName == 'GameOfLife18':
+            app = GameOfLife18()
+        elif taskName == 'GameOfLife19':
+            app = GameOfLife19()
+        elif taskName == 'GameOfLife20':
+            app = GameOfLife20()
+        elif taskName == 'GameOfLife21':
+            app = GameOfLife21()
+        elif taskName == 'GameOfLife22':
+            app = GameOfLife22()
+        elif taskName == 'GameOfLife23':
+            app = GameOfLife23()
+        elif taskName == 'GameOfLife24':
+            app = GameOfLife24()
+        elif taskName == 'GameOfLife25':
+            app = GameOfLife25()
+        elif taskName == 'GameOfLife26':
+            app = GameOfLife26()
+        elif taskName == 'GameOfLife27':
+            app = GameOfLife27()
+        elif taskName == 'GameOfLife28':
+            app = GameOfLife28()
+        elif taskName == 'GameOfLife29':
+            app = GameOfLife29()
+        elif taskName == 'GameOfLife30':
+            app = GameOfLife30()
+        elif taskName == 'GameOfLife31':
+            app = GameOfLife31()
+        elif taskName == 'GameOfLife32':
+            app = GameOfLife32()
+        elif taskName == 'GameOfLife33':
+            app = GameOfLife33()
+        elif taskName == 'GameOfLife34':
+            app = GameOfLife34()
+        elif taskName == 'GameOfLife35':
+            app = GameOfLife35()
+        elif taskName == 'GameOfLife36':
+            app = GameOfLife36()
+        elif taskName == 'GameOfLife37':
+            app = GameOfLife37()
+        elif taskName == 'GameOfLife38':
+            app = GameOfLife38()
+        elif taskName == 'GameOfLife39':
+            app = GameOfLife39()
+        elif taskName == 'GameOfLife40':
+            app = GameOfLife40()
+        elif taskName == 'GameOfLife41':
+            app = GameOfLife41()
+        elif taskName == 'GameOfLife42':
+            app = GameOfLife42()
+        elif taskName == 'GameOfLife43':
+            app = GameOfLife43()
+        elif taskName == 'GameOfLife44':
+            app = GameOfLife44()
+        elif taskName == 'GameOfLife45':
+            app = GameOfLife45()
+        elif taskName == 'GameOfLife46':
+            app = GameOfLife46()
+        elif taskName == 'GameOfLife47':
+            app = GameOfLife47()
+        elif taskName == 'GameOfLife48':
+            app = GameOfLife48()
+        elif taskName == 'GameOfLife49':
+            app = GameOfLife49()
+        elif taskName == 'GameOfLife50':
+            app = GameOfLife50()
+        elif taskName == 'GameOfLife51':
+            app = GameOfLife51()
+        elif taskName == 'GameOfLife52':
+            app = GameOfLife52()
+        elif taskName == 'GameOfLife53':
+            app = GameOfLife53()
+        elif taskName == 'GameOfLife54':
+            app = GameOfLife54()
+        elif taskName == 'GameOfLife55':
+            app = GameOfLife55()
+        elif taskName == 'GameOfLife56':
+            app = GameOfLife56()
+        elif taskName == 'GameOfLife57':
+            app = GameOfLife57()
+        elif taskName == 'GameOfLife58':
+            app = GameOfLife58()
+        elif taskName == 'GameOfLife59':
+            app = GameOfLife59()
+        elif taskName == 'GameOfLife60':
+            app = GameOfLife60()
+        elif taskName == 'GameOfLife61':
+            app = GameOfLife61()
+        elif taskName == 'GameOfLife62':
+            app = GameOfLife62()
         if app is None:
-            os.killpg(os.getpgrp(), signal.SIGINT)
-        self.app: TasksWorkerSide = app
+            msg = {
+                'type': 'exit',
+                'reason': 'No TaskHandler named %s' % taskName}
+            self.sendMessage(msg, self.masterAddr)
+        else:
+            self.app: TasksWorkerSide = app
 
     def __uploadAverageProcessTime(self):
         if self.processTime.average() is None:
@@ -152,16 +282,55 @@ class TaskHandler(Node):
         self.sendMessage(msg, self.masterAddr)
 
 
+def run(
+        masterAddr,
+        loggerAddr,
+        userID,
+        userName,
+        taskName,
+        token,
+        childTaskTokens,
+        workerID,
+        retries):
+    if retries == 0:
+        raise CannotBindAddr
+    try:
+        tmpSocket = socket.socket(
+            socket.AF_INET,
+            socket.SOCK_STREAM)
+        tmpSocket.bind(('', 0))
+        port = tmpSocket.getsockname()[1]
+        tmpSocket.close()
+        myAddr = (sys.argv[1], port)
+
+        taskHandler_ = TaskHandler(
+            myAddr=myAddr,
+            masterAddr=masterAddr,
+            loggerAddr=loggerAddr,
+            userID=userID,
+            userName=userName,
+            taskName=taskName,
+            token=token,
+            childTaskTokens=childTaskTokens,
+            workerID=workerID
+        )
+        taskHandler_.run()
+    except CannotBindAddr:
+        run(
+            masterAddr=masterAddr_,
+            loggerAddr=loggerAddr_,
+            userID=userID_,
+            taskName=taskName_,
+            userName=userName_,
+            token=token_,
+            workerID=workerID_,
+            childTaskTokens=childTaskTokens_,
+            retries=retries - 1)
+
+
 if __name__ == '__main__':
     import socket
 
-    tmpSocket = socket.socket(
-        socket.AF_INET,
-        socket.SOCK_STREAM)
-    tmpSocket.bind(('', 0))
-    port = tmpSocket.getsockname()[1]
-    tmpSocket.close()
-    myAddr_ = (sys.argv[1], port)
     masterAddr_ = (sys.argv[2], int(sys.argv[3]))
     loggerAddr_ = (sys.argv[4], int(sys.argv[5]))
 
@@ -175,15 +344,13 @@ if __name__ == '__main__':
         childTaskTokens_ = sys.argv[10].split(',')
     workerID_ = int(sys.argv[11])
 
-    taskHandler_ = TaskHandler(
-        myAddr=myAddr_,
+    run(
         masterAddr=masterAddr_,
         loggerAddr=loggerAddr_,
         userID=userID_,
-        userName=userName_,
         taskName=taskName_,
+        userName=userName_,
         token=token_,
+        workerID=workerID_,
         childTaskTokens=childTaskTokens_,
-        workerID=workerID_
-    )
-    taskHandler_.run()
+        retries=3)

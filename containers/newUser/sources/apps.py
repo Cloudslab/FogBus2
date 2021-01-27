@@ -268,8 +268,10 @@ class GameOfLifeSerialised(ApplicationUserSide):
         self.mayChange = set([])
 
     def _run(self):
-        self.initMayChange()
+        self.startWithText()
+        gen = 0
         while True:
+            gen += 1
             cv2.imshow(
                 'Game of Life',
                 cv2.resize(
@@ -280,6 +282,7 @@ class GameOfLifeSerialised(ApplicationUserSide):
             # cv2.waitKey(0)
             if cv2.waitKey(1) == ord('q'):
                 break
+            print('\r[*] Generation %d' % gen, end='')
             inputData = (
                 self.world,
                 self.height,
@@ -289,8 +292,8 @@ class GameOfLifeSerialised(ApplicationUserSide):
                 set([]))
             self.dataToSubmit.put(inputData)
             result = self.result.get()
-            self.newStates = result[0]
-            self.mayChange = result[1]
+            self.newStates = result[4]
+            self.mayChange = result[5]
             self.changeStates()
 
         print('[*] Bye')
