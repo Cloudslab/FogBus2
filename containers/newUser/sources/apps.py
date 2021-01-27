@@ -258,12 +258,12 @@ class GameOfLifeSerialised(ApplicationUserSide):
             targetWidth=targetWidth,
             showWindow=showWindow)
 
-        self.__resizeFactor = 8
-        self.height = 1024 // self.__resizeFactor
-        self.width = 2048 // self.__resizeFactor
+        self._resizeFactor = 8
+        self.height = 1024 // self._resizeFactor
+        self.width = 2048 // self._resizeFactor
         self.generationNumber = None
         self.world = np.zeros((self.height, self.width, 1), np.uint8)
-        self.newStates = []
+        self.newStates = set([])
         self.frameUpdateGap = 1 / 60
         self.mayChange = set([])
 
@@ -272,16 +272,16 @@ class GameOfLifeSerialised(ApplicationUserSide):
         gen = 0
         while True:
             gen += 1
-            if self.__resizeFactor != 1:
+            if self._resizeFactor != 1:
                 showWorld = cv2.resize(
                     self.world,
-                    (self.width * self.__resizeFactor,
-                     self.height * self.__resizeFactor),
+                    (self.width * self._resizeFactor,
+                     self.height * self._resizeFactor),
                     interpolation=cv2.INTER_AREA)
             else:
                 showWorld = self.world
             cv2.imshow(
-                'Game of Life',
+                'Game of Life - Serialized',
                 showWorld)
             # cv2.waitKey(0)
             if cv2.waitKey(1) == ord('q'):
@@ -296,8 +296,8 @@ class GameOfLifeSerialised(ApplicationUserSide):
                 set([]))
             self.dataToSubmit.put(inputData)
             result = self.result.get()
-            self.newStates = result[4]
-            self.mayChange = result[5]
+            self.newStates.update(result[4])
+            self.mayChange.update(result[5])
             self.changeStates()
 
         print('[*] Bye')
@@ -323,8 +323,8 @@ class GameOfLifeSerialised(ApplicationUserSide):
             'Game of Life',
             cv2.resize(
                 self.world,
-                (self.width * self.__resizeFactor,
-                 self.height * self.__resizeFactor),
+                (self.width * self._resizeFactor,
+                 self.height * self._resizeFactor),
                 interpolation=cv2.INTER_AREA))
         print('[*] This is your initial world. Press \'Space\' to start.')
         cv2.waitKey(0)
@@ -379,4 +379,47 @@ class GameOfLifeSerialised(ApplicationUserSide):
                 self.world[i][j] = 255
                 continue
             self.world[i][j] = 0
-        self.newStates = []
+        self.newStates = set([])
+
+
+class GameOfLifeParallelized(GameOfLifeSerialised):
+
+    def _run(self):
+        self.startWithText()
+        gen = 0
+        while True:
+            gen += 1
+            if self._resizeFactor != 1:
+                showWorld = cv2.resize(
+                    self.world,
+                    (self.width * self._resizeFactor,
+                     self.height * self._resizeFactor),
+                    interpolation=cv2.INTER_AREA)
+            else:
+                showWorld = self.world
+            cv2.imshow(
+                'Game of Life - Parallelized',
+                showWorld)
+            # cv2.waitKey(0)
+            if cv2.waitKey(1) == ord('q'):
+                break
+            print('\r[*] Generation %d' % gen, end='')
+            inputData = (
+                self.world,
+                self.height,
+                self.width,
+                self.mayChange,
+                set([]),
+                set([]))
+            self.dataToSubmit.put(inputData)
+            resCount = 0
+            self.newStates = set([])
+            self.mayChange = set([])
+            while resCount < 62:
+                result = self.result.get()
+                resCount += 1
+                self.newStates.update(result[4])
+                self.mayChange.update(result[5])
+            self.changeStates()
+
+        print('[*] Bye')

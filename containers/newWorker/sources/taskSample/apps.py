@@ -272,27 +272,6 @@ class GameOfLife(TasksWorkerSide):
         return neighbours
 
 
-class GameOfLife62(TasksWorkerSide):
-    def __init__(self):
-        super().__init__(104, 'GameOfLife62')
-        self.count = 0
-        self.newStates = set([])
-        self.mayChange = set([])
-
-    # return self.world, self.height, self.width,
-    #           newStates, mayChangeInNextRound
-
-    def process(self, inputData):
-        newStates = inputData[3]
-        mayChange = inputData[4]
-        self.newStates.update(newStates)
-        self.mayChange.update(mayChange)
-        ret = self.newStates, self.mayChange
-        self.newStates = set([])
-        self.mayChange = set([])
-        return ret
-
-
 class GameOfLife0(GameOfLife):
     def __init__(self):
         super().__init__(

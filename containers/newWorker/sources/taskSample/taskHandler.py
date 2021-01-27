@@ -181,8 +181,6 @@ class TaskHandler(Node):
             app = GameOfLife60()
         elif taskName == 'GameOfLife61':
             app = GameOfLife61()
-        elif taskName == 'GameOfLife62':
-            app = GameOfLife62()
         if app is None:
             msg = {
                 'type': 'exit',
