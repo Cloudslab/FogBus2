@@ -272,13 +272,17 @@ class GameOfLifeSerialised(ApplicationUserSide):
         gen = 0
         while True:
             gen += 1
-            cv2.imshow(
-                'Game of Life',
-                cv2.resize(
+            if self.__resizeFactor != 1:
+                showWorld = cv2.resize(
                     self.world,
                     (self.width * self.__resizeFactor,
                      self.height * self.__resizeFactor),
-                    interpolation=cv2.INTER_AREA))
+                    interpolation=cv2.INTER_AREA)
+            else:
+                showWorld = self.world
+            cv2.imshow(
+                'Game of Life',
+                showWorld)
             # cv2.waitKey(0)
             if cv2.waitKey(1) == ord('q'):
                 break
