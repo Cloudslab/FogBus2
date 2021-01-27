@@ -1,0 +1,16 @@
+version: '3'
+
+services:
+
+  game_of_life34:
+    container_name: game_of_life34
+    image: game_of_life34
+    build:
+      context: ../../
+      dockerfile: ./tasks/GameOfLife34/Dockerfile
+    environment:
+      PUID: 1000
+      PGID: 1000
+      TZ: Australia/Melbourne
+    network_mode: "host"
+

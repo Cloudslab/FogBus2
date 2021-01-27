@@ -1,0 +1,16 @@
+version: '3'
+
+services:
+
+  game_of_life40:
+    container_name: game_of_life40
+    image: game_of_life40
+    build:
+      context: ../../
+      dockerfile: ./tasks/GameOfLife40/Dockerfile
+    environment:
+      PUID: 1000
+      PGID: 1000
+      TZ: Australia/Melbourne
+    network_mode: "host"
+

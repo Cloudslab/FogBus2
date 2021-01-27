@@ -1,0 +1,16 @@
+version: '3'
+
+services:
+
+  game_of_life22:
+    container_name: game_of_life22
+    image: game_of_life22
+    build:
+      context: ../../
+      dockerfile: ./tasks/GameOfLife22/Dockerfile
+    environment:
+      PUID: 1000
+      PGID: 1000
+      TZ: Australia/Melbourne
+    network_mode: "host"
+
