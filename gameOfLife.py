@@ -73,8 +73,9 @@ class GameOfLife:
 
     def affectedNeighbours(self, i, j):
         neighbours = set([])
-        for iNeighbour in range(i - 2, i + 2):
-            for jNeighbour in range(j - 2, j + 2):
+        wide = 2
+        for iNeighbour in range(i - wide, i + wide):
+            for jNeighbour in range(j - wide, j + wide):
                 neighbours.update([(iNeighbour % self.height, jNeighbour % self.width)])
         return neighbours
 
