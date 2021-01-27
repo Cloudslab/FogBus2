@@ -194,3 +194,31 @@ class OCR(TasksWorkerSide):
     @staticmethod
     def editDistance(textA, textB):
         return editdistance.eval(textA, textB)
+
+
+class GameOfLife1(TasksWorkerSide):
+    def __init__(self):
+        super().__init__(taskID=5, taskName='OCR')
+        self.text = ''
+        self.preText = None
+        self.thresholdEditDistance = 800
+
+    def process(self, inputData):
+        (frame, isLastFrame) = inputData
+        if isLastFrame:
+            return self.text
+        currText = pytesseract.image_to_string(frame)
+        if self.preText is None:
+            self.text = currText
+            self.preText = currText
+            return None
+        editDistance = self.editDistance(self.preText, currText)
+        if editDistance <= self.thresholdEditDistance:
+            return None
+        self.text += currText
+        self.preText = currText
+        return None
+
+    @staticmethod
+    def editDistance(textA, textB):
+        return editdistance.eval(textA, textB)
