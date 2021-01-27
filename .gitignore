@@ -11,3 +11,6 @@ src/nginx/nginx.conf
 .idea
 **.csv
 test/
+**test.py
+*.tar
+uploadArchive.sh
