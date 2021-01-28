@@ -390,6 +390,7 @@ class GameOfLifeSerialised(ApplicationUserSide):
 class GameOfLifeParallelized(GameOfLifeSerialised):
 
     def _run(self):
+        self.appName = 'GameOfLifeParallelized'
         self.startWithText()
         gen = 0
         while True:
@@ -421,6 +422,50 @@ class GameOfLifeParallelized(GameOfLifeSerialised):
             self.newStates = set([])
             self.mayChange = set([])
             while resCount < 62:
+                result = self.result.get()
+                resCount += 1
+                self.newStates.update(result[4])
+                self.mayChange.update(result[5])
+            self.changeStates()
+
+        print('[*] Bye')
+
+
+class GameOfLifePyramid(GameOfLifeSerialised):
+
+    def _run(self):
+        self.appName = 'GameOfLifePyramid'
+        self.startWithText()
+        gen = 0
+        while True:
+            gen += 1
+            if self._resizeFactor != 1:
+                showWorld = cv2.resize(
+                    self.world,
+                    (self.width * self._resizeFactor,
+                     self.height * self._resizeFactor),
+                    interpolation=cv2.INTER_AREA)
+            else:
+                showWorld = self.world
+            cv2.imshow(
+                self.appName,
+                showWorld)
+            # cv2.waitKey(0)
+            if cv2.waitKey(1) == ord('q'):
+                break
+            print('\r[*] Generation %d' % gen, end='')
+            inputData = (
+                self.world,
+                self.height,
+                self.width,
+                self.mayChange,
+                set([]),
+                set([]))
+            self.dataToSubmit.put(inputData)
+            resCount = 0
+            self.newStates = set([])
+            self.mayChange = set([])
+            while resCount < 32:
                 result = self.result.get()
                 resCount += 1
                 self.newStates.update(result[4])

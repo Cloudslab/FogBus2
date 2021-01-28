@@ -86,6 +86,12 @@ class User(Node):
                 videoPath=self.videoPath,
                 targetHeight=int(self.label),
                 showWindow=self.showWindow)
+        elif self.appName == 'GameOfLifePyramid':
+            self.app: ApplicationUserSide = GameOfLifePyramid(
+                appName=self.appName,
+                videoPath=self.videoPath,
+                targetHeight=int(self.label),
+                showWindow=self.showWindow)
         else:
             self.logger.info('Application does not exist: %s', self.appName)
             os._exit(0)
