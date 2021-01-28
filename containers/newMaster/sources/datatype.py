@@ -3,6 +3,7 @@ from queue import Queue
 from typing import List, Dict, Tuple
 from secrets import token_urlsafe
 from node import Identity
+from resourcesInfo import ResourcesInfo, ImagesAndContainers
 
 Address = Tuple[str, int]
 
@@ -20,7 +21,8 @@ class Worker(Client):
             name: str,
             nameLogPrinting: str,
             nameConsistent: str,
-            workerID: int):
+            workerID: int,
+            resources: ResourcesInfo):
         # TODO Containers info
         if name is None:
             name = "Worker-%d" % workerID
@@ -31,6 +33,7 @@ class Worker(Client):
             nameConsistent=nameConsistent,
             addr=addr,
             machineID=machineID)
+        self.resources: ResourcesInfo = resources
 
 
 class TaskHandler(Client):

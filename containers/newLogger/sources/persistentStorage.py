@@ -3,7 +3,7 @@ import os
 from typing import Dict
 from copy import deepcopy
 from edge import Edge
-from resourcesInfo import ResourcesInfo, WorkerInfo
+from resourcesInfo import ResourcesInfo, ImagesAndContainers
 
 
 class PersistentStorage:
@@ -43,7 +43,7 @@ class PersistentStorage:
             return self.__recoverObject(content, ResourcesInfo)
 
         if name == 'imagesAndRunningContainers':
-            res = self.__recoverObject(content, WorkerInfo)
+            res = self.__recoverObject(content, ImagesAndContainers)
             for k, v in res.items():
                 for kk, vv in v.__dict__.items():
                     v.__dict__[kk] = set(vv)
@@ -67,7 +67,7 @@ class PersistentStorage:
             return dict(obj)
         if isinstance(obj, ResourcesInfo):
             return dict(obj)
-        if isinstance(obj, WorkerInfo):
+        if isinstance(obj, ImagesAndContainers):
             objDict = dict(obj)
             for k, v in objDict.items():
                 objDict[k] = list(v)

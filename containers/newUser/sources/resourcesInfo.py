@@ -29,7 +29,7 @@ class Dictionary:
             yield k, v
 
 
-class WorkerInfo(Dictionary):
+class ImagesAndContainers(Dictionary):
 
     def __init__(
             self,

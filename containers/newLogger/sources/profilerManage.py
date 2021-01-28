@@ -1,7 +1,7 @@
 import threading
 from edge import Edge
 from typing import Dict, List, Tuple
-from resourcesInfo import ResourcesInfo, WorkerInfo
+from resourcesInfo import ResourcesInfo, ImagesAndContainers
 from persistentStorage import PersistentStorage
 
 
@@ -12,7 +12,7 @@ class Profiler:
         self.nodeResources: Dict[str, ResourcesInfo] = {}
         self.averageProcessTime: Dict[str, float] = {}
         self.averageRespondTime: Dict[str, float] = {}
-        self.imagesAndRunningContainers: Dict[str, WorkerInfo] = {}
+        self.imagesAndRunningContainers: Dict[str, ImagesAndContainers] = {}
 
         self.persistentStorage: PersistentStorage = PersistentStorage()
         self.__readFromPersistentStorage()

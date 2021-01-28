@@ -10,6 +10,7 @@ from connection import Message
 from typing import Dict, Union, List, Tuple
 from dependencies import loadDependencies, Application
 from scheduling import Scheduler, Decision, NSGA3
+from collections import defaultdict
 
 Address = Tuple[str, int]
 
@@ -106,6 +107,7 @@ class Registry(Profiler, Node, ABC):
     def __addWorker(self, message: Message):
         workerID = self.__newWorkerID()
         machineID = message.content['machineID']
+        resources = message.content['resources']
 
         name = 'Worker'
         nameLogPrinting = '%s-%d' % (name, workerID)
@@ -116,7 +118,8 @@ class Registry(Profiler, Node, ABC):
             nameConsistent=nameConsistent,
             addr=message.source.addr,
             workerID=workerID,
-            machineID=machineID)
+            machineID=machineID,
+            resources=resources)
 
         self.workers[workerID] = worker
         self.workers[worker.machineID] = worker
@@ -242,21 +245,26 @@ class Registry(Profiler, Node, ABC):
         self.__schedule(user)
 
     def __schedule(self, user):
-        try:
-            # TODO
-            decision = self.scheduler.schedule(
-                applicationName=user.appName,
-                label=user.label,
-                userMachineID=user.machineID)
-            messageForWorkers = self.__parseDecision(decision, user)
-            self.logger.info(
-                'Scheduled by %s.' % self.scheduler.name)
-        except (KeyError, TypeError):
-            # has not seen this user or
-            # this is the first time fot this user
-            # to request the app
-            messageForWorkers = self.__randomlySchedule(user)
-            self.logger.info('Scheduled randomly.')
+        allWorkers = []
+        workersResources = {}
+        for key in self.workers.keys():
+            if not isinstance(key, str):
+                continue
+            worker = self.workers[key]
+            allWorkers.append(key)
+            workersResources[key] = worker.resources
+        # suppose each worker has all taskHandlers
+        availableWorkers = defaultdict(lambda: allWorkers)
+        decision = self.scheduler.schedule(
+            applicationName=user.appName,
+            label=user.label,
+            userMachineID=user.machineID,
+            availableWorkers=availableWorkers,
+            workersResources=workersResources)
+        messageForWorkers = self.__parseDecision(decision, user)
+        self.logger.info(
+            'Scheduled by %s.' % self.scheduler.name)
+
         for message, worker in messageForWorkers:
             self.sendMessage(message, worker)
 

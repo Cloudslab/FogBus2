@@ -8,7 +8,7 @@ from exceptions import *
 from connection import Message
 from node import Node
 from logger import get_logger
-from resourcesInfo import WorkerInfo
+from resourcesInfo import ImagesAndContainers
 
 
 class Worker(Node):
@@ -38,7 +38,8 @@ class Worker(Node):
     def __register(self):
         message = {'type': 'register',
                    'role': 'worker',
-                   'machineID': self.machineID}
+                   'machineID': self.machineID,
+                   'resources': self.resources.all()}
         self.sendMessage(message, self.master)
         self.isRegistered.wait()
         self.logger.info("Registered.")
@@ -159,7 +160,7 @@ class Worker(Node):
                 continue
             runningContainers.add(tags[0].split(':')[0])
 
-        imagesAndContainers = WorkerInfo(
+        imagesAndContainers = ImagesAndContainers(
             images=imageNames,
             containers=runningContainers
         )

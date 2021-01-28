@@ -133,17 +133,22 @@ class Master(Registry):
             message.content['reason'])
 
         if message.source.role == 'user':
+            if message.source.id not in self.users:
+                return
             user = self.users[message.source.id]
             msg = {'type': 'stop', 'reason': 'Your User has exited.'}
             for taskHandler in user.taskHandlerByTaskName.values():
                 self.sendMessage(msg, taskHandler)
             del self.users[message.source.id]
         elif message.source.role == 'TaskHandler':
-            if message.source.id in self.taskHandlers:
-                taskHandler = self.taskHandlers[message.source.id]
-                del self.taskHandlerByToken[taskHandler.token]
-                del self.taskHandlers[message.source.id]
+            if message.source.id not in self.taskHandlers:
+                return
+            taskHandler = self.taskHandlers[message.source.id]
+            del self.taskHandlerByToken[taskHandler.token]
+            del self.taskHandlers[message.source.id]
         elif message.source.role == 'worker':
+            if message.source.id not in self.workers:
+                return
             del self.workers[message.source.id]
 
     def __handleProfiler(self, message: Message):
