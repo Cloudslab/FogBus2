@@ -2,8 +2,9 @@ import logging
 import sys
 from logger import get_logger
 from registry import Registry
-from connection import Message
-from typing import Tuple
+from connection import Message, Source, Connection
+from typing import Tuple, Dict
+from time import time
 
 Address = Tuple[str, int]
 
@@ -159,6 +160,32 @@ class Master(Registry):
     def __stopClient(self, addr: Address, reason: str = 'No reason'):
         msg = {'type': 'stop', 'reason': reason}
         self.sendMessage(msg, addr)
+
+    def sendMessage(self, message: Dict, addr):
+        try:
+            source = Source(
+                role=self.role,
+                id_=self.id,
+                addr=self.myAddr,
+                name=self.name,
+                nameLogPrinting=self.nameLogPrinting,
+                nameConsistent=self.nameConsistent,
+                machineID=self.machineID
+            )
+            message['source'] = source
+            Connection(addr).send(message)
+
+            if message['type'] == 'pong':
+                return
+
+            if addr == self.myAddr:
+                # remoteLogger sends resources to itself
+                return
+
+            ping = {'type': 'ping', 'time': time(), 'source': source}
+            Connection(addr).send(ping)
+        except OSError:
+            pass
 
 
 if __name__ == '__main__':

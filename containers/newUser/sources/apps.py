@@ -15,8 +15,16 @@ class ApplicationUserSide:
             targetHeight: int = 640,
             showWindow: bool = True):
         self.appName = appName
-        self.capture = cv2.VideoCapture(0) if videoPath is None \
-            else cv2.VideoCapture(videoPath)
+        if appName in {
+            'FaceDetection',
+            'FaceAndEyeDetection',
+            'ColorTracking',
+            'VideoOCR'
+        }:
+            self.capture = cv2.VideoCapture(0) if videoPath is None \
+                else cv2.VideoCapture(videoPath)
+        else:
+            self.capture = None
         self.result: Queue = Queue()
         self.dataToSubmit: Queue = Queue()
         self.targetHeight = targetHeight
@@ -257,7 +265,6 @@ class GameOfLifeSerialised(ApplicationUserSide):
             videoPath=videoPath,
             targetHeight=targetHeight,
             showWindow=showWindow)
-
         t = self.targetHeight // 128 * 128
 
         self._resizeFactor = 4
