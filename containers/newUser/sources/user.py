@@ -54,37 +54,37 @@ class User(Node):
             self.app: ApplicationUserSide = FaceDetection(
                 appName=self.appName,
                 videoPath=self.videoPath,
-                targetWidth=int(self.label),
+                targetHeight=int(self.label),
                 showWindow=self.showWindow)
         elif self.appName == 'FaceAndEyeDetection':
             self.app: ApplicationUserSide = FaceAndEyeDetection(
                 appName=self.appName,
                 videoPath=self.videoPath,
-                targetWidth=int(self.label),
+                targetHeight=int(self.label),
                 showWindow=self.showWindow)
         elif self.appName == 'ColorTracking':
             self.app: ApplicationUserSide = ColorTracking(
                 appName=self.appName,
                 videoPath=self.videoPath,
-                targetWidth=int(self.label),
+                targetHeight=int(self.label),
                 showWindow=self.showWindow)
         elif self.appName == 'VideoOCR':
             self.app: ApplicationUserSide = VideoOCR(
                 appName=self.appName,
                 videoPath=self.videoPath,
-                targetWidth=int(self.label),
+                targetHeight=int(self.label),
                 showWindow=self.showWindow)
         elif self.appName == 'GameOfLifeSerialised':
             self.app: ApplicationUserSide = GameOfLifeSerialised(
                 appName=self.appName,
                 videoPath=self.videoPath,
-                targetWidth=int(self.label),
+                targetHeight=int(self.label),
                 showWindow=self.showWindow)
         elif self.appName == 'GameOfLifeParallelized':
             self.app: ApplicationUserSide = GameOfLifeParallelized(
                 appName=self.appName,
                 videoPath=self.videoPath,
-                targetWidth=int(self.label),
+                targetHeight=int(self.label),
                 showWindow=self.showWindow)
         else:
             self.logger.info('Application does not exist: %s', self.appName)

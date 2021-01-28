@@ -89,6 +89,10 @@ class PersistentStorage:
         if not os.path.exists(filename):
             return {}
         with open(filename, 'r+') as file:
-            res = json.loads(file.read())
-            file.close()
-            return res
+            try:
+                res = json.loads(file.read())
+                file.close()
+                return res
+            except json.decoder.JSONDecodeError:
+                file.close()
+                return {}

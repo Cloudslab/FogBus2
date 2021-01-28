@@ -208,10 +208,19 @@ class GameOfLife(TasksWorkerSide):
         self.width = None
         self.focusArea = focusArea
 
+    def adjustFocusArea(self):
+
+        focusArea = [list(point) for point in self.focusArea]
+        for i in range(2):
+            for j in range(2):
+                focusArea[i][j] *= self.height // 128
+        self.focusArea = focusArea
+
     def process(self, inputData):
         self.world = inputData[0]
         self.height = inputData[1]
         self.width = inputData[2]
+        self.adjustFocusArea()
         mayChange = inputData[3]
         newStates = inputData[4]
         mayChangeInNextRound = inputData[5]

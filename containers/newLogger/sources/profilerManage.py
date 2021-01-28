@@ -1,3 +1,4 @@
+import threading
 from edge import Edge
 from typing import Dict, List, Tuple
 from resourcesInfo import ResourcesInfo, WorkerInfo
@@ -6,6 +7,7 @@ from persistentStorage import PersistentStorage
 
 class Profiler:
     def __init__(self):
+        self.lock = threading.Lock()
         self.edges: Dict[str, Edge] = {}
         self.nodeResources: Dict[str, ResourcesInfo] = {}
         self.averageProcessTime: Dict[str, float] = {}

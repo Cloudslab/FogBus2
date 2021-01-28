@@ -12,22 +12,22 @@ class ApplicationUserSide:
             self,
             appName: str,
             videoPath: str = None,
-            targetWidth: int = 640,
+            targetHeight: int = 640,
             showWindow: bool = True):
         self.appName = appName
         self.capture = cv2.VideoCapture(0) if videoPath is None \
             else cv2.VideoCapture(videoPath)
         self.result: Queue = Queue()
         self.dataToSubmit: Queue = Queue()
-        self.targetWidth = targetWidth
+        self.targetHeight = targetHeight
         self.showWindow: bool = showWindow
         self.videoPath: str = videoPath
 
     def resizeFrame(self, frame):
         width = frame.shape[1]
         height = frame.shape[0]
-        resizedWidth = int(width * self.targetWidth / height)
-        return cv2.resize(frame, (resizedWidth, self.targetWidth))
+        resizedWidth = int(width * self.targetHeight / height)
+        return cv2.resize(frame, (resizedWidth, self.targetHeight))
 
     def run(self):
         threading.Thread(target=self._run).start()
@@ -43,12 +43,12 @@ class FaceDetection(ApplicationUserSide):
             self,
             appName: str,
             videoPath: str,
-            targetWidth: int,
+            targetHeight: int,
             showWindow: bool):
         super().__init__(
             appName=appName,
             videoPath=videoPath,
-            targetWidth=targetWidth,
+            targetHeight=targetHeight,
             showWindow=showWindow)
 
     def _run(self):
@@ -80,12 +80,12 @@ class FaceAndEyeDetection(ApplicationUserSide):
             self,
             appName: str,
             videoPath: str,
-            targetWidth: int,
+            targetHeight: int,
             showWindow: bool):
         super().__init__(
             appName=appName,
             videoPath=videoPath,
-            targetWidth=targetWidth,
+            targetHeight=targetHeight,
             showWindow=showWindow)
 
     def _run(self):
@@ -120,12 +120,12 @@ class ColorTracking(ApplicationUserSide):
             self,
             appName: str,
             videoPath: str,
-            targetWidth: int,
+            targetHeight: int,
             showWindow: bool):
         super().__init__(
             appName=appName,
             videoPath=videoPath,
-            targetWidth=targetWidth,
+            targetHeight=targetHeight,
             showWindow=showWindow)
 
     @staticmethod
@@ -210,12 +210,12 @@ class VideoOCR(ApplicationUserSide):
             self,
             appName: str,
             videoPath: str,
-            targetWidth: int,
+            targetHeight: int,
             showWindow: bool):
         super().__init__(
             appName=appName,
             videoPath=videoPath,
-            targetWidth=targetWidth,
+            targetHeight=targetHeight,
             showWindow=showWindow)
 
     def __preprocess(self, q: Queue):
@@ -250,17 +250,19 @@ class GameOfLifeSerialised(ApplicationUserSide):
             self,
             appName: str,
             videoPath: str,
-            targetWidth: int,
+            targetHeight: int,
             showWindow: bool):
         super().__init__(
             appName=appName,
             videoPath=videoPath,
-            targetWidth=targetWidth,
+            targetHeight=targetHeight,
             showWindow=showWindow)
 
-        self._resizeFactor = 8
-        self.height = 1024 // self._resizeFactor
-        self.width = 2048 // self._resizeFactor
+        t = self.targetHeight // 128 * 128
+
+        self._resizeFactor = 4
+        self.height = t // self._resizeFactor
+        self.width = t * 2 // self._resizeFactor
         self.generationNumber = None
         self.world = np.zeros((self.height, self.width, 1), np.uint8)
         self.newStates = set([])
@@ -281,7 +283,7 @@ class GameOfLifeSerialised(ApplicationUserSide):
             else:
                 showWorld = self.world
             cv2.imshow(
-                'Game of Life - Serialized',
+                self.appName,
                 showWorld)
             # cv2.waitKey(0)
             if cv2.waitKey(1) == ord('q'):
@@ -320,7 +322,7 @@ class GameOfLifeSerialised(ApplicationUserSide):
         _, self.world = cv2.threshold(world, 127, 255, cv2.THRESH_BINARY)
         self.initMayChange(theWholeWorld=True)
         cv2.imshow(
-            'Game of Life',
+            self.appName,
             cv2.resize(
                 self.world,
                 (self.width * self._resizeFactor,
@@ -401,7 +403,7 @@ class GameOfLifeParallelized(GameOfLifeSerialised):
             else:
                 showWorld = self.world
             cv2.imshow(
-                'Game of Life - Parallelized',
+                self.appName,
                 showWorld)
             # cv2.waitKey(0)
             if cv2.waitKey(1) == ord('q'):

@@ -35,6 +35,7 @@ class RemoteLogger(Profiler, Node):
         self.logger.info('Running ...')
 
     def handleMessage(self, message: Message):
+        self.lock.acquire()
         if message.type == 'averageReceivedPackageSize':
             self.__handleAverageReceivedPackageSize(message=message)
         elif message.type == 'averageProcessTime':
@@ -49,6 +50,7 @@ class RemoteLogger(Profiler, Node):
             self.__handleImagesAndRunningContainers(message=message)
         elif message.type == 'requestProfiler':
             self.__handleRequestProfiler(message=message)
+        self.lock.release()
 
     def __handleAverageReceivedPackageSize(self, message: Message):
         result = self.__handleEdgeAverage(message, 'averageReceivedPackageSize')
