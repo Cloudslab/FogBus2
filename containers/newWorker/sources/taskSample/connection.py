@@ -3,8 +3,7 @@ import struct
 import threading
 import traceback
 import pickle
-import os
-import signal
+from time import sleep
 from queue import Queue, PriorityQueue
 from typing import Any, Dict, Tuple, List
 from exceptions import *
@@ -135,6 +134,7 @@ class Connection:
         except ConnectionRefusedError:
             clientSocket.close()
             if retries:
+                sleep(0.5)
                 self.__send(message=message, retries=retries - 1)
                 return
             raise ConnectionRefusedError

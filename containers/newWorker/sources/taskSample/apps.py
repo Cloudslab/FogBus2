@@ -213,7 +213,7 @@ class GameOfLife(TasksWorkerSide):
         focusArea = [list(point) for point in self.focusArea]
         for i in range(2):
             for j in range(2):
-                focusArea[i][j] *= self.height // 128
+                focusArea[i][j] *= self.height // 32
         self.focusArea = focusArea
 
     def process(self, inputData):
@@ -286,7 +286,7 @@ class GameOfLife0(GameOfLife):
         super().__init__(
             42,
             'GameOfLife0',
-            ((0, 0), (64, 128)))
+            ((0, 0), (16, 32)))
 
 
 class GameOfLife1(GameOfLife):
@@ -294,7 +294,7 @@ class GameOfLife1(GameOfLife):
         super().__init__(
             43,
             'GameOfLife1',
-            ((0, 128), (64, 256)))
+            ((0, 32), (16, 64)))
 
 
 class GameOfLife2(GameOfLife):
@@ -302,7 +302,7 @@ class GameOfLife2(GameOfLife):
         super().__init__(
             44,
             'GameOfLife2',
-            ((64, 128), (96, 192)))
+            ((16, 32), (24, 48)))
 
 
 class GameOfLife3(GameOfLife):
@@ -310,7 +310,7 @@ class GameOfLife3(GameOfLife):
         super().__init__(
             45,
             'GameOfLife3',
-            ((64, 192), (96, 256)))
+            ((16, 48), (24, 64)))
 
 
 class GameOfLife4(GameOfLife):
@@ -318,7 +318,7 @@ class GameOfLife4(GameOfLife):
         super().__init__(
             46,
             'GameOfLife4',
-            ((96, 192), (112, 224)))
+            ((24, 48), (28, 56)))
 
 
 class GameOfLife5(GameOfLife):
@@ -326,7 +326,7 @@ class GameOfLife5(GameOfLife):
         super().__init__(
             47,
             'GameOfLife5',
-            ((96, 224), (112, 256)))
+            ((24, 56), (28, 64)))
 
 
 class GameOfLife6(GameOfLife):
@@ -334,7 +334,7 @@ class GameOfLife6(GameOfLife):
         super().__init__(
             48,
             'GameOfLife6',
-            ((112, 224), (120, 240)))
+            ((28, 56), (30, 60)))
 
 
 class GameOfLife7(GameOfLife):
@@ -342,7 +342,7 @@ class GameOfLife7(GameOfLife):
         super().__init__(
             49,
             'GameOfLife7',
-            ((112, 240), (120, 256)))
+            ((28, 60), (30, 64)))
 
 
 class GameOfLife8(GameOfLife):
@@ -350,7 +350,7 @@ class GameOfLife8(GameOfLife):
         super().__init__(
             50,
             'GameOfLife8',
-            ((120, 240), (128, 248)))
+            ((30, 60), (32, 62)))
 
 
 class GameOfLife9(GameOfLife):
@@ -358,7 +358,7 @@ class GameOfLife9(GameOfLife):
         super().__init__(
             51,
             'GameOfLife9',
-            ((120, 248), (128, 256)))
+            ((30, 62), (32, 64)))
 
 
 class GameOfLife10(GameOfLife):
@@ -366,7 +366,7 @@ class GameOfLife10(GameOfLife):
         super().__init__(
             52,
             'GameOfLife10',
-            ((120, 224), (128, 232)))
+            ((30, 56), (32, 58)))
 
 
 class GameOfLife11(GameOfLife):
@@ -374,7 +374,7 @@ class GameOfLife11(GameOfLife):
         super().__init__(
             53,
             'GameOfLife11',
-            ((120, 232), (128, 240)))
+            ((30, 58), (32, 60)))
 
 
 class GameOfLife12(GameOfLife):
@@ -382,7 +382,7 @@ class GameOfLife12(GameOfLife):
         super().__init__(
             54,
             'GameOfLife12',
-            ((112, 192), (120, 208)))
+            ((28, 48), (30, 52)))
 
 
 class GameOfLife13(GameOfLife):
@@ -390,7 +390,7 @@ class GameOfLife13(GameOfLife):
         super().__init__(
             55,
             'GameOfLife13',
-            ((112, 208), (120, 224)))
+            ((28, 52), (30, 56)))
 
 
 class GameOfLife14(GameOfLife):
@@ -398,7 +398,7 @@ class GameOfLife14(GameOfLife):
         super().__init__(
             56,
             'GameOfLife14',
-            ((120, 208), (128, 216)))
+            ((30, 52), (32, 54)))
 
 
 class GameOfLife15(GameOfLife):
@@ -406,7 +406,7 @@ class GameOfLife15(GameOfLife):
         super().__init__(
             57,
             'GameOfLife15',
-            ((120, 216), (128, 224)))
+            ((30, 54), (32, 56)))
 
 
 class GameOfLife16(GameOfLife):
@@ -414,7 +414,7 @@ class GameOfLife16(GameOfLife):
         super().__init__(
             58,
             'GameOfLife16',
-            ((120, 192), (128, 200)))
+            ((30, 48), (32, 50)))
 
 
 class GameOfLife17(GameOfLife):
@@ -422,7 +422,7 @@ class GameOfLife17(GameOfLife):
         super().__init__(
             59,
             'GameOfLife17',
-            ((120, 200), (128, 208)))
+            ((30, 50), (32, 52)))
 
 
 class GameOfLife18(GameOfLife):
@@ -430,7 +430,7 @@ class GameOfLife18(GameOfLife):
         super().__init__(
             60,
             'GameOfLife18',
-            ((96, 128), (112, 160)))
+            ((24, 32), (28, 40)))
 
 
 class GameOfLife19(GameOfLife):
@@ -438,7 +438,7 @@ class GameOfLife19(GameOfLife):
         super().__init__(
             61,
             'GameOfLife19',
-            ((96, 160), (112, 192)))
+            ((24, 40), (28, 48)))
 
 
 class GameOfLife20(GameOfLife):
@@ -446,7 +446,7 @@ class GameOfLife20(GameOfLife):
         super().__init__(
             62,
             'GameOfLife20',
-            ((112, 160), (120, 176)))
+            ((28, 40), (30, 44)))
 
 
 class GameOfLife21(GameOfLife):
@@ -454,7 +454,7 @@ class GameOfLife21(GameOfLife):
         super().__init__(
             63,
             'GameOfLife21',
-            ((112, 176), (120, 192)))
+            ((28, 44), (30, 48)))
 
 
 class GameOfLife22(GameOfLife):
@@ -462,7 +462,7 @@ class GameOfLife22(GameOfLife):
         super().__init__(
             64,
             'GameOfLife22',
-            ((120, 176), (128, 184)))
+            ((30, 44), (32, 46)))
 
 
 class GameOfLife23(GameOfLife):
@@ -470,7 +470,7 @@ class GameOfLife23(GameOfLife):
         super().__init__(
             65,
             'GameOfLife23',
-            ((120, 184), (128, 192)))
+            ((30, 46), (32, 48)))
 
 
 class GameOfLife24(GameOfLife):
@@ -478,7 +478,7 @@ class GameOfLife24(GameOfLife):
         super().__init__(
             66,
             'GameOfLife24',
-            ((120, 160), (128, 168)))
+            ((30, 40), (32, 42)))
 
 
 class GameOfLife25(GameOfLife):
@@ -486,7 +486,7 @@ class GameOfLife25(GameOfLife):
         super().__init__(
             67,
             'GameOfLife25',
-            ((120, 168), (128, 176)))
+            ((30, 42), (32, 44)))
 
 
 class GameOfLife26(GameOfLife):
@@ -494,7 +494,7 @@ class GameOfLife26(GameOfLife):
         super().__init__(
             68,
             'GameOfLife26',
-            ((112, 128), (120, 144)))
+            ((28, 32), (30, 36)))
 
 
 class GameOfLife27(GameOfLife):
@@ -502,7 +502,7 @@ class GameOfLife27(GameOfLife):
         super().__init__(
             69,
             'GameOfLife27',
-            ((112, 144), (120, 160)))
+            ((28, 36), (30, 40)))
 
 
 class GameOfLife28(GameOfLife):
@@ -510,7 +510,7 @@ class GameOfLife28(GameOfLife):
         super().__init__(
             70,
             'GameOfLife28',
-            ((120, 144), (128, 152)))
+            ((30, 36), (32, 38)))
 
 
 class GameOfLife29(GameOfLife):
@@ -518,7 +518,7 @@ class GameOfLife29(GameOfLife):
         super().__init__(
             71,
             'GameOfLife29',
-            ((120, 152), (128, 160)))
+            ((30, 38), (32, 40)))
 
 
 class GameOfLife30(GameOfLife):
@@ -526,7 +526,7 @@ class GameOfLife30(GameOfLife):
         super().__init__(
             72,
             'GameOfLife30',
-            ((120, 128), (128, 136)))
+            ((30, 32), (32, 34)))
 
 
 class GameOfLife31(GameOfLife):
@@ -534,7 +534,7 @@ class GameOfLife31(GameOfLife):
         super().__init__(
             73,
             'GameOfLife31',
-            ((120, 136), (128, 144)))
+            ((30, 34), (32, 36)))
 
 
 class GameOfLife32(GameOfLife):
@@ -542,7 +542,7 @@ class GameOfLife32(GameOfLife):
         super().__init__(
             74,
             'GameOfLife32',
-            ((64, 0), (96, 64)))
+            ((16, 0), (24, 16)))
 
 
 class GameOfLife33(GameOfLife):
@@ -550,7 +550,7 @@ class GameOfLife33(GameOfLife):
         super().__init__(
             75,
             'GameOfLife33',
-            ((64, 64), (96, 128)))
+            ((16, 16), (24, 32)))
 
 
 class GameOfLife34(GameOfLife):
@@ -558,7 +558,7 @@ class GameOfLife34(GameOfLife):
         super().__init__(
             76,
             'GameOfLife34',
-            ((96, 64), (112, 96)))
+            ((24, 16), (28, 24)))
 
 
 class GameOfLife35(GameOfLife):
@@ -566,7 +566,7 @@ class GameOfLife35(GameOfLife):
         super().__init__(
             77,
             'GameOfLife35',
-            ((96, 96), (112, 128)))
+            ((24, 24), (28, 32)))
 
 
 class GameOfLife36(GameOfLife):
@@ -574,7 +574,7 @@ class GameOfLife36(GameOfLife):
         super().__init__(
             78,
             'GameOfLife36',
-            ((112, 96), (120, 112)))
+            ((28, 24), (30, 28)))
 
 
 class GameOfLife37(GameOfLife):
@@ -582,7 +582,7 @@ class GameOfLife37(GameOfLife):
         super().__init__(
             79,
             'GameOfLife37',
-            ((112, 112), (120, 128)))
+            ((28, 28), (30, 32)))
 
 
 class GameOfLife38(GameOfLife):
@@ -590,7 +590,7 @@ class GameOfLife38(GameOfLife):
         super().__init__(
             80,
             'GameOfLife38',
-            ((120, 112), (128, 120)))
+            ((30, 28), (32, 30)))
 
 
 class GameOfLife39(GameOfLife):
@@ -598,7 +598,7 @@ class GameOfLife39(GameOfLife):
         super().__init__(
             81,
             'GameOfLife39',
-            ((120, 120), (128, 128)))
+            ((30, 30), (32, 32)))
 
 
 class GameOfLife40(GameOfLife):
@@ -606,7 +606,7 @@ class GameOfLife40(GameOfLife):
         super().__init__(
             82,
             'GameOfLife40',
-            ((120, 96), (128, 104)))
+            ((30, 24), (32, 26)))
 
 
 class GameOfLife41(GameOfLife):
@@ -614,7 +614,7 @@ class GameOfLife41(GameOfLife):
         super().__init__(
             83,
             'GameOfLife41',
-            ((120, 104), (128, 112)))
+            ((30, 26), (32, 28)))
 
 
 class GameOfLife42(GameOfLife):
@@ -622,7 +622,7 @@ class GameOfLife42(GameOfLife):
         super().__init__(
             84,
             'GameOfLife42',
-            ((112, 64), (120, 80)))
+            ((28, 16), (30, 20)))
 
 
 class GameOfLife43(GameOfLife):
@@ -630,7 +630,7 @@ class GameOfLife43(GameOfLife):
         super().__init__(
             85,
             'GameOfLife43',
-            ((112, 80), (120, 96)))
+            ((28, 20), (30, 24)))
 
 
 class GameOfLife44(GameOfLife):
@@ -638,7 +638,7 @@ class GameOfLife44(GameOfLife):
         super().__init__(
             86,
             'GameOfLife44',
-            ((120, 80), (128, 88)))
+            ((30, 20), (32, 22)))
 
 
 class GameOfLife45(GameOfLife):
@@ -646,7 +646,7 @@ class GameOfLife45(GameOfLife):
         super().__init__(
             87,
             'GameOfLife45',
-            ((120, 88), (128, 96)))
+            ((30, 22), (32, 24)))
 
 
 class GameOfLife46(GameOfLife):
@@ -654,7 +654,7 @@ class GameOfLife46(GameOfLife):
         super().__init__(
             88,
             'GameOfLife46',
-            ((120, 64), (128, 72)))
+            ((30, 16), (32, 18)))
 
 
 class GameOfLife47(GameOfLife):
@@ -662,7 +662,7 @@ class GameOfLife47(GameOfLife):
         super().__init__(
             89,
             'GameOfLife47',
-            ((120, 72), (128, 80)))
+            ((30, 18), (32, 20)))
 
 
 class GameOfLife48(GameOfLife):
@@ -670,7 +670,7 @@ class GameOfLife48(GameOfLife):
         super().__init__(
             90,
             'GameOfLife48',
-            ((96, 0), (112, 32)))
+            ((24, 0), (28, 8)))
 
 
 class GameOfLife49(GameOfLife):
@@ -678,7 +678,7 @@ class GameOfLife49(GameOfLife):
         super().__init__(
             91,
             'GameOfLife49',
-            ((96, 32), (112, 64)))
+            ((24, 8), (28, 16)))
 
 
 class GameOfLife50(GameOfLife):
@@ -686,7 +686,7 @@ class GameOfLife50(GameOfLife):
         super().__init__(
             92,
             'GameOfLife50',
-            ((112, 32), (120, 48)))
+            ((28, 8), (30, 12)))
 
 
 class GameOfLife51(GameOfLife):
@@ -694,7 +694,7 @@ class GameOfLife51(GameOfLife):
         super().__init__(
             93,
             'GameOfLife51',
-            ((112, 48), (120, 64)))
+            ((28, 12), (30, 16)))
 
 
 class GameOfLife52(GameOfLife):
@@ -702,7 +702,7 @@ class GameOfLife52(GameOfLife):
         super().__init__(
             94,
             'GameOfLife52',
-            ((120, 48), (128, 56)))
+            ((30, 12), (32, 14)))
 
 
 class GameOfLife53(GameOfLife):
@@ -710,7 +710,7 @@ class GameOfLife53(GameOfLife):
         super().__init__(
             95,
             'GameOfLife53',
-            ((120, 56), (128, 64)))
+            ((30, 14), (32, 16)))
 
 
 class GameOfLife54(GameOfLife):
@@ -718,7 +718,7 @@ class GameOfLife54(GameOfLife):
         super().__init__(
             96,
             'GameOfLife54',
-            ((120, 32), (128, 40)))
+            ((30, 8), (32, 10)))
 
 
 class GameOfLife55(GameOfLife):
@@ -726,7 +726,7 @@ class GameOfLife55(GameOfLife):
         super().__init__(
             97,
             'GameOfLife55',
-            ((120, 40), (128, 48)))
+            ((30, 10), (32, 12)))
 
 
 class GameOfLife56(GameOfLife):
@@ -734,7 +734,7 @@ class GameOfLife56(GameOfLife):
         super().__init__(
             98,
             'GameOfLife56',
-            ((112, 0), (120, 16)))
+            ((28, 0), (30, 4)))
 
 
 class GameOfLife57(GameOfLife):
@@ -742,7 +742,7 @@ class GameOfLife57(GameOfLife):
         super().__init__(
             99,
             'GameOfLife57',
-            ((112, 16), (120, 32)))
+            ((28, 4), (30, 8)))
 
 
 class GameOfLife58(GameOfLife):
@@ -750,7 +750,7 @@ class GameOfLife58(GameOfLife):
         super().__init__(
             100,
             'GameOfLife58',
-            ((120, 16), (128, 24)))
+            ((30, 4), (32, 6)))
 
 
 class GameOfLife59(GameOfLife):
@@ -758,7 +758,7 @@ class GameOfLife59(GameOfLife):
         super().__init__(
             101,
             'GameOfLife59',
-            ((120, 24), (128, 32)))
+            ((30, 6), (32, 8)))
 
 
 class GameOfLife60(GameOfLife):
@@ -766,7 +766,7 @@ class GameOfLife60(GameOfLife):
         super().__init__(
             102,
             'GameOfLife60',
-            ((120, 0), (128, 8)))
+            ((30, 0), (32, 2)))
 
 
 class GameOfLife61(GameOfLife):
@@ -774,4 +774,4 @@ class GameOfLife61(GameOfLife):
         super().__init__(
             103,
             'GameOfLife61',
-            ((120, 8), (128, 16)))
+            ((30, 2), (32, 4)))

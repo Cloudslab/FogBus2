@@ -130,8 +130,11 @@ class Node:
             self._sendMessage(message, identity.addr)
         except OSError:
             if identity.addr == self.master.addr:
-                self.logger.warning(
-                    'Cannot connect to the system. Exit.')
+                warning = 'Cannot connect to the system. Exit.'
+                if self.logger is None:
+                    print(warning)
+                else:
+                    self.logger.warning(warning)
                 os._exit(-1)
             msg = {'type': 'exit', 'reason': 'Network Error.'}
             self.sendMessage(msg, identity)
