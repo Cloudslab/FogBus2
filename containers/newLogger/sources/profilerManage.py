@@ -18,15 +18,19 @@ class Profiler:
         self.__readFromPersistentStorage()
 
     def _saveToPersistentStorage(self):
+        self.lock.acquire()
         self.persistentStorage.write('edges', self.edges)
         self.persistentStorage.write('nodeResources', self.nodeResources)
         self.persistentStorage.write('averageProcessTime', self.averageProcessTime)
         self.persistentStorage.write('averageRespondTime', self.averageRespondTime)
         self.persistentStorage.write('imagesAndRunningContainers', self.imagesAndRunningContainers)
+        self.lock.release()
 
     def __readFromPersistentStorage(self):
+        self.lock.acquire()
         self.edges = self.persistentStorage.read('edges')
         self.nodeResources = self.persistentStorage.read('nodeResources', )
         self.averageProcessTime = self.persistentStorage.read('averageProcessTime')
         self.averageRespondTime = self.persistentStorage.read('averageRespondTime')
         self.imagesAndRunningContainers = self.persistentStorage.read('imagesAndRunningContainers')
+        self.lock.release()
