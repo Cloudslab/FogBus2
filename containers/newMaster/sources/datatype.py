@@ -2,24 +2,13 @@ import threading
 from queue import Queue
 from typing import List, Dict, Tuple
 from secrets import token_urlsafe
+from node import Identity
 
 Address = Tuple[str, int]
 
 
-class Client:
-
-    def __init__(
-            self,
-            name: str,
-            nameLogPrinting: str,
-            nameConsistent: str,
-            addr: Address,
-            machineID: str):
-        self.name: str = name
-        self.nameLogPrinting: str = nameLogPrinting
-        self.nameConsistent: str = nameConsistent
-        self.addr: Address = addr
-        self.machineID: str = machineID
+class Client(Identity):
+    pass
 
 
 class Worker(Client):
@@ -36,13 +25,12 @@ class Worker(Client):
         if name is None:
             name = "Worker-%d" % workerID
         super(Worker, self).__init__(
+            id_=workerID,
             name=name,
             nameLogPrinting=nameLogPrinting,
             nameConsistent=nameConsistent,
             addr=addr,
             machineID=machineID)
-
-        self.id: int = workerID
 
 
 class TaskHandler(Client):
@@ -60,12 +48,12 @@ class TaskHandler(Client):
             nameLogPrinting: str,
             nameConsistent: str):
         super(TaskHandler, self).__init__(
+            id_=taskHandlerID,
             name=name,
             nameLogPrinting=nameLogPrinting,
             nameConsistent=nameConsistent,
             addr=addr,
             machineID=machineID)
-        self.id: int = taskHandlerID
         self.taskName = taskName
         self.token = token
         self.worker: Worker = worker
@@ -98,12 +86,12 @@ class User(Client):
         if name is None:
             name = 'User-%d' % userID
         super(User, self).__init__(
+            id_=userID,
             name=name,
             nameLogPrinting=nameLogPrinting,
             nameConsistent=nameConsistent,
             addr=addr,
             machineID=machineID)
-        self.id = userID
         self.appName: str = appName
         self.label: str = label
         self.taskNameTokenMap: Dict[str, UserTask] = {}

@@ -5,8 +5,7 @@ from threading import Lock
 from node import Node
 from profilerManage import Profiler
 from queue import Queue
-from datatype import Worker, User
-from datatype import TaskHandler
+from datatype import Worker, User, TaskHandler
 from connection import Message
 from typing import Dict, Union, List, Tuple
 from dependencies import loadDependencies, Application
@@ -258,10 +257,10 @@ class Registry(Profiler, Node, ABC):
             # to request the app
             messageForWorkers = self.__randomlySchedule(user)
             self.logger.info('Scheduled randomly.')
-        for message, addr in messageForWorkers:
-            self.sendMessage(message, addr)
+        for message, worker in messageForWorkers:
+            self.sendMessage(message, worker)
 
-    def __parseDecision(self, decision: Decision, user: User):
+    def __parseDecision(self, decision: Decision, user: User) -> List[Tuple[Dict, Worker]]:
         messageForWorkers = []
         for machineName, machineID in decision.machines.items():
             nameSplit = machineName.split('@')
@@ -277,10 +276,10 @@ class Registry(Profiler, Node, ABC):
                     'token': userTask.token,
                     'childTaskTokens': userTask.childTaskTokens}
                 worker = self.workers[machineID]
-                messageForWorkers.append((message, worker.addr))
+                messageForWorkers.append((message, worker))
         return messageForWorkers
 
-    def __randomlySchedule(self, user) -> List[Tuple[Dict, Address]]:
+    def __randomlySchedule(self, user) -> List[Tuple[Dict, Worker]]:
 
         messageForWorkers = []
         for taskName, userTask in user.taskNameTokenMap.items():
@@ -298,10 +297,10 @@ class Registry(Profiler, Node, ABC):
                 'taskName': taskName,
                 'token': token,
                 'childTaskTokens': childTaskTokens}
-            messageForWorkers.append((message, worker.addr))
+            messageForWorkers.append((message, worker))
             self.workersQueue.put(worker)
         return messageForWorkers
 
     def __requestProfiler(self):
         msg = {'type': 'requestProfiler'}
-        self.sendMessage(msg, self.loggerAddr)
+        self.sendMessage(msg, self.remoteLogger)

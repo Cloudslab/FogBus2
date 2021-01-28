@@ -39,7 +39,7 @@ class Worker(Node):
         message = {'type': 'register',
                    'role': 'worker',
                    'machineID': self.machineID}
-        self.sendMessage(message, self.masterAddr)
+        self.sendMessage(message, self.master)
         self.isRegistered.wait()
         self.logger.info("Registered.")
 
@@ -166,7 +166,7 @@ class Worker(Node):
         msg = {
             'type': 'imagesAndRunningContainers',
             'imagesAndRunningContainers': imagesAndContainers}
-        self.sendMessage(msg, self.loggerAddr)
+        self.sendMessage(msg, self.remoteLogger)
 
 
 if __name__ == '__main__':

@@ -2,7 +2,7 @@ import sys
 import logging
 import json
 from node import Node, Address
-from connection import Message, Average
+from connection import Message, Average, Identity
 from logger import get_logger
 from edge import Edge
 from typing import Dict, List, Tuple
@@ -51,6 +51,9 @@ class RemoteLogger(Profiler, Node):
         elif message.type == 'requestProfiler':
             self.__handleRequestProfiler(message=message)
         self.lock.release()
+
+    def sendMessage(self, message: Dict, identity: Identity):
+        self.sendMessageIgnoreErr(message, identity)
 
     def __handleAverageReceivedPackageSize(self, message: Message):
         result = self.__handleEdgeAverage(message, 'averageReceivedPackageSize')
@@ -114,7 +117,7 @@ class RemoteLogger(Profiler, Node):
                 self.averageRespondTime,
                 self.imagesAndRunningContainers,
             ]}
-        self.sendMessage(msg, message.source.addr)
+        self.sendMessage(msg, message.source)
 
 
 if __name__ == '__main__':

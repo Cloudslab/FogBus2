@@ -106,7 +106,7 @@ class User(Node):
             'label': self.label,
             'appName': self.appName,
             'machineID': self.machineID}
-        self.sendMessage(message, self.masterAddr)
+        self.sendMessage(message, self.master)
         self.isRegistered.wait()
         self.logger.info("Registered. Waiting for resources to be ready ...")
 
@@ -114,7 +114,7 @@ class User(Node):
         if message.type == 'registered':
             self.__handleRegistered(message)
         elif message.type == 'ready':
-            self.__handleReady(message)
+            self.__handleReady()
         elif message.type == 'result':
             self.__handleResult(message)
 
@@ -128,7 +128,7 @@ class User(Node):
         self.logger = get_logger(self.nameLogPrinting, self.logLevel)
         self.isRegistered.set()
 
-    def __handleReady(self, message: Message):
+    def __handleReady(self):
         threading.Thread(target=self.__ready).start()
 
     def __ready(self):
@@ -142,7 +142,7 @@ class User(Node):
                 'type': 'data',
                 'userID': self.id,
                 'data': data}
-            self.sendMessage(message, self.masterAddr)
+            self.sendMessage(message, self.master)
             self.__lastDataSentTime = time()
 
     def __handleResult(self, message: Message):
@@ -156,7 +156,7 @@ class User(Node):
         msg = {
             'type': 'respondTime',
             'respondTime': self.respondTime.average()}
-        self.sendMessage(msg, self.loggerAddr)
+        self.sendMessage(msg, self.remoteLogger)
 
 
 if __name__ == "__main__":

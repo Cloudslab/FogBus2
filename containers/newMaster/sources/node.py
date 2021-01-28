@@ -2,8 +2,8 @@ import threading
 import logging
 import os
 import signal
-from queue import PriorityQueue
-from connection import Server, Message, Connection, Source, Average
+from queue import Queue, PriorityQueue
+from connection import Server, Message, Connection, Source, Average, Identity
 from abc import abstractmethod
 from typing import Dict, Tuple, List, Callable
 from logging import Logger
@@ -26,6 +26,18 @@ class Node:
         self.myAddr = myAddr
         self.masterAddr = masterAddr
         self.loggerAddr = loggerAddr
+        self.me = Identity(
+            nameLogPrinting='Me',
+            addr=self.myAddr,
+        )
+        self.master = Identity(
+            nameLogPrinting='Master',
+            addr=self.masterAddr,
+        )
+        self.remoteLogger = Identity(
+            nameLogPrinting='RemoteLogger',
+            addr=self.loggerAddr,
+        )
         self.resources: Resources = Resources(
             addr=self.myAddr)
         self.name: str = None
@@ -100,7 +112,7 @@ class Node:
 
             if message.type == 'ping':
                 message.content['type'] = 'pong'
-                self.sendMessage(message.content, message.source.addr)
+                self.sendMessage(message.content, message.source)
                 continue
             elif message.type == 'pong':
                 self.__handlePong(message)
@@ -113,7 +125,24 @@ class Node:
                 continue
             self.handleMessage(message)
 
-    def sendMessage(self, message: Dict, addr):
+    def sendMessage(self, message: Dict, identity: Identity):
+        try:
+            self._sendMessage(message, identity.addr)
+        except OSError:
+            if identity.addr == self.master.addr:
+                self.logger.warning(
+                    'Cannot connect to the system. Exit.')
+                os._exit(-1)
+            msg = {'type': 'exit', 'reason': 'Network Error.'}
+            self.sendMessage(msg, identity)
+
+    def sendMessageIgnoreErr(self, message: Dict, identity: Identity):
+        try:
+            self._sendMessage(message, identity.addr)
+        except OSError:
+            pass
+
+    def _sendMessage(self, message: Dict, addr: Tuple[str, int]):
         source = Source(
             role=self.role,
             id_=self.id,
@@ -152,7 +181,7 @@ class Node:
         # https://stackoverflow.com/questions/1112343
         if self.role not in {'Master', 'RemoteLogger'}:
             message = {'type': 'exit', 'reason': 'Manually interrupted.'}
-            self.sendMessage(message, self.masterAddr)
+            self.sendMessage(message, self.master)
         self.__myService.serverSocket.close()
         print('[*] Bye.')
         os._exit(0)
@@ -180,15 +209,15 @@ class Node:
         if not message.source.addr == self.masterAddr:
             return
         msg = {'type': 'nodeResources', 'resources': self.resources.all()}
-        self.sendMessage(msg, message.source.addr)
+        self.sendMessage(msg, message.source)
 
     def __handleStop(self, message: Message):
         reasonFormatted = '%s asks me to stop. ' \
                           'Reason: %s' % (
-                              message.source.name,
+                              message.source.nameLogPrinting,
                               message.content['reason'])
         msg = {'type': 'exit', 'reason': reasonFormatted}
-        self.sendMessage(msg, self.masterAddr)
+        self.sendMessage(msg, self.master)
         self.logger.warning(reasonFormatted)
         self.logger.info('Exit.')
         os._exit(0)
@@ -207,16 +236,16 @@ class Node:
 
     def __uploadResources(self):
         msg = {'type': 'nodeResources', 'resources': self.resources.all()}
-        self.sendMessage(msg, self.loggerAddr)
+        self.sendMessage(msg, self.remoteLogger)
 
     def __uploadAverageReceivedPackageSize(self):
         msg = {
             'type': 'averageReceivedPackageSize',
             'averageReceivedPackageSize': self.receivedPackageSize}
-        self.sendMessage(msg, self.loggerAddr)
+        self.sendMessage(msg, self.remoteLogger)
 
     def __uploadRoundTripDelay(self):
         msg = {
             'type': 'roundTripDelay',
             'roundTripDelay': self.roundTripDelay}
-        self.sendMessage(msg, self.loggerAddr)
+        self.sendMessage(msg, self.remoteLogger)

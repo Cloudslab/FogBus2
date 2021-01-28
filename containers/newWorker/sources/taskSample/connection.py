@@ -28,13 +28,13 @@ def decrypt(msg: bytes) -> Dict:
 class Identity:
     def __init__(
             self,
-            role: str,
-            id_: int,
-            addr: Address,
-            name: str,
-            nameLogPrinting: str,
-            nameConsistent: str,
-            machineID: str):
+            role: str = None,
+            id_: int = None,
+            addr: Address = None,
+            name: str = None,
+            nameLogPrinting: str = None,
+            nameConsistent: str = None,
+            machineID: str = None):
         self.role: str = role
         self.id: int = id_
         self.addr: Address = addr

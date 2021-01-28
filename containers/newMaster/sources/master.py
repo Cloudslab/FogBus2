@@ -2,9 +2,8 @@ import logging
 import sys
 from logger import get_logger
 from registry import Registry
-from connection import Message, Source, Connection
+from connection import Message, Identity
 from typing import Tuple, Dict
-from time import time
 
 Address = Tuple[str, int]
 
@@ -52,40 +51,43 @@ class Master(Registry):
         elif message.type == 'profiler':
             self.__handleProfiler(message=message)
 
+    def sendMessage(self, message: Dict, identity: Identity):
+        self.sendMessageIgnoreErr(message, identity)
+
     def __handleRegister(self, message: Message):
         respond = self.registerClient(message=message)
         if respond is None:
             return self.__stopClient(
-                message.source.addr,
+                message.source,
                 'No such role: %s' % message.content['role'])
-        self.sendMessage(respond, message.source.addr)
+        self.sendMessage(respond, message.source)
         self.logger.info('%s registered', respond['nameLogPrinting'])
 
     def __handleData(self, message: Message):
         userID = message.content['userID']
         if userID not in self.users:
             return self.__stopClient(
-                message.source.addr,
+                message.source,
                 'User-%d does not exist' % userID)
         user = self.users[userID]
         if not user.addr == message.source.addr:
             return self.__stopClient(
-                message.source.addr,
+                message.source,
                 'You are not User-%d' % userID)
 
         for taskName in user.entranceTasksByName:
             taskHandlerToken = user.taskNameTokenMap[taskName].token
             taskHandler = self.taskHandlerByToken[taskHandlerToken]
-            self.sendMessage(message.content, taskHandler.addr)
+            self.sendMessage(message.content, taskHandler)
 
     def __handleResult(self, message: Message):
         userID = message.content['userID']
         if userID not in self.users:
             return self.__stopClient(
-                message.source.addr,
+                message.source,
                 'User-%d does not exist' % userID)
         user = self.users[userID]
-        self.sendMessage(message.content, user.addr)
+        self.sendMessage(message.content, user)
 
     def __handleLookup(self, message: Message):
         taskHandlerToken = message.content['token']
@@ -97,12 +99,12 @@ class Master(Registry):
             'addr': taskHandler.addr,
             'token': taskHandlerToken
         }
-        self.sendMessage(respond, message.source.addr)
+        self.sendMessage(respond, message.source)
 
     def __handleReady(self, message: Message):
         if not message.source.role == 'TaskHandler':
             return self.__stopClient(
-                message.source.addr,
+                message.source,
                 'You are not TaskHandler')
 
         taskHandlerToken = message.content['token']
@@ -119,7 +121,7 @@ class Master(Registry):
                     return
             if not user.isReady:
                 msg = {'type': 'ready'}
-                self.sendMessage(msg, user.addr)
+                self.sendMessage(msg, user)
                 user.isReady = True
         user.lock.release()
 
@@ -134,7 +136,7 @@ class Master(Registry):
             user = self.users[message.source.id]
             msg = {'type': 'stop', 'reason': 'Your User has exited.'}
             for taskHandler in user.taskHandlerByTaskName.values():
-                self.sendMessage(msg, taskHandler.addr)
+                self.sendMessage(msg, taskHandler)
             del self.users[message.source.id]
         elif message.source.role == 'TaskHandler':
             if message.source.id in self.taskHandlers:
@@ -157,35 +159,9 @@ class Master(Registry):
         self.scheduler.edges = self.edges
         self.scheduler.averageProcessTime = self.averageProcessTime
 
-    def __stopClient(self, addr: Address, reason: str = 'No reason'):
+    def __stopClient(self, identity: Identity, reason: str = 'No reason'):
         msg = {'type': 'stop', 'reason': reason}
-        self.sendMessage(msg, addr)
-
-    def sendMessage(self, message: Dict, addr):
-        try:
-            source = Source(
-                role=self.role,
-                id_=self.id,
-                addr=self.myAddr,
-                name=self.name,
-                nameLogPrinting=self.nameLogPrinting,
-                nameConsistent=self.nameConsistent,
-                machineID=self.machineID
-            )
-            message['source'] = source
-            Connection(addr).send(message)
-
-            if message['type'] == 'pong':
-                return
-
-            if addr == self.myAddr:
-                # remoteLogger sends resources to itself
-                return
-
-            ping = {'type': 'ping', 'time': time(), 'source': source}
-            Connection(addr).send(ping)
-        except OSError:
-            pass
+        self.sendMessage(msg, identity)
 
 
 if __name__ == '__main__':
