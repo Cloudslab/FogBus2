@@ -139,7 +139,7 @@ class Connection:
                 return
             raise ConnectionRefusedError
 
-    def send(self, message: Dict, retries: int = 3):
+    def send(self, message: Dict, retries: int = 10):
         self.__send(encrypt(message), retries=retries)
 
 
