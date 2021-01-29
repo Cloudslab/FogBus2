@@ -177,11 +177,13 @@ class Evaluator:
             for dest in destinations:
                 destName = '%s#%s' % (dest, individual[dest])
                 costKey = '%s,%s' % (sourceName, destName)
-                if costKey in self.edges:
+                if costKey in self.edges \
+                        and self.edges[costKey].averageReceivedPackageSize is None \
+                        and self.edges[costKey].averageRoundTripDelay is None:
                     total += self.edges[costKey].averageReceivedPackageSize
                     total += self.edges[costKey].averageRoundTripDelay
-                else:
-                    total += self.evaluateEdgeCost(costKey)
+                    continue
+                total += self.evaluateEdgeCost(costKey)
 
         # suppose bandwidth for all nodes are the same
         # and is 0.1 mb/ ms
@@ -238,10 +240,11 @@ class Evaluator:
             if not machineName.split('@')[-1] == 'TaskHandler':
                 continue
             taskHandlerName = '%s#%s' % (machineName, individual[machineName])
-            if taskHandlerName in self.averageProcessTime:
+            if taskHandlerName in self.averageProcessTime \
+                    and self.averageProcessTime[taskHandlerName] is None:
                 total += self.averageProcessTime[taskHandlerName]
-            else:
-                total += self.evaluateComputingCost(taskHandlerName)
+                continue
+            total += self.evaluateComputingCost(taskHandlerName)
         return total
 
     def evaluateComputingCost(self, taskHandlerName: str):
