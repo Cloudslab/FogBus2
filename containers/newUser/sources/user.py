@@ -106,7 +106,7 @@ class User(Node):
             'label': self.label,
             'appName': self.appName,
             'machineID': self.machineID}
-        self.sendMessage(message, self.master)
+        self.sendMessage(message, self.master.addr)
         self.isRegistered.wait()
         self.logger.info("Registered. Waiting for resources to be ready ...")
 
@@ -142,7 +142,7 @@ class User(Node):
                 'type': 'data',
                 'userID': self.id,
                 'data': data}
-            self.sendMessage(message, self.master)
+            self.sendMessage(message, self.master.addr)
             self.__lastDataSentTime = time()
 
     def __handleResult(self, message: Message):
@@ -156,7 +156,7 @@ class User(Node):
         msg = {
             'type': 'respondTime',
             'respondTime': self.respondTime.average()}
-        self.sendMessage(msg, self.remoteLogger)
+        self.sendMessage(msg, self.remoteLogger.addr)
 
 
 if __name__ == "__main__":

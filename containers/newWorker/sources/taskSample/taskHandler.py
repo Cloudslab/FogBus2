@@ -183,7 +183,7 @@ class TaskHandler(Node):
             msg = {
                 'type': 'exit',
                 'reason': 'No TaskHandler named %s' % taskName}
-            self.sendMessage(msg, self.master)
+            self.sendMessage(msg, self.master.addr)
         else:
             self.app: TasksWorkerSide = app
 
@@ -193,7 +193,7 @@ class TaskHandler(Node):
         msg = {
             'type': 'averageProcessTime',
             'averageProcessTime': self.processTime.average()}
-        self.sendMessage(msg, self.remoteLogger)
+        self.sendMessage(msg, self.remoteLogger.addr)
 
     def run(self):
         self.__register()
@@ -208,7 +208,7 @@ class TaskHandler(Node):
             'workerID': self.workerID,
             'token': self.token,
             'machineID': self.machineID}
-        self.sendMessage(message, self.master)
+        self.sendMessage(message, self.master.addr)
         self.isRegistered.wait()
         self.logger.info("Registered.")
 
@@ -220,10 +220,10 @@ class TaskHandler(Node):
                 if childToken in self.childrenAddr:
                     continue
                 msg = {'type': 'lookup', 'token': childToken}
-                self.sendMessage(msg, self.master)
+                self.sendMessage(msg, self.master.addr)
             sleep(1)
         msg = {'type': 'ready', 'token': self.token}
-        self.sendMessage(msg, self.master)
+        self.sendMessage(msg, self.master.addr)
         self.logger.info('Got %d children\'s addr' % len(self.childTaskTokens))
 
     def handleMessage(self, message: Message):
@@ -254,7 +254,7 @@ class TaskHandler(Node):
         if not len(self.childTaskTokens) == len(self.childrenAddr.keys()):
             return
         msg = {'type': 'ready', 'token': self.token}
-        self.sendMessage(msg, self.master)
+        self.sendMessage(msg, self.master.addr)
 
     def __handleData(self, message: Message):
         data = message.content['data']
@@ -268,17 +268,17 @@ class TaskHandler(Node):
             msg['data'] = result
             for token, addr in self.childrenAddr.items():
                 try:
-                    self._sendMessage(msg, addr)
+                    self.sendMessage(msg, addr)
                 except OSError:
                     msg = {'type': 'exit', 'reason': 'Cannot connect to %s' % token}
-                    self.sendMessage(msg, self.master)
+                    self.sendMessage(msg, self.master.addr)
             return
 
         del msg['data']
         msg['type'] = 'result'
         msg['result'] = result
 
-        self.sendMessage(msg, self.master)
+        self.sendMessage(msg, self.master.addr)
 
 
 def run(

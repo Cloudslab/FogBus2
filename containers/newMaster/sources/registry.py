@@ -22,6 +22,7 @@ class Registry(Profiler, Node, ABC):
             myAddr,
             masterAddr,
             loggerAddr,
+            ignoreSocketErr: bool,
             schedulerName: str = None,
             logLevel=logging.DEBUG):
         Profiler.__init__(self)
@@ -30,6 +31,7 @@ class Registry(Profiler, Node, ABC):
             myAddr=myAddr,
             masterAddr=masterAddr,
             loggerAddr=loggerAddr,
+            ignoreSocketErr=ignoreSocketErr,
             periodicTasks=[
                 (self._saveToPersistentStorage, 2),
                 (self.__requestProfiler, 2)],
@@ -270,7 +272,7 @@ class Registry(Profiler, Node, ABC):
             'Scheduled by %s.' % self.scheduler.name)
 
         for message, worker in messageForWorkers:
-            self.sendMessage(message, worker)
+            self.sendMessage(message, worker.addr)
 
     def __parseDecision(self, decision: Decision, user: User) -> List[Tuple[Dict, Worker]]:
         messageForWorkers = []
@@ -315,4 +317,4 @@ class Registry(Profiler, Node, ABC):
 
     def __requestProfiler(self):
         msg = {'type': 'requestProfiler'}
-        self.sendMessage(msg, self.remoteLogger)
+        self.sendMessage(msg, self.remoteLogger.addr)

@@ -3,7 +3,7 @@ import sys
 from logger import get_logger
 from registry import Registry
 from connection import Message, Identity
-from typing import Tuple, Dict
+from typing import Tuple
 
 Address = Tuple[str, int]
 
@@ -23,6 +23,7 @@ class Master(Registry):
             myAddr=myAddr,
             masterAddr=masterAddr,
             loggerAddr=loggerAddr,
+            ignoreSocketErr=True,
             schedulerName=schedulerName,
             logLevel=logLevel)
         self.id = masterID
@@ -51,16 +52,13 @@ class Master(Registry):
         elif message.type == 'profiler':
             self.__handleProfiler(message=message)
 
-    def sendMessage(self, message: Dict, identity: Identity):
-        self.sendMessageIgnoreErr(message, identity)
-
     def __handleRegister(self, message: Message):
         respond = self.registerClient(message=message)
         if respond is None:
             return self.__stopClient(
                 message.source,
                 'No such role: %s' % message.content['role'])
-        self.sendMessage(respond, message.source)
+        self.sendMessage(respond, message.source.addr)
         self.logger.info('%s registered', respond['nameLogPrinting'])
 
     def __handleData(self, message: Message):
@@ -78,7 +76,7 @@ class Master(Registry):
         for taskName in user.entranceTasksByName:
             taskHandlerToken = user.taskNameTokenMap[taskName].token
             taskHandler = self.taskHandlerByToken[taskHandlerToken]
-            self.sendMessage(message.content, taskHandler)
+            self.sendMessage(message.content, taskHandler.addr)
 
     def __handleResult(self, message: Message):
         userID = message.content['userID']
@@ -87,7 +85,7 @@ class Master(Registry):
                 message.source,
                 'User-%d does not exist' % userID)
         user = self.users[userID]
-        self.sendMessage(message.content, user)
+        self.sendMessage(message.content, user.addr)
 
     def __handleLookup(self, message: Message):
         taskHandlerToken = message.content['token']
@@ -99,7 +97,7 @@ class Master(Registry):
             'addr': taskHandler.addr,
             'token': taskHandlerToken
         }
-        self.sendMessage(respond, message.source)
+        self.sendMessage(respond, message.source.addr)
 
     def __handleReady(self, message: Message):
         if not message.source.role == 'TaskHandler':
@@ -121,7 +119,7 @@ class Master(Registry):
                     return
             if not user.isReady:
                 msg = {'type': 'ready'}
-                self.sendMessage(msg, user)
+                self.sendMessage(msg, user.addr)
                 user.isReady = True
         user.lock.release()
 
@@ -139,16 +137,16 @@ class Master(Registry):
             if message.source.id not in self.users:
                 return
             user = self.users[message.source.id]
-            self.sendMessage(response, user)
+            self.sendMessage(response, user.addr)
             msg = {'type': 'stop', 'reason': 'Your User has exited.'}
             for taskHandler in user.taskHandlerByTaskName.values():
-                self.sendMessage(msg, taskHandler)
+                self.sendMessage(msg, taskHandler.addr)
             del self.users[message.source.id]
         elif message.source.role == 'TaskHandler':
             if message.source.id not in self.taskHandlers:
                 return
             taskHandler = self.taskHandlers[message.source.id]
-            self.sendMessage(response, taskHandler)
+            self.sendMessage(response, taskHandler.addr)
             del self.taskHandlerByToken[taskHandler.token]
             del self.taskHandlers[message.source.id]
         elif message.source.role == 'worker':
@@ -156,7 +154,7 @@ class Master(Registry):
                 return
             del self.workers[message.source.id]
             del self.workers[message.source.machineID]
-        self.sendMessage(response, message.source)
+        self.sendMessage(response, message.source.addr)
 
     def __handleProfiler(self, message: Message):
         profilers = message.content['profiler']
@@ -173,7 +171,7 @@ class Master(Registry):
 
     def __stopClient(self, identity: Identity, reason: str = 'No reason'):
         msg = {'type': 'stop', 'reason': reason}
-        self.sendMessage(msg, identity)
+        self.sendMessage(msg, identity.addr)
 
 
 if __name__ == '__main__':

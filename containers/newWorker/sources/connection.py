@@ -3,8 +3,8 @@ import struct
 import threading
 import traceback
 import pickle
-from time import sleep, time
-from queue import Queue, PriorityQueue
+from time import time, sleep
+from queue import Queue
 from typing import Dict, Tuple, List
 from exceptions import *
 
@@ -134,11 +134,12 @@ class Connection:
         except ConnectionRefusedError:
             clientSocket.close()
             if retries:
+                sleep(0.1)
                 self.__send(message=message, retries=retries - 1)
                 return
             raise ConnectionRefusedError
 
-    def send(self, message: Dict, retries: int = 3):
+    def send(self, message: Dict, retries: int = 5):
         message['_sentAt'] = time() * 1000
         self.__send(encrypt(message), retries=retries)
 
@@ -176,13 +177,13 @@ class Server:
     def __init__(
             self,
             addr,
-            messagesQueue: PriorityQueue[Tuple[Message, int]],
+            messagesQueue: Queue[Tuple[Message, int]],
             threadNumber: int = 32):
         self.addr = addr
         self.serverSocket = socket.socket(
             socket.AF_INET,
             socket.SOCK_STREAM)
-        self.messageQueue: PriorityQueue[Tuple[Message, int]] = messagesQueue
+        self.messageQueue: Queue[Tuple[Message, int]] = messagesQueue
 
         self.threadNumber: int = threadNumber
         self.requests: Queue[Request] = Queue()

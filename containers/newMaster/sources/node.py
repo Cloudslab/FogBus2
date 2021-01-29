@@ -2,7 +2,7 @@ import threading
 import logging
 import os
 import signal
-from queue import PriorityQueue
+from queue import Queue
 from connection import Server, Message, Connection, Source, Average, Identity
 from abc import abstractmethod
 from typing import Dict, Tuple, List, Callable
@@ -23,10 +23,12 @@ class Node:
             loggerAddr: Address,
             periodicTasks: List[PeriodicTask] = None,
             threadNumber: int = 32,
+            ignoreSocketErr: bool = False,
             logLevel=logging.DEBUG):
         self.myAddr = myAddr
         self.masterAddr = masterAddr
         self.loggerAddr = loggerAddr
+        self.ignoreSocketErr = ignoreSocketErr
         self.me = Identity(
             nameLogPrinting='Me',
             addr=self.myAddr,
@@ -49,8 +51,8 @@ class Node:
         self.id: int = None
         self.machineID: str = self.resources.uniqueID()
 
-        self.receivedMessage: PriorityQueue[Tuple[Message, int]] = PriorityQueue()
-        self.messageToSend: PriorityQueue[Tuple[Dict, Tuple[str, int]]] = PriorityQueue()
+        self.receivedMessage: Queue[Tuple[Message, int]] = Queue()
+        self.messageToSend: Queue[Tuple[Dict, Tuple[str, int]]] = Queue()
         self.isRegistered: threading.Event = threading.Event()
         self.__myService = Server(
             self.myAddr,
@@ -105,7 +107,20 @@ class Node:
     def __messageSender(self):
         while True:
             message, addr = self.messageToSend.get()
-            Connection(addr).send(message)
+            try:
+                Connection(addr).send(message)
+            except OSError:
+                if self.ignoreSocketErr:
+                    continue
+                if addr == self.master.addr:
+                    warning = 'Cannot connect to the system. Exit.'
+                    if self.logger is None:
+                        print(warning)
+                    else:
+                        self.logger.warning(warning)
+                    os._exit(-1)
+                msg = {'type': 'exit', 'reason': 'Network Error.'}
+                self.sendMessage(msg, self.master.addr)
 
     def __messageHandler(self):
         while True:
@@ -148,27 +163,7 @@ class Node:
                 continue
             self.handleMessage(message)
 
-    def sendMessage(self, message: Dict, identity: Identity):
-        try:
-            self._sendMessage(message, identity.addr)
-        except OSError:
-            if identity.addr == self.master.addr:
-                warning = 'Cannot connect to the system. Exit.'
-                if self.logger is None:
-                    print(warning)
-                else:
-                    self.logger.warning(warning)
-                os._exit(-1)
-            msg = {'type': 'exit', 'reason': 'Network Error.'}
-            self.sendMessage(msg, identity)
-
-    def sendMessageIgnoreErr(self, message: Dict, identity: Identity):
-        try:
-            self._sendMessage(message, identity.addr)
-        except OSError:
-            pass
-
-    def _sendMessage(self, message: Dict, addr: Tuple[str, int]):
+    def sendMessage(self, message: Dict, addr: Address):
         source = Source(
             role=self.role,
             id_=self.id,
@@ -197,7 +192,7 @@ class Node:
         # https://stackoverflow.com/questions/1112343
         if self.role not in {'Master', 'RemoteLogger'}:
             message = {'type': 'exit', 'reason': 'Manually interrupted.'}
-            self.sendMessage(message, self.master)
+            self.sendMessage(message, self.master.addr)
         self.__myService.serverSocket.close()
         print('[*] Bye.')
         os._exit(0)
@@ -209,7 +204,7 @@ class Node:
         if not message.source.addr == self.masterAddr:
             return
         msg = {'type': 'nodeResources', 'resources': self.resources.all()}
-        self.sendMessage(msg, message.source)
+        self.sendMessage(msg, message.source.addr)
 
     def __handleStop(self, message: Message):
         reasonFormatted = '%s asks me to stop. ' \
@@ -237,16 +232,16 @@ class Node:
 
     def __uploadResources(self):
         msg = {'type': 'nodeResources', 'resources': self.resources.all()}
-        self.sendMessage(msg, self.remoteLogger)
+        self.sendMessage(msg, self.remoteLogger.addr)
 
     def __uploadAverageReceivedPackageSize(self):
         msg = {
             'type': 'averageReceivedPackageSize',
             'averageReceivedPackageSize': self.receivedPackageSize}
-        self.sendMessage(msg, self.remoteLogger)
+        self.sendMessage(msg, self.remoteLogger.addr)
 
     def __uploadDelays(self):
         msg = {
             'type': 'delays',
             'delays': self.delays}
-        self.sendMessage(msg, self.remoteLogger)
+        self.sendMessage(msg, self.remoteLogger.addr)
