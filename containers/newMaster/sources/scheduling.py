@@ -239,12 +239,25 @@ class Evaluator:
             if not machineName.split('@')[-1] == 'TaskHandler':
                 continue
             taskHandlerName = '%s#%s' % (machineName, individual[machineName])
+            resources = self.workersResources
             if taskHandlerName in self.averageProcessTime \
                     and self.averageProcessTime[taskHandlerName] is None:
-                total += self.averageProcessTime[taskHandlerName]
+                total += self.averageProcessTime[taskHandlerName] * self.considerRecentResources(machineName)
                 continue
-            total += self.evaluateComputingCost(taskHandlerName)
+            total += self.evaluateComputingCost(taskHandlerName) * self.considerRecentResources(machineName)
         return total
+
+    def considerRecentResources(self, machineName):
+        if machineName not in self.workersResources:
+            return 1
+        resources = self.workersResources[machineName]
+
+        factor = 0
+        factor += resources.totalSwapMemory / resources.availableSwapMemory
+        factor += resources.totalMemory / resources.availableMemory
+        factor += resources.currentTotalCPUUsage / 100
+
+        return factor
 
     def evaluateComputingCost(self, taskHandlerName: str):
         taskName, machine = taskHandlerName.split('#')
