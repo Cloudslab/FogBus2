@@ -134,12 +134,11 @@ class Connection:
         except ConnectionRefusedError:
             clientSocket.close()
             if retries:
-                sleep(0.5)
                 self.__send(message=message, retries=retries - 1)
                 return
             raise ConnectionRefusedError
 
-    def send(self, message: Dict, retries: int = 10):
+    def send(self, message: Dict, retries: int = 3):
         message['_sentAt'] = time() * 1000
         self.__send(encrypt(message), retries=retries)
 

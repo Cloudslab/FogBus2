@@ -50,17 +50,21 @@ class Node:
         self.machineID: str = self.resources.uniqueID()
 
         self.receivedMessage: PriorityQueue[Tuple[Message, int]] = PriorityQueue()
+        self.messageToSend: PriorityQueue[Tuple[Dict, Tuple[str, int]]] = PriorityQueue()
         self.isRegistered: threading.Event = threading.Event()
         self.__myService = Server(
             self.myAddr,
             self.receivedMessage,
             threadNumber=threadNumber // 4)
         for i in range(threadNumber):
-            t = threading.Thread(
+            threading.Thread(
                 target=self.__messageHandler,
                 name="HandlingMessage-%d" % i
-            )
-            t.start()
+            ).start()
+            threading.Thread(
+                target=self.__messageSender,
+                name="MessageSender-%d" % i
+            ).start()
         self.logLevel = logLevel
         self.logger: Logger = None
         self.handleSignal()
@@ -97,6 +101,11 @@ class Node:
     @abstractmethod
     def run(self):
         pass
+
+    def __messageSender(self):
+        while True:
+            message, addr = self.messageToSend.get()
+            Connection(addr).send(message)
 
     def __messageHandler(self):
         while True:
@@ -170,7 +179,7 @@ class Node:
             machineID=self.machineID
         )
         message['source'] = source
-        Connection(addr).send(message)
+        self.messageToSend.put((message, addr))
 
     @abstractmethod
     def handleMessage(self, message: Message):
