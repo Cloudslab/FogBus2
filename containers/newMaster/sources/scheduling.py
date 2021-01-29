@@ -1,9 +1,9 @@
 import numpy as np
 import autograd.numpy as anp
 
-from time import time
 from random import randint
 from pymoo.algorithms.genetic_algorithm import GeneticAlgorithm
+from pymoo.algorithms.ctaea import CTAEA as CTAEA_
 from pymoo.algorithms.nsga3 import NSGA3 as NSGA3_
 from pymoo.algorithms.nsga2 import NSGA2 as NSGA2_
 from pymoo.factory import get_reference_directions
@@ -278,7 +278,7 @@ class Evaluator:
         return maxProcessTime
 
 
-class NSGAProblem(Problem, Evaluator):
+class BaseProblem(Problem, Evaluator):
 
     def __init__(
             self,
@@ -364,7 +364,7 @@ class NSGABase(Scheduler):
             machinesByName: MachinesByName,
             availableWorkers: Dict[str, str],
             workersResources: Dict[str, ResourcesInfo]) -> Decision:
-        problem = NSGAProblem(
+        problem = BaseProblem(
             edges=self.edges,
             averageProcessTime=self.averageProcessTime,
             edgesByName=edgesByName,
@@ -373,7 +373,7 @@ class NSGABase(Scheduler):
             workersResources=workersResources)
         res = minimize(problem,
                        self.__algorithm,
-                       seed=randint(0, int(time() % 0.01 * 10000)),
+                       seed=randint(0, 100),
                        termination=(
                            'n_gen',
                            self.__generationNum))
@@ -422,6 +422,27 @@ class NSGA3(NSGABase):
                 pop_size=populationSize,
                 ref_dirs=refDirs,
                 eliminate_duplicates=True),
+            edges,
+            averageProcessTime,
+            generationNum=generationNum)
+
+
+class CTAEA(NSGABase):
+
+    def __init__(self,
+                 generationNum: int,
+                 dasDennisP: int,
+                 edges: Dict[str, Edge],
+                 averageProcessTime: Dict[str, float]):
+        refDirs = get_reference_directions(
+            "das-dennis",
+            2,
+            n_partitions=dasDennisP)
+        super().__init__(
+            'CTAEA',
+            CTAEA_(
+                ref_dirs=refDirs,
+                seed=randint(0, 100)),
             edges,
             averageProcessTime,
             generationNum=generationNum)

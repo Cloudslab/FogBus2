@@ -9,7 +9,7 @@ from datatype import Worker, User, TaskHandler
 from connection import Message
 from typing import Dict, Union, List, Tuple
 from dependencies import loadDependencies, Application
-from scheduling import Scheduler, Decision, NSGA3, NSGA2
+from scheduling import Scheduler, Decision, NSGA3, NSGA2, CTAEA
 from collections import defaultdict
 
 Address = Tuple[str, int]
@@ -23,7 +23,7 @@ class Registry(Profiler, Node, ABC):
             masterAddr,
             loggerAddr,
             ignoreSocketErr: bool,
-            schedulerName: str = None,
+            schedulerName: str,
             logLevel=logging.DEBUG):
         Profiler.__init__(self)
         Node.__init__(
@@ -67,11 +67,24 @@ class Registry(Profiler, Node, ABC):
 
     def __getScheduler(self, schedulerName: str) -> Scheduler:
         if schedulerName in {None, 'NSGA3'}:
+            return NSGA3(
+                edges=self.edges,
+                averageProcessTime=self.averageProcessTime,
+                populationSize=10,
+                generationNum=100,
+                dasDennisP=1)
+        elif schedulerName == 'NSGA2':
             return NSGA2(
                 edges=self.edges,
                 averageProcessTime=self.averageProcessTime,
                 populationSize=10,
                 generationNum=100)
+        elif schedulerName == 'CTAEA':
+            return CTAEA(
+                edges=self.edges,
+                averageProcessTime=self.averageProcessTime,
+                generationNum=100,
+                dasDennisP=1)
         self.logger.warning('Unknown scheduler: %s', schedulerName)
         os._exit(0)
 

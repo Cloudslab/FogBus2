@@ -15,7 +15,7 @@ class Master(Registry):
             myAddr,
             masterAddr,
             loggerAddr,
-            schedulerName: str = None,
+            schedulerName: str,
             masterID: int = 0,
             logLevel=logging.DEBUG):
         Registry.__init__(
@@ -181,6 +181,7 @@ if __name__ == '__main__':
     master_ = Master(
         myAddr=myAddr_,
         masterAddr=masterAddr_,
-        loggerAddr=loggerAddr_
+        loggerAddr=loggerAddr_,
+        schedulerName='CTAEA'
     )
     master_.run()
