@@ -239,7 +239,6 @@ class Evaluator:
             if not machineName.split('@')[-1] == 'TaskHandler':
                 continue
             taskHandlerName = '%s#%s' % (machineName, individual[machineName])
-            resources = self.workersResources
             if taskHandlerName in self.averageProcessTime \
                     and self.averageProcessTime[taskHandlerName] is None:
                 total += self.averageProcessTime[taskHandlerName] * self.considerRecentResources(machineName)

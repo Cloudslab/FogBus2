@@ -95,6 +95,9 @@ class Node:
     def __messageHandler(self):
         while True:
             message, messageSize = self.receivedMessage.get()
+            _receivedAt = time() * 1000
+            message.content['delay'] = _receivedAt - message.content['_sentAt']
+            message.content['_receivedAt'] = _receivedAt
 
             if not message.source.nameConsistent == self.nameConsistent:
                 if message.source.name not in self.receivedPackageSize:

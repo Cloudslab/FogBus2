@@ -251,17 +251,7 @@ class Server:
         clientSocket.close()
         if result is None:
             return {}, 0
-        # may broken why?
-        try:
-            res = decrypt(result)
-            _receivedAt = time() * 1000
-            res['delay'] = _receivedAt - res['_sentAt']
-            res['_receivedAt'] = _receivedAt
-        except KeyError:
-            print(res)
-            import traceback
-            traceback.print_exc()
-        return res, len(result)
+        return decrypt(result), len(result)
 
 
 if __name__ == '__main__':
