@@ -178,7 +178,7 @@ class Server:
             self,
             addr,
             messagesQueue: PriorityQueue[Tuple[Message, int]],
-            threadNumber: int = 256):
+            threadNumber: int = 32):
         self.addr = addr
         self.serverSocket = socket.socket(
             socket.AF_INET,
@@ -193,7 +193,7 @@ class Server:
         for i in range(self.threadNumber):
             t = threading.Thread(
                 target=self.__handleThread,
-                name="HandlingThread-%d" % i
+                name="ServiceThread-%d" % i
             )
             t.start()
         server = threading.Thread(
