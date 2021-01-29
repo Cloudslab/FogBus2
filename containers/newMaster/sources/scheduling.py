@@ -3,7 +3,9 @@ import autograd.numpy as anp
 
 from time import time
 from random import randint
+from pymoo.algorithms.genetic_algorithm import GeneticAlgorithm
 from pymoo.algorithms.nsga3 import NSGA3 as NSGA3_
+from pymoo.algorithms.nsga2 import NSGA2 as NSGA2_
 from pymoo.factory import get_reference_directions
 from pymoo.optimize import minimize
 from abc import abstractmethod
@@ -276,7 +278,7 @@ class Evaluator:
         return maxProcessTime
 
 
-class NSGA3Problem(Problem, Evaluator):
+class NSGAProblem(Problem, Evaluator):
 
     def __init__(
             self,
@@ -340,28 +342,21 @@ class NSGA3Problem(Problem, Evaluator):
         return res
 
 
-class NSGA3(Scheduler):
+class NSGABase(Scheduler):
     def __init__(
             self,
+            name: str,
+            algorithm: GeneticAlgorithm,
             edges: Dict[str, Edge],
             averageProcessTime: Dict[str, float],
-            dasDennisP: int = 1,
-            populationSize: int = 42,
-            generationNum: int = 100,
+            generationNum: int,
     ):
         self.__generationNum: int = generationNum
         super().__init__(
-            name='NSGA3',
+            name=name,
             edges=edges,
             averageProcessTime=averageProcessTime)
-        self.__refDirs = get_reference_directions(
-            "das-dennis",
-            2,
-            n_partitions=dasDennisP)
-        self.__algorithm = NSGA3_(
-            pop_size=populationSize,
-            ref_dirs=self.__refDirs,
-            eliminate_duplicates=True)
+        self.__algorithm = algorithm
 
     def _schedule(
             self,
@@ -369,7 +364,7 @@ class NSGA3(Scheduler):
             machinesByName: MachinesByName,
             availableWorkers: Dict[str, str],
             workersResources: Dict[str, ResourcesInfo]) -> Decision:
-        problem = NSGA3Problem(
+        problem = NSGAProblem(
             edges=self.edges,
             averageProcessTime=self.averageProcessTime,
             edgesByName=edgesByName,
@@ -390,6 +385,46 @@ class NSGA3(Scheduler):
             edgeCost=edgeCost,
             computingCost=computingCost)
         return decision
+
+
+class NSGA2(NSGABase):
+
+    def __init__(self,
+                 populationSize: int,
+                 generationNum: int,
+                 edges: Dict[str, Edge],
+                 averageProcessTime: Dict[str, float]):
+        super().__init__(
+            'NSGA2',
+            NSGA2_(
+                pop_size=populationSize,
+                eliminate_duplicates=True),
+            edges,
+            averageProcessTime,
+            generationNum=generationNum)
+
+
+class NSGA3(NSGABase):
+
+    def __init__(self,
+                 populationSize: int,
+                 generationNum: int,
+                 dasDennisP: int,
+                 edges: Dict[str, Edge],
+                 averageProcessTime: Dict[str, float]):
+        refDirs = get_reference_directions(
+            "das-dennis",
+            2,
+            n_partitions=dasDennisP)
+        super().__init__(
+            'NSGA3',
+            NSGA3_(
+                pop_size=populationSize,
+                ref_dirs=refDirs,
+                eliminate_duplicates=True),
+            edges,
+            averageProcessTime,
+            generationNum=generationNum)
 
 
 if __name__ == '__main__':

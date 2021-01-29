@@ -9,7 +9,7 @@ from datatype import Worker, User, TaskHandler
 from connection import Message
 from typing import Dict, Union, List, Tuple
 from dependencies import loadDependencies, Application
-from scheduling import Scheduler, Decision, NSGA3
+from scheduling import Scheduler, Decision, NSGA3, NSGA2
 from collections import defaultdict
 
 Address = Tuple[str, int]
@@ -67,11 +67,11 @@ class Registry(Profiler, Node, ABC):
 
     def __getScheduler(self, schedulerName: str) -> Scheduler:
         if schedulerName in {None, 'NSGA3'}:
-            return NSGA3(
+            return NSGA2(
                 edges=self.edges,
                 averageProcessTime=self.averageProcessTime,
                 populationSize=10,
-                generationNum=10)
+                generationNum=100)
         self.logger.warning('Unknown scheduler: %s', schedulerName)
         os._exit(0)
 
