@@ -54,7 +54,7 @@ class Node:
         self.__myService = Server(
             self.myAddr,
             self.receivedMessage,
-            threadNumber=threadNumber)
+            threadNumber=threadNumber // 4)
         for i in range(threadNumber):
             t = threading.Thread(
                 target=self.__messageHandler,
