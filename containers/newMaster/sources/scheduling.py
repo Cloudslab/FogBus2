@@ -335,8 +335,8 @@ class NSGA3(Scheduler):
             edges: Dict[str, Edge],
             averageProcessTime: Dict[str, float],
             dasDennisP: int = 1,
-            populationSize: int = 92,
-            generationNum: int = 600,
+            populationSize: int = 42,
+            generationNum: int = 100,
     ):
         self.__generationNum: int = generationNum
         super().__init__(
