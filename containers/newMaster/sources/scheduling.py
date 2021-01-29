@@ -257,6 +257,8 @@ class Evaluator:
             if processTime > maxProcessTime:
                 maxProcessTime = processTime
             taskNameRecord, machineRecord = taskHandlerRecord.split('#')
+            if machineRecord not in self.workersResources:
+                continue
             recordResources = self.workersResources[machineRecord]
             if taskNameRecord == taskName:
                 return processTime * machineResources.currentCPUFrequency / recordResources.currentCPUFrequency
