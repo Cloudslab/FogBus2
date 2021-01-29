@@ -258,9 +258,8 @@ class TaskHandler(Node):
 
     def __handleData(self, message: Message):
         data = message.content['data']
-        startTime = time()
         result = self.app.process(data)
-        self.processTime.update((time() - startTime) * 1000)
+        self.processTime.update((time() * 1000 - message.content['_receivedAt']))
         if result is None:
             return
 

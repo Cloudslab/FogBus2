@@ -2,7 +2,7 @@ import threading
 import logging
 import os
 import signal
-from queue import Queue, PriorityQueue
+from queue import PriorityQueue
 from connection import Server, Message, Connection, Source, Average, Identity
 from abc import abstractmethod
 from typing import Dict, Tuple, List, Callable
@@ -61,13 +61,15 @@ class Node:
         # Node stats
         self.roundTripDelay: Dict[str, Average] = {}
         self.receivedPackageSize: Dict[str, Average] = {}
+        self.delays: Dict[str, Average] = {}
 
         defaultPeriodicTasks: List[PeriodicTask] = [
             (self.__uploadResources, 10)]
         if not self.role == 'RemoteLogger':
             defaultPeriodicTasks += [
                 (self.__uploadAverageReceivedPackageSize, 10),
-                (self.__uploadRoundTripDelay, 10)]
+                (self.__uploadRoundTripDelay, 10),
+                (self.__uploadDelays, 10)]
         if periodicTasks is None:
             periodicTasks = []
         self.periodicTasks: List[PeriodicTask] = defaultPeriodicTasks + periodicTasks
@@ -109,6 +111,18 @@ class Node:
                     )
                     self.receivedPackageSize[message.source.name] = receivedPackageSize
                 self.receivedPackageSize[message.source.name].update(messageSize)
+                if message.source.name not in self.delays:
+                    delay = Average(
+                        addr=message.source.addr,
+                        name=message.source.name,
+                        nameLogPrinting=message.source.nameLogPrinting,
+                        nameConsistent=message.source.nameConsistent,
+                        role=message.source.role,
+                        id_=message.source.id,
+                        machineID=message.source.machineID
+                    )
+                    self.delays[message.source.name] = delay
+                self.delays[message.source.name].update(message.content['delay'])
 
             if message.type == 'ping':
                 message.content['type'] = 'pong'
@@ -251,4 +265,10 @@ class Node:
         msg = {
             'type': 'roundTripDelay',
             'roundTripDelay': self.roundTripDelay}
+        self.sendMessage(msg, self.remoteLogger)
+
+    def __uploadDelays(self):
+        msg = {
+            'type': 'delays',
+            'delays': self.delays}
         self.sendMessage(msg, self.remoteLogger)

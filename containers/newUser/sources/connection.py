@@ -3,9 +3,9 @@ import struct
 import threading
 import traceback
 import pickle
-from time import sleep
+from time import sleep, time
 from queue import Queue, PriorityQueue
-from typing import Any, Dict, Tuple, List
+from typing import Dict, Tuple, List
 from exceptions import *
 
 Address = Tuple[str, int]
@@ -140,6 +140,7 @@ class Connection:
             raise ConnectionRefusedError
 
     def send(self, message: Dict, retries: int = 10):
+        message['_sentAt'] = time() * 1000
         self.__send(encrypt(message), retries=retries)
 
 
@@ -250,13 +251,12 @@ class Server:
         clientSocket.close()
         if result is None:
             return {}, 0
-        return decrypt(result), len(result)
+        res = decrypt(result)
+        _receivedAt = time() * 1000
+        res['delay'] = _receivedAt - res['_sentAt']
+        res['_receivedAt'] = _receivedAt
+        return res, len(result)
 
 
 if __name__ == '__main__':
-    serverIP = ''
-    serverPort = 5000
-    addr_ = ('', 5000)
-    server_ = Server(addr_, Queue())
-    server_.run()
-    Connection(addr_).send({})
+    pass

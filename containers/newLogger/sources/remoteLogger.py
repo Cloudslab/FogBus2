@@ -1,6 +1,5 @@
 import sys
 import logging
-import json
 from node import Node, Address
 from connection import Message, Average, Identity
 from logger import get_logger
@@ -46,6 +45,8 @@ class RemoteLogger(Profiler, Node):
             self.__handleResponseTime(message=message)
         elif message.type == 'roundTripDelay':
             self.__handleRoundTripDelay(message=message)
+        elif message.type == 'delays':
+            self.__handleDelays(message=message)
         elif message.type == 'imagesAndRunningContainers':
             self.__handleImagesAndRunningContainers(message=message)
         elif message.type == 'requestProfiler':
@@ -64,6 +65,11 @@ class RemoteLogger(Profiler, Node):
         result = self.__handleEdgeAverage(message, 'roundTripDelay')
         for edgeName, average in result:
             self.edges[edgeName].averageRoundTripDelay = average
+
+    def __handleDelays(self, message: Message):
+        result = self.__handleEdgeAverage(message, 'delays')
+        for edgeName, average in result:
+            self.edges[edgeName].delay = average
 
     def __handleEdgeAverage(self, message: Message, keyName: str) -> List[Tuple[str, float]]:
         result = []
