@@ -178,10 +178,9 @@ class Evaluator:
                 destName = '%s#%s' % (dest, individual[dest])
                 costKey = '%s,%s' % (sourceName, destName)
                 if costKey in self.edges \
-                        and self.edges[costKey].averageReceivedPackageSize is None \
-                        and self.edges[costKey].averageRoundTripDelay is None:
+                        and self.edges[costKey].averageReceivedPackageSize is None:
                     total += self.edges[costKey].averageReceivedPackageSize
-                    total += self.edges[costKey].averageRoundTripDelay
+                    total += self.edges[costKey].delay
                     continue
                 total += self.evaluateEdgeCost(costKey)
 
@@ -213,26 +212,26 @@ class Evaluator:
         else:
             averageReceivedPackageSize = 4096
 
-        allRoundTripDelayStat = []
-        roundTripDelayStat = []
+        allDelayStat = []
+        delayStat = []
         for _, edge in self.edges.items():
-            if edge.averageRoundTripDelay is None:
+            if edge.delay is None:
                 continue
-            allRoundTripDelayStat.append(edge.averageRoundTripDelay)
+            allDelayStat.append(edge.delay)
             if sourceMachine != edge.source.split('#')[-1]:
                 continue
             if destMachine != edge.destination.split('#')[-1]:
                 continue
-            roundTripDelayStat.append(edge.averageRoundTripDelay)
+            delayStat.append(edge.delay)
 
-        if len(roundTripDelayStat):
-            averageRoundTripDelay = sorted(roundTripDelayStat)[len(roundTripDelayStat) // 2]
-        elif len(allRoundTripDelayStat):
-            averageRoundTripDelay = sorted(allRoundTripDelayStat)[len(allRoundTripDelayStat) // 2]
+        if len(delayStat):
+            delay = sorted(delayStat)[len(delayStat) // 2]
+        elif len(allDelayStat):
+            delay = sorted(allDelayStat)[len(allDelayStat) // 2]
         else:
-            averageRoundTripDelay = 42
+            delay = 42
 
-        return averageReceivedPackageSize + averageRoundTripDelay
+        return averageReceivedPackageSize + delay
 
     def _computingCost(self, individual: Dict[str, str]) -> float:
         total = .0

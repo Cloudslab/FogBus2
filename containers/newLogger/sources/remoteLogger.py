@@ -43,8 +43,6 @@ class RemoteLogger(Profiler, Node):
             self.__handleNodeResources(message=message)
         elif message.type == 'respondTime':
             self.__handleResponseTime(message=message)
-        elif message.type == 'roundTripDelay':
-            self.__handleRoundTripDelay(message=message)
         elif message.type == 'delays':
             self.__handleDelays(message=message)
         elif message.type == 'imagesAndRunningContainers':
@@ -60,11 +58,6 @@ class RemoteLogger(Profiler, Node):
         result = self.__handleEdgeAverage(message, 'averageReceivedPackageSize')
         for edgeName, average in result:
             self.edges[edgeName].averageReceivedPackageSize = average
-
-    def __handleRoundTripDelay(self, message: Message):
-        result = self.__handleEdgeAverage(message, 'roundTripDelay')
-        for edgeName, average in result:
-            self.edges[edgeName].averageRoundTripDelay = average
 
     def __handleDelays(self, message: Message):
         result = self.__handleEdgeAverage(message, 'delays')

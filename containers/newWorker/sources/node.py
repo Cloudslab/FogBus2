@@ -59,7 +59,6 @@ class Node:
         self.logger: Logger = None
         self.handleSignal()
         # Node stats
-        self.roundTripDelay: Dict[str, Average] = {}
         self.receivedPackageSize: Dict[str, Average] = {}
         self.delays: Dict[str, Average] = {}
 
