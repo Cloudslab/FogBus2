@@ -22,7 +22,7 @@ class Node:
             masterAddr: Address,
             loggerAddr: Address,
             periodicTasks: List[PeriodicTask] = None,
-            threadNumber: int = 128,
+            threadNumber: int = 32,
             logLevel=logging.DEBUG):
         self.myAddr = myAddr
         self.masterAddr = masterAddr
@@ -54,7 +54,7 @@ class Node:
         self.__myService = Server(
             self.myAddr,
             self.receivedMessage,
-            threadNumber=threadNumber // 4)
+            threadNumber=threadNumber)
         for i in range(threadNumber):
             t = threading.Thread(
                 target=self.__messageHandler,
