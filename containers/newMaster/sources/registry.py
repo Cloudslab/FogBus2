@@ -34,7 +34,7 @@ class Registry(Profiler, Node, ABC):
             ignoreSocketErr=ignoreSocketErr,
             periodicTasks=[
                 (self._saveToPersistentStorage, 2),
-                (self.__requestProfiler, 2)],
+                (self.__requestProfiler, 1)],
             logLevel=logLevel
         )
         self.__currentWorkerID: int = 0

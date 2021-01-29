@@ -75,7 +75,7 @@ class Node:
         self.delays: Dict[str, Average] = {}
 
         defaultPeriodicTasks: List[PeriodicTask] = [
-            (self.__uploadResources, 10)]
+            (self.__uploadResources, 1)]
         if not self.role == 'RemoteLogger':
             defaultPeriodicTasks += [
                 (self.__uploadAverageReceivedPackageSize, 10),
