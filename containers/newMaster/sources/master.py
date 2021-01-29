@@ -155,6 +155,7 @@ class Master(Registry):
             if message.source.id not in self.workers:
                 return
             del self.workers[message.source.id]
+            del self.workers[message.source.machineID]
         self.sendMessage(response, message.source)
 
     def __handleProfiler(self, message: Message):
