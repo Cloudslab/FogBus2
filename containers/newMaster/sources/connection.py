@@ -218,7 +218,7 @@ class Server:
         while True:
             request = self.requests.get()
             content, messageSize = self.__receiveMessage(request.clientSocket)
-            if content is None:
+            if messageSize == 0:
                 continue
             message = Message(content=content)
             self.messageQueue.put((message, messageSize))
@@ -230,6 +230,7 @@ class Server:
         payloadSize = struct.calcsize('>L')
 
         try:
+            clientSocket.settimeout(3)
             while len(buffer) < payloadSize:
                 buffer += clientSocket.recv(4096)
 
@@ -243,8 +244,8 @@ class Server:
             data = buffer[:dataSize]
             result = data
 
-        except OSError:
-            clientSocket.close()
+        except (OSError, socket.error):
+            pass
 
         clientSocket.close()
         if result is None:

@@ -174,6 +174,10 @@ class Registry(Profiler, Node, ABC):
         token = message.content['token']
         workerID = message.content['workerID']
 
+        if userID not in self.users:
+            return
+        if workerID not in self.workers:
+            return
         user = self.users[userID]
         worker = self.workers[workerID]
 
