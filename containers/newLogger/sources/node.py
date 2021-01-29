@@ -68,7 +68,6 @@ class Node:
         if not self.role == 'RemoteLogger':
             defaultPeriodicTasks += [
                 (self.__uploadAverageReceivedPackageSize, 10),
-                (self.__uploadRoundTripDelay, 10),
                 (self.__uploadDelays, 10)]
         if periodicTasks is None:
             periodicTasks = []
@@ -124,13 +123,6 @@ class Node:
                     self.delays[message.source.name] = delay
                 self.delays[message.source.name].update(message.content['delay'])
 
-            if message.type == 'ping':
-                message.content['type'] = 'pong'
-                self.sendMessage(message.content, message.source)
-                continue
-            elif message.type == 'pong':
-                self.__handlePong(message)
-                continue
             elif message.type == 'resourcesQuery':
                 self.__handleResourcesQuery(message)
                 continue
@@ -172,16 +164,6 @@ class Node:
         message['source'] = source
         Connection(addr).send(message)
 
-        if message['type'] == 'pong':
-            return
-
-        if addr == self.myAddr:
-            # remoteLogger sends resources to itself
-            return
-
-        ping = {'type': 'ping', 'time': time(), 'source': source}
-        Connection(addr).send(ping)
-
     @abstractmethod
     def handleMessage(self, message: Message):
         pass
@@ -206,22 +188,6 @@ class Node:
     def handleSignal(self):
         signal.signal(signal.SIGINT, self.__signalHandler)
 
-    def __handlePong(self, message: Message):
-        delay = time() - message.content['time']
-        source = message.source
-        if source.nameConsistent not in self.roundTripDelay:
-            roundTripDelay = Average(
-                addr=message.source.addr,
-                name=source.nameConsistent,
-                nameLogPrinting=source.nameLogPrinting,
-                nameConsistent=source.nameConsistent,
-                role=source.role,
-                id_=source.id,
-                machineID=source.machineID
-            )
-            self.roundTripDelay[source.nameConsistent] = roundTripDelay
-        self.roundTripDelay[source.nameConsistent].update(delay * 1000)
-
     def __handleResourcesQuery(self, message: Message):
         if not message.source.addr == self.masterAddr:
             return
@@ -233,10 +199,11 @@ class Node:
                           'Reason: %s' % (
                               message.source.nameLogPrinting,
                               message.content['reason'])
-        msg = {'type': 'exit', 'reason': reasonFormatted}
-        self.sendMessage(msg, self.master)
-        self.logger.warning(reasonFormatted)
-        self.logger.info('Exit.')
+        if self.logger is not None:
+            self.logger.warning(reasonFormatted)
+            self.logger.info('Exit.')
+        else:
+            print(reasonFormatted)
         os._exit(0)
 
     def __periodic(self, runner: Callable, period: float):
@@ -259,12 +226,6 @@ class Node:
         msg = {
             'type': 'averageReceivedPackageSize',
             'averageReceivedPackageSize': self.receivedPackageSize}
-        self.sendMessage(msg, self.remoteLogger)
-
-    def __uploadRoundTripDelay(self):
-        msg = {
-            'type': 'roundTripDelay',
-            'roundTripDelay': self.roundTripDelay}
         self.sendMessage(msg, self.remoteLogger)
 
     def __uploadDelays(self):
