@@ -261,7 +261,7 @@ class Evaluator:
                 continue
             recordResources = self.workersResources[machineRecord]
             if taskNameRecord == taskName:
-                return processTime * machineResources.currentCPUFrequency / recordResources.currentCPUFrequency
+                return processTime * recordResources.currentCPUFrequency / machineResources.currentCPUFrequency
         return maxProcessTime
 
 
