@@ -7,9 +7,9 @@ docker-compose \
 
 }
 
-cd newLogger && build
-cd  ../newMaster && build
-cd  ../newUser && build
-cd  ../newWorker && build
+cd newLogger && build &
+cd  ../newMaster && build &
+cd  ../newUser && build &
+cd  ../newWorker && build &
 
 cd sources/tasks && ./rebuild.sh
