@@ -116,21 +116,21 @@ class Scheduler:
             childTaskList = deepcopy(dependency.childTaskList)
             if 'Sensor' in childTaskList and 'Master' not in childTaskList:
                 childTaskList.remove('Sensor')
-                childTaskList.append('Master')
+                childTaskList.append('Master-0')
             if 'Actor' in childTaskList and 'Master' not in childTaskList:
                 childTaskList.remove('Actor')
-                childTaskList.append('Master')
+                childTaskList.append('Master-0')
             if 'RemoteLogger' in childTaskList:
                 childTaskList.remove('RemoteLogger')
             for i, name in enumerate(childTaskList):
-                if not name == 'Master':
+                if not name == 'Master-0':
                     childTaskList[i] = '%s@%s@TaskHandler' % (childTaskList[i], label)
                 elif name == 'User':
                     childTaskList[i] = '%s@%s' % (applicationName, name)
             edgesByName[taskName].update(set(childTaskList))
         userAppName = '%s@%s@User' % (applicationName, label)
         edgesByName['Master-0'].update({userAppName})
-        edgesByName[userAppName] = {'Master'}
+        edgesByName[userAppName] = {'Master-0'}
 
         res = defaultdict(lambda: set([]))
         result = {}
