@@ -27,11 +27,13 @@ class Decision:
     def __init__(
             self,
             machines: Dict[str, str],
-            edgeCost: float,
+            edgePackageSize: float,
+            edgeDelay: float,
             computingCost: float,
     ):
         self.machines: Dict[str, str] = machines
-        self.edgeCost: float = edgeCost
+        self.edgePackageSize: float = edgePackageSize
+        self.edgeDelay: float = edgeDelay
         self.computingCost: float = computingCost
 
     def __repr__(self):
@@ -163,7 +165,7 @@ class Evaluator:
         self.edgesByName = edgesByName
         self.workersResources = workersResources
 
-    def _edgeCost(self, individual: Dict[str, str]) -> float:
+    def _edgePackageSize(self) -> float:
         packageSize = .0
         for source, destinations in self.edgesByName.items():
             if source not in self.averagePackageSize:
@@ -175,21 +177,22 @@ class Evaluator:
                     continue
                 packageSize += self.averagePackageSize[source][dest]
         # suppose bandwidth for all nodes are the same
-        # and is 0.1 mb/ ms
-        packageSize /= 104857
+        # and is 10 mb/ s
+        # packageSize /= 10485
+        return packageSize
 
+    def _edgeDelay(self, individual: Dict[str, str]) -> float:
         delay = .0
         for source, destinations in self.edgesByName.items():
             if individual[source] not in self.averageDelay:
-                delay += 42 * len(destinations)
+                delay += 0
                 continue
             for dest in destinations:
                 if individual[dest] not in self.averageDelay[individual[source]]:
-                    delay += 42
+                    delay += 0
                     continue
                 delay += self.averageDelay[individual[source]][individual[dest]]
-
-        return packageSize + delay
+        return delay
 
     def _computingCost(self, individual: Dict[str, str]) -> float:
         total = .0
@@ -198,10 +201,10 @@ class Evaluator:
                 continue
             taskHandlerName = '%s#%s' % (machineName, individual[machineName])
             if taskHandlerName in self.averageProcessTime \
-                    and self.averageProcessTime[taskHandlerName] is None:
+                    and self.averageProcessTime[taskHandlerName] is not None:
                 total += self.averageProcessTime[taskHandlerName] * self.considerRecentResources(machineName)
                 continue
-            total += 42
+            total += 0
         return total
 
     def considerRecentResources(self, machineName):
@@ -281,7 +284,7 @@ class BaseProblem(Problem, Evaluator):
             self,
             xl=lowerBound,
             xu=upperBound,
-            n_obj=2,
+            n_obj=3,
             n_var=self.variableNumber,
             type_var=np.int,
             elementwise_evaluation=True)
@@ -290,10 +293,12 @@ class BaseProblem(Problem, Evaluator):
         x = x.astype(int)
         individual = self.indexesToMachines(x)
 
-        edgeCost = self._edgeCost(individual)
+        # TODO: bandwidth
+        # edgePackageSize = self._edgePackageSize()
+        edgeDelay = self._edgeDelay(individual)
         computingCost = self._computingCost(individual)
-
-        out['F'] = anp.column_stack([edgeCost, computingCost])
+        print(x, 0, edgeDelay, computingCost)
+        out['F'] = anp.column_stack([0, edgeDelay, computingCost])
 
     def indexesToMachines(self, indexes: List[int]):
         res = {}
@@ -355,11 +360,13 @@ class NSGABase(Scheduler):
                            'n_gen',
                            self.__generationNum))
         machines = problem.indexesToMachines(list(res.X[0].astype(int)))
-        edgeCost = res.F[0][0]
-        computingCost = res.F[0][1]
+        edgePackageSize = res.F[0][0]
+        edgeDelay = res.F[0][1]
+        computingCost = res.F[0][2]
         decision = Decision(
             machines=machines,
-            edgeCost=edgeCost,
+            edgePackageSize=edgePackageSize,
+            edgeDelay=edgeDelay,
             computingCost=computingCost)
         return decision
 
@@ -394,7 +401,7 @@ class NSGA3(NSGABase):
                  averageProcessTime: Dict[str, float]):
         refDirs = get_reference_directions(
             "das-dennis",
-            2,
+            3,
             n_partitions=dasDennisP)
         super().__init__(
             'NSGA3',
@@ -418,7 +425,7 @@ class CTAEA(NSGABase):
                  averageProcessTime: Dict[str, float]):
         refDirs = get_reference_directions(
             "das-dennis",
-            2,
+            3,
             n_partitions=dasDennisP)
         super().__init__(
             'CTAEA',

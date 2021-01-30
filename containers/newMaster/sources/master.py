@@ -145,6 +145,10 @@ class Master(Registry):
             if message.source.id not in self.taskHandlers:
                 return
             taskHandler = self.taskHandlers[message.source.id]
+            if taskHandler.user.id in self.users:
+                user = self.users[taskHandler.user.id]
+                del taskHandler.user.taskHandlerByTaskName[taskHandler.taskName]
+                self.__stopClient(user, 'Your resources was released.')
             del self.taskHandlerByToken[taskHandler.token]
             del self.taskHandlers[message.source.id]
         elif message.source.role == 'worker':

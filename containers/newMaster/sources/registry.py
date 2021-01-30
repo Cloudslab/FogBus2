@@ -71,22 +71,22 @@ class Registry(Profiler, Node, ABC):
                 averagePackageSize=self.averagePackageSize,
                 averageDelay=self.averageDelay,
                 averageProcessTime=self.averageProcessTime,
-                populationSize=92,
-                generationNum=100,
+                populationSize=100,
+                generationNum=200,
                 dasDennisP=1)
         elif schedulerName == 'NSGA2':
             return NSGA2(
                 averagePackageSize=self.averagePackageSize,
                 averageDelay=self.averageDelay,
                 averageProcessTime=self.averageProcessTime,
-                populationSize=92,
-                generationNum=100)
+                populationSize=100,
+                generationNum=200)
         elif schedulerName == 'CTAEA':
             return CTAEA(
                 averagePackageSize=self.averagePackageSize,
                 averageDelay=self.averageDelay,
                 averageProcessTime=self.averageProcessTime,
-                generationNum=100,
+                generationNum=200,
                 dasDennisP=1)
         self.logger.warning('Unknown scheduler: %s', schedulerName)
         os._exit(0)

@@ -58,7 +58,7 @@ class RemoteLogger(Profiler, Node):
             self.averagePackageSize[source][dest] = averageReceivedPackageSize
 
     def __handleDelays(self, message: Message):
-        source = message.source.name
+        source = message.source.machineID
         if source not in self.averageDelay:
             self.averageDelay[source] = {}
         for dest, delay in message.content['delays'].items():

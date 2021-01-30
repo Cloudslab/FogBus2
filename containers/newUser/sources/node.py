@@ -145,7 +145,7 @@ class Node(Server):
                     )
                     self.receivedPackageSize[message.source.name] = receivedPackageSize
                 self.receivedPackageSize[message.source.name].update(messageSize)
-                if message.source.name not in self.delays:
+                if message.source.machineID not in self.delays:
                     delay = Average(
                         addr=message.source.addr,
                         name=message.source.name,
@@ -155,8 +155,8 @@ class Node(Server):
                         id_=message.source.id,
                         machineID=message.source.machineID
                     )
-                    self.delays[message.source.name] = delay
-                self.delays[message.source.name].update(message.content['delay'])
+                    self.delays[message.source.machineID] = delay
+                self.delays[message.source.machineID].update(message.content['delay'])
                 self.lock.release()
 
             if message.type == 'resourcesQuery':
