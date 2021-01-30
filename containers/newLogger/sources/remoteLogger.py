@@ -114,7 +114,9 @@ class RemoteLogger(Profiler, Node):
                 self.averageRespondTime,
                 self.imagesAndRunningContainers,
             ]}
+        self.lock.acquire()
         self.sendMessage(msg, message.source.addr)
+        self.lock.release()
 
 
 if __name__ == '__main__':

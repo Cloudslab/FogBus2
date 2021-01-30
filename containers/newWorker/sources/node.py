@@ -128,7 +128,6 @@ class Node:
             _receivedAt = time() * 1000
             message.content['delay'] = _receivedAt - message.content['_sentAt']
             message.content['_receivedAt'] = _receivedAt
-
             if not message.source.nameConsistent == self.nameConsistent:
                 if message.source.name not in self.receivedPackageSize:
                     receivedPackageSize = Average(
@@ -155,7 +154,7 @@ class Node:
                     self.delays[message.source.name] = delay
                 self.delays[message.source.name].update(message.content['delay'])
 
-            elif message.type == 'resourcesQuery':
+            if message.type == 'resourcesQuery':
                 self.__handleResourcesQuery(message)
                 continue
             elif message.type == 'stop':
@@ -190,11 +189,12 @@ class Node:
 
     def __signalHandler(self, sig, frame):
         # https://stackoverflow.com/questions/1112343
+        print('[*] Exiting ...')
         if self.role not in {'Master', 'RemoteLogger'}:
             message = {'type': 'exit', 'reason': 'Manually interrupted.'}
             self.sendMessage(message, self.master.addr)
-        self.__myService.serverSocket.close()
-        print('[*] Exiting ...')
+            return
+        os._exit(0)
 
     def handleSignal(self):
         signal.signal(signal.SIGINT, self.__signalHandler)

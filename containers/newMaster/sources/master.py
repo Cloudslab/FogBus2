@@ -130,23 +130,21 @@ class Master(Registry):
             str(message.source.addr),
             message.content['reason'])
 
-        response = {
-            'type': 'stop',
-            'reason': 'Your asked for. Reason: %s' % message.content['reason']}
+        self.__stopClient(
+            message.source,
+            'Your asked for. Reason: %s' % message.content['reason'])
+
         if message.source.role == 'user':
             if message.source.id not in self.users:
                 return
             user = self.users[message.source.id]
-            self.sendMessage(response, user.addr)
-            msg = {'type': 'stop', 'reason': 'Your User has exited.'}
             for taskHandler in user.taskHandlerByTaskName.values():
-                self.sendMessage(msg, taskHandler.addr)
+                self.__stopClient(taskHandler, 'Your User has exited.')
             del self.users[message.source.id]
         elif message.source.role == 'TaskHandler':
             if message.source.id not in self.taskHandlers:
                 return
             taskHandler = self.taskHandlers[message.source.id]
-            self.sendMessage(response, taskHandler.addr)
             del self.taskHandlerByToken[taskHandler.token]
             del self.taskHandlers[message.source.id]
         elif message.source.role == 'worker':
@@ -154,7 +152,6 @@ class Master(Registry):
                 return
             del self.workers[message.source.id]
             del self.workers[message.source.machineID]
-        self.sendMessage(response, message.source.addr)
 
     def __handleProfiler(self, message: Message):
         profilers = message.content['profiler']
