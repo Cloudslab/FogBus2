@@ -3,6 +3,7 @@ import struct
 import threading
 import traceback
 import pickle
+import os
 from time import time, sleep
 from queue import Queue
 from typing import Dict, Tuple, List
@@ -187,25 +188,29 @@ class Server:
 
         self.threadNumber: int = threadNumber
         self.requests: Queue[Request] = Queue()
-        self.run()
+        self._runServer()
 
-    def run(self):
+    def _runServer(self):
         for i in range(self.threadNumber):
             t = threading.Thread(
                 target=self.__handleThread,
                 name="ServiceThread-%d" % i
             )
             t.start()
-        server = threading.Thread(
+        event = threading.Event()
+        threading.Thread(
             target=self.__serve,
-            name="Server"
-        )
-        server.start()
+            name="Server",
+            args=(event,)
+        ).start()
+        event.wait()
 
-    def __serve(self):
+    def __serve(self, event: threading.Event):
         try:
             self.serverSocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             self.serverSocket.bind(self.addr)
+            self.addr = self.serverSocket.getsockname()
+            event.set()
             self.serverSocket.listen()
             while True:
                 clientSocket, clientAddress = self.serverSocket.accept()
@@ -213,7 +218,9 @@ class Server:
                 self.requests.put(request)
         except socket.error:
             self.serverSocket.close()
-            raise CannotBindAddr
+            import traceback
+            traceback.print_exc()
+            os._exit(-1)
 
     def __handleThread(self):
         while True:

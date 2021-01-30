@@ -1,6 +1,5 @@
 import threading
-from edge import Edge
-from typing import Dict, List, Tuple
+from typing import Dict
 from resourcesInfo import ResourcesInfo, ImagesAndContainers
 from persistentStorage import PersistentStorage
 
@@ -8,7 +7,8 @@ from persistentStorage import PersistentStorage
 class Profiler:
     def __init__(self):
         self.lock = threading.Lock()
-        self.edges: Dict[str, Edge] = {}
+        self.averagePackageSize: Dict[str, Dict[str, float]] = {}
+        self.averageDelay: Dict[str, Dict[str, float]] = {}
         self.nodeResources: Dict[str, ResourcesInfo] = {}
         self.averageProcessTime: Dict[str, float] = {}
         self.averageRespondTime: Dict[str, float] = {}
@@ -19,7 +19,8 @@ class Profiler:
 
     def _saveToPersistentStorage(self):
         self.lock.acquire()
-        self.persistentStorage.write('edges', self.edges)
+        self.persistentStorage.write('averagePackageSize', self.averagePackageSize)
+        self.persistentStorage.write('averageDelay', self.averageDelay)
         self.persistentStorage.write('nodeResources', self.nodeResources)
         self.persistentStorage.write('averageProcessTime', self.averageProcessTime)
         self.persistentStorage.write('averageRespondTime', self.averageRespondTime)
@@ -28,7 +29,8 @@ class Profiler:
 
     def __readFromPersistentStorage(self):
         self.lock.acquire()
-        self.edges = self.persistentStorage.read('edges')
+        self.averagePackageSize = self.persistentStorage.read('averagePackageSize')
+        self.averageDelay = self.persistentStorage.read('averageDelay')
         self.nodeResources = self.persistentStorage.read('nodeResources', )
         self.averageProcessTime = self.persistentStorage.read('averageProcessTime')
         self.averageRespondTime = self.persistentStorage.read('averageRespondTime')

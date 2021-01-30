@@ -14,7 +14,7 @@ Address = Tuple[str, int]
 PeriodicTask = Tuple[Callable, float]
 
 
-class Node:
+class Node(Server):
 
     def __init__(
             self,
@@ -54,10 +54,12 @@ class Node:
         self.receivedMessage: Queue[Tuple[Message, int]] = Queue()
         self.messageToSend: Queue[Tuple[Dict, Tuple[str, int]]] = Queue()
         self.isRegistered: threading.Event = threading.Event()
-        self.__myService = Server(
-            self.myAddr,
-            self.receivedMessage,
+        Server.__init__(
+            self,
+            addr=self.myAddr,
+            messagesQueue=self.receivedMessage,
             threadNumber=threadNumber // 4)
+        self.myAddr = self.addr
         for i in range(threadNumber):
             threading.Thread(
                 target=self.__messageHandler,
@@ -71,6 +73,7 @@ class Node:
         self.logger: Logger = None
         self.handleSignal()
         # Node stats
+        self.lock = threading.Lock()
         self.receivedPackageSize: Dict[str, Average] = {}
         self.delays: Dict[str, Average] = {}
 
@@ -129,6 +132,7 @@ class Node:
             message.content['delay'] = _receivedAt - message.content['_sentAt']
             message.content['_receivedAt'] = _receivedAt
             if not message.source.nameConsistent == self.nameConsistent:
+                self.lock.acquire()
                 if message.source.name not in self.receivedPackageSize:
                     receivedPackageSize = Average(
                         addr=message.source.addr,
@@ -153,6 +157,7 @@ class Node:
                     )
                     self.delays[message.source.name] = delay
                 self.delays[message.source.name].update(message.content['delay'])
+                self.lock.release()
 
             if message.type == 'resourcesQuery':
                 self.__handleResourcesQuery(message)
@@ -234,13 +239,27 @@ class Node:
         self.sendMessage(msg, self.remoteLogger.addr)
 
     def __uploadAverageReceivedPackageSize(self):
+        self.lock.acquire()
+        allAverage = {}
+        for k, average in self.receivedPackageSize.items():
+            if k is None:
+                continue
+            allAverage[k] = average.average()
         msg = {
             'type': 'averageReceivedPackageSize',
-            'averageReceivedPackageSize': self.receivedPackageSize}
+            'averageReceivedPackageSize': allAverage}
         self.sendMessage(msg, self.remoteLogger.addr)
+        self.lock.release()
 
     def __uploadDelays(self):
+        self.lock.acquire()
+        allDelay = {}
+        for k, average in self.delays.items():
+            if k is None:
+                continue
+            allDelay[k] = average.average()
         msg = {
             'type': 'delays',
-            'delays': self.delays}
+            'delays': allDelay}
         self.sendMessage(msg, self.remoteLogger.addr)
+        self.lock.release()

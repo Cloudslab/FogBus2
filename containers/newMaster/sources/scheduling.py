@@ -11,7 +11,6 @@ from pymoo.optimize import minimize
 from abc import abstractmethod
 from pymoo.model.problem import Problem
 from typing import Dict, List
-from edge import Edge
 from dependencies import loadDependencies, Task, Application
 from copy import deepcopy
 from collections import defaultdict
@@ -21,7 +20,6 @@ from resourcesInfo import ResourcesInfo
 
 Configuration.show_compile_hint = False
 EdgesByName = Dict[str, List[str]]
-MachinesByName = Dict[str, List[str]]
 
 
 class Decision:
@@ -50,10 +48,12 @@ class Scheduler:
     def __init__(
             self,
             name: str,
-            edges: Dict[str, Edge],
+            averagePackageSize: Dict[str, Dict[str, float]],
+            averageDelay: Dict[str, Dict[str, float]],
             averageProcessTime: Dict[str, float]):
         self.name: str = name
-        self.edges: Dict[str, Edge] = edges
+        self.averagePackageSize: Dict[str, Dict[str, float]] = averagePackageSize
+        self.averageDelay: Dict[str, Dict[str, float]] = averageDelay
         self.averageProcessTime: Dict[str, float] = averageProcessTime
         tasksAndApps = loadDependencies()
         self.tasks: Dict[str, Task] = tasksAndApps[0]
@@ -61,30 +61,35 @@ class Scheduler:
 
     def schedule(
             self,
+            userName,
+            userMachine,
+            masterName,
+            masterMachine,
             applicationName: str,
             label: str,
-            userMachineID: str,
             availableWorkers: Dict[str, str],
             workersResources: Dict[str, ResourcesInfo]
     ) -> Decision:
         edgesByName = self.__getExecutionMap(
             applicationName,
             label=label)
-        machinesByName = self.__getMachinesByName(
-            applicationName=applicationName,
-            label=label,
-            userMachineID=userMachineID)
         return self._schedule(
+            userName,
+            userMachine,
+            masterName,
+            masterMachine,
             edgesByName,
-            machinesByName,
             availableWorkers,
             workersResources)
 
     @abstractmethod
     def _schedule(
             self,
+            userName,
+            userMachine,
+            masterName,
+            masterMachine,
             edgesByName: EdgesByName,
-            machinesByName: MachinesByName,
             availableWorkers: Dict[str, str],
             workersResources: Dict[str, ResourcesInfo]) -> Decision:
         raise NotImplementedError
@@ -102,7 +107,7 @@ class Scheduler:
             if taskName in skipRoles:
                 continue
             if taskName in replaceRoles:
-                taskName = 'Master'
+                taskName = 'Master-0'
             else:
                 taskName = '%s@%s@TaskHandler' % (taskName, label)
 
@@ -122,7 +127,7 @@ class Scheduler:
                     childTaskList[i] = '%s@%s' % (applicationName, name)
             edgesByName[taskName].update(set(childTaskList))
         userAppName = '%s@%s@User' % (applicationName, label)
-        edgesByName['Master'].update({userAppName})
+        edgesByName['Master-0'].update({userAppName})
         edgesByName[userAppName] = {'Master'}
 
         res = defaultdict(lambda: set([]))
@@ -133,103 +138,58 @@ class Scheduler:
             result[k] = list(res[k])
         return result
 
-    def __getMachinesByName(
-            self,
-            applicationName: str,
-            label: str,
-            userMachineID: str) -> MachinesByName:
-        userName = '%s@%s@User' % (applicationName, label)
-        res = defaultdict(lambda: set([]))
-        skipNames = {'RemoteLogger', 'Worker'}
-        for edge in self.edges.values():
-            source = edge.source.split('#')
-            name = source[-2]
-            if name in skipNames:
-                continue
-            machineID = source[-1]
-            if name == userName:
-                if not machineID == userMachineID:
-                    continue
-            res[name].update([machineID])
-        result = {}
-        for k, v in res.items():
-            result[k] = list(v)
-        return result
-
 
 class Evaluator:
 
     def __init__(
             self,
-            edges: Dict[str, Edge],
+            userName,
+            userMachine,
+            masterName,
+            masterMachine,
+            averagePackageSize: Dict[str, Dict[str, float]],
+            averageDelay: Dict[str, Dict[str, float]],
             averageProcessTime: Dict[str, float],
             edgesByName: EdgesByName,
-            machinesByName: MachinesByName,
             workersResources: Dict[str, ResourcesInfo]):
-        self.edges: Dict[str, Edge] = edges
+
+        self.userName = userName
+        self.userMachine = userMachine
+        self.masterName = masterName
+        self.masterMachine = masterMachine
+        self.averagePackageSize: Dict[str, Dict[str, float]] = averagePackageSize
+        self.averageDelay: Dict[str, Dict[str, float]] = averageDelay
         self.averageProcessTime: Dict[str, float] = averageProcessTime
         self.edgesByName = edgesByName
-        self.machinesByName = machinesByName
         self.workersResources = workersResources
 
     def _edgeCost(self, individual: Dict[str, str]) -> float:
-        total = .0
+        packageSize = .0
         for source, destinations in self.edgesByName.items():
-            sourceName = '%s#%s' % (source, individual[source])
+            if source not in self.averagePackageSize:
+                packageSize += 4096 * len(destinations)
+                continue
             for dest in destinations:
-                destName = '%s#%s' % (dest, individual[dest])
-                costKey = '%s,%s' % (sourceName, destName)
-                if costKey in self.edges \
-                        and self.edges[costKey].averageReceivedPackageSize is None:
-                    total += self.edges[costKey].averageReceivedPackageSize
-                    total += self.edges[costKey].delay
+                if dest not in self.averagePackageSize[source]:
+                    packageSize += 4096
                     continue
-                total += self.evaluateEdgeCost(source, individual[source], dest, individual[dest])
-
+                packageSize += self.averagePackageSize[source][dest]
         # suppose bandwidth for all nodes are the same
         # and is 0.1 mb/ ms
-        return total / (1024 ** 2 / 10)
+        packageSize /= 104857
 
-    def evaluateEdgeCost(self, sourceName, sourceMachine, destName, destMachine):
-        allReceivedStat = set([])
-        averageReceivedStat = set([])
-        for _, edge in self.edges.items():
-            if edge.averageReceivedPackageSize is None:
+        delay = .0
+        for source, destinations in self.edgesByName.items():
+            if individual[source] not in self.averageDelay:
+                delay += 42 * len(destinations)
                 continue
-            averageReceivedStat.add(edge.averageReceivedPackageSize)
-            if sourceName != edge.source[len(sourceName)]:
-                continue
-            if destName != edge.destination[len(destName)]:
-                continue
-            averageReceivedStat.add(edge.averageReceivedPackageSize)
+            for dest in destinations:
+                if individual[dest] not in self.averageDelay[individual[source]]:
+                    delay += 42
+                    continue
+                delay += self.averageDelay[individual[source]][individual[dest]]
 
-        if len(averageReceivedStat):
-            averageReceivedPackageSize = sorted(averageReceivedStat)[len(averageReceivedStat) // 2]
-        elif len(allReceivedStat):
-            averageReceivedPackageSize = sorted(allReceivedStat)[len(allReceivedStat) // 2]
-        else:
-            averageReceivedPackageSize = 4096
-
-        allDelayStat = set([])
-        delayStat = set([])
-        for _, edge in self.edges.items():
-            if edge.delay is None:
-                continue
-            allDelayStat.add(edge.delay)
-            if sourceMachine != edge.source[-len(sourceMachine):]:
-                continue
-            if destMachine != edge.destination[-len(destMachine):]:
-                continue
-            delayStat.add(edge.delay)
-
-        if len(delayStat):
-            delay = sorted(delayStat)[len(delayStat) // 2]
-        elif len(allDelayStat):
-            delay = sorted(allDelayStat)[len(allDelayStat) // 2]
-        else:
-            delay = 42
-
-        return averageReceivedPackageSize + delay
+        return packageSize + delay
 
     def _computingCost(self, individual: Dict[str, str]) -> float:
         total = .0
@@ -241,7 +201,7 @@ class Evaluator:
                     and self.averageProcessTime[taskHandlerName] is None:
                 total += self.averageProcessTime[taskHandlerName] * self.considerRecentResources(machineName)
                 continue
-            total += self.evaluateComputingCost(taskHandlerName) * self.considerRecentResources(machineName)
+            total += self.evaluateComputingCost(machineName, individual[machineName]) * self.considerRecentResources(machineName)
         return total
 
     def considerRecentResources(self, machineName):
@@ -256,10 +216,9 @@ class Evaluator:
 
         return factor
 
-    def evaluateComputingCost(self, taskHandlerName: str):
-        taskName, machine = taskHandlerName.split('#')
+    def evaluateComputingCost(self, taskName, machine):
         machineResources = self.workersResources[machine]
-        maxProcessTime = 0
+        maxProcessTime = 1024
         for taskHandlerRecord, processTime in self.averageProcessTime.items():
             if processTime is None:
                 continue
@@ -268,8 +227,8 @@ class Evaluator:
             taskNameRecord, machineRecord = taskHandlerRecord.split('#')
             if machineRecord not in self.workersResources:
                 continue
-            recordResources = self.workersResources[machineRecord]
             if taskNameRecord == taskName:
+                recordResources = self.workersResources[machineRecord]
                 return processTime * recordResources.currentCPUFrequency / machineResources.currentCPUFrequency
         return maxProcessTime
 
@@ -278,28 +237,37 @@ class BaseProblem(Problem, Evaluator):
 
     def __init__(
             self,
-            edges: Dict[str, Edge],
+            userName,
+            userMachine,
+            masterName,
+            masterMachine,
+            averagePackageSize: Dict[str, Dict[str, float]],
+            averageDelay: Dict[str, Dict[str, float]],
             averageProcessTime: Dict[str, float],
             edgesByName: EdgesByName,
-            machinesByName: MachinesByName,
             availableWorkers: Dict[str, str],
             workersResources: Dict[str, ResourcesInfo]):
+        self.averagePackageSize: Dict[str, Dict[str, float]] = averagePackageSize
+        self.averageDelay: Dict[str, Dict[str, float]] = averageDelay
         Evaluator.__init__(
             self,
-            edges=edges,
+            userName,
+            userMachine,
+            masterName,
+            masterMachine,
+            averagePackageSize=self.averagePackageSize,
+            averageDelay=self.averageDelay,
             averageProcessTime=averageProcessTime,
             edgesByName=edgesByName,
-            machinesByName=machinesByName,
             workersResources=workersResources)
         self.variableNumber = len(edgesByName)
         self.availableWorkers = availableWorkers
         choicesEachVariable = []
         for name in edgesByName.keys():
-            if name.split('@')[-1] == 'TaskHandler':
-                choicesEachVariable.append(len(availableWorkers[name.split('@')[0]]))
-                continue
-            if name in machinesByName:
-                choicesEachVariable.append(len(machinesByName[name]))
+            if len(name) == len('TaskHandler') \
+                    and name[-11:] == ' TaskHandler':
+                # TODO: Change when support multiple masters
+                choicesEachVariable.append(len(availableWorkers[name]))
                 continue
             choicesEachVariable.append(1)
 
@@ -328,13 +296,13 @@ class BaseProblem(Problem, Evaluator):
         keys = list(self.edgesByName.keys())
         for keysIndex, index in enumerate(indexes):
             key = keys[keysIndex]
-            if key.split('@')[-1] == 'TaskHandler':
+            if len(key) > len('TaskHandler') \
+                    and key[-11:] == 'TaskHandler':
                 res[key] = self.availableWorkers[key][index]
                 continue
-            if key in self.machinesByName:
-                res[key] = self.machinesByName[key][index]
-                continue
             res[key] = None
+        res[self.masterName] = self.masterMachine
+        res[self.userName] = self.userMachine
         return res
 
 
@@ -343,28 +311,37 @@ class NSGABase(Scheduler):
             self,
             name: str,
             algorithm: GeneticAlgorithm,
-            edges: Dict[str, Edge],
+            averagePackageSize: Dict[str, Dict[str, float]],
+            averageDelay: Dict[str, Dict[str, float]],
             averageProcessTime: Dict[str, float],
             generationNum: int,
     ):
         self.__generationNum: int = generationNum
         super().__init__(
             name=name,
-            edges=edges,
+            averagePackageSize=averagePackageSize,
+            averageDelay=averageDelay,
             averageProcessTime=averageProcessTime)
         self.__algorithm = algorithm
 
     def _schedule(
             self,
+            userName,
+            userMachine,
+            masterName,
+            masterMachine,
             edgesByName: EdgesByName,
-            machinesByName: MachinesByName,
             availableWorkers: Dict[str, str],
             workersResources: Dict[str, ResourcesInfo]) -> Decision:
         problem = BaseProblem(
-            edges=self.edges,
+            userName,
+            userMachine,
+            masterName,
+            masterMachine,
+            averagePackageSize=self.averagePackageSize,
+            averageDelay=self.averageDelay,
             averageProcessTime=self.averageProcessTime,
             edgesByName=edgesByName,
-            machinesByName=machinesByName,
             availableWorkers=availableWorkers,
             workersResources=workersResources)
         res = minimize(problem,
@@ -388,15 +365,17 @@ class NSGA2(NSGABase):
     def __init__(self,
                  populationSize: int,
                  generationNum: int,
-                 edges: Dict[str, Edge],
+                 averagePackageSize: Dict[str, Dict[str, float]],
+                 averageDelay: Dict[str, Dict[str, float]],
                  averageProcessTime: Dict[str, float]):
         super().__init__(
             'NSGA2',
             NSGA2_(
                 pop_size=populationSize,
                 eliminate_duplicates=True),
-            edges,
-            averageProcessTime,
+            averagePackageSize=averagePackageSize,
+            averageDelay=averageDelay,
+            averageProcessTime=averageProcessTime,
             generationNum=generationNum)
 
 
@@ -406,7 +385,8 @@ class NSGA3(NSGABase):
                  populationSize: int,
                  generationNum: int,
                  dasDennisP: int,
-                 edges: Dict[str, Edge],
+                 averagePackageSize: Dict[str, Dict[str, float]],
+                 averageDelay: Dict[str, Dict[str, float]],
                  averageProcessTime: Dict[str, float]):
         refDirs = get_reference_directions(
             "das-dennis",
@@ -418,8 +398,9 @@ class NSGA3(NSGABase):
                 pop_size=populationSize,
                 ref_dirs=refDirs,
                 eliminate_duplicates=True),
-            edges,
-            averageProcessTime,
+            averagePackageSize=averagePackageSize,
+            averageDelay=averageDelay,
+            averageProcessTime=averageProcessTime,
             generationNum=generationNum)
 
 
@@ -428,7 +409,8 @@ class CTAEA(NSGABase):
     def __init__(self,
                  generationNum: int,
                  dasDennisP: int,
-                 edges: Dict[str, Edge],
+                 averagePackageSize: Dict[str, Dict[str, float]],
+                 averageDelay: Dict[str, Dict[str, float]],
                  averageProcessTime: Dict[str, float]):
         refDirs = get_reference_directions(
             "das-dennis",
@@ -439,8 +421,9 @@ class CTAEA(NSGABase):
             CTAEA_(
                 ref_dirs=refDirs,
                 seed=randint(0, 100)),
-            edges,
-            averageProcessTime,
+            averagePackageSize=averagePackageSize,
+            averageDelay=averageDelay,
+            averageProcessTime=averageProcessTime,
             generationNum=generationNum)
 
 

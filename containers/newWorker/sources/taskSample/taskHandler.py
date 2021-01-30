@@ -289,42 +289,21 @@ def run(
         taskName,
         token,
         childTaskTokens,
-        workerID,
-        retries):
-    if retries == 0:
-        raise CannotBindAddr
-    try:
-        tmpSocket = socket.socket(
-            socket.AF_INET,
-            socket.SOCK_STREAM)
-        tmpSocket.bind(('', 0))
-        port = tmpSocket.getsockname()[1]
-        tmpSocket.close()
-        myAddr = (sys.argv[1], port)
+        workerID):
+    myAddr = (sys.argv[1], 0)
 
-        taskHandler_ = TaskHandler(
-            myAddr=myAddr,
-            masterAddr=masterAddr,
-            loggerAddr=loggerAddr,
-            userID=userID,
-            userName=userName,
-            taskName=taskName,
-            token=token,
-            childTaskTokens=childTaskTokens,
-            workerID=workerID
-        )
-        taskHandler_.run()
-    except CannotBindAddr:
-        run(
-            masterAddr=masterAddr_,
-            loggerAddr=loggerAddr_,
-            userID=userID_,
-            taskName=taskName_,
-            userName=userName_,
-            token=token_,
-            workerID=workerID_,
-            childTaskTokens=childTaskTokens_,
-            retries=retries - 1)
+    taskHandler_ = TaskHandler(
+        myAddr=myAddr,
+        masterAddr=masterAddr,
+        loggerAddr=loggerAddr,
+        userID=userID,
+        userName=userName,
+        taskName=taskName,
+        token=token,
+        childTaskTokens=childTaskTokens,
+        workerID=workerID
+    )
+    taskHandler_.run()
 
 
 if __name__ == '__main__':
@@ -351,5 +330,4 @@ if __name__ == '__main__':
         userName=userName_,
         token=token_,
         workerID=workerID_,
-        childTaskTokens=childTaskTokens_,
-        retries=3)
+        childTaskTokens=childTaskTokens_)

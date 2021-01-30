@@ -2,9 +2,8 @@ import json
 import os
 from typing import Dict
 from copy import deepcopy
-from edge import Edge
 from resourcesInfo import ResourcesInfo, ImagesAndContainers
-
+from collections.abc import Iterable
 
 class PersistentStorage:
 
@@ -36,14 +35,11 @@ class PersistentStorage:
         if content == {}:
             return content
 
-        if name == 'edges':
-            return self.__recoverObject(content, Edge)
-
         if name == 'nodeResources':
-            return self.__recoverObject(content, ResourcesInfo)
+            return self.__recoverObject(content, 'nodeResources', ResourcesInfo)
 
         if name == 'imagesAndRunningContainers':
-            res = self.__recoverObject(content, ImagesAndContainers)
+            res = self.__recoverObject(content, 'imagesAndRunningContainers', ImagesAndContainers)
             for k, v in res.items():
                 for kk, vv in v.__dict__.items():
                     v.__dict__[kk] = set(vv)
@@ -53,25 +49,29 @@ class PersistentStorage:
         return content
 
     @staticmethod
-    def __recoverObject(content, objType):
+    def __recoverObject(content, objType: str, obj):
         res = {}
 
         for k, v in content.items():
-            res[k] = objType()
+            if objType == 'edges':
+                res[k] = {}
+                for kk, vv in v.items():
+                    res[k][kk] = obj()
+                    res[k][kk].__dict__ = vv
+                continue
+            res[k] = obj()
             res[k].__dict__ = v
         return res
 
     @staticmethod
     def __covert(obj):
-        if isinstance(obj, Edge):
-            return dict(obj)
-        if isinstance(obj, ResourcesInfo):
-            return dict(obj)
         if isinstance(obj, ImagesAndContainers):
             objDict = dict(obj)
             for k, v in objDict.items():
                 objDict[k] = list(v)
             return objDict
+        if isinstance(obj, Iterable):
+            return dict(obj)
         return obj
 
     def __writeDictToFileInJson(self, filename: str, content: Dict):

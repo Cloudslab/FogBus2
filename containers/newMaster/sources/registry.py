@@ -68,20 +68,23 @@ class Registry(Profiler, Node, ABC):
     def __getScheduler(self, schedulerName: str) -> Scheduler:
         if schedulerName in {None, 'NSGA3'}:
             return NSGA3(
-                edges=self.edges,
+                averagePackageSize=self.averagePackageSize,
+                averageDelay=self.averageDelay,
                 averageProcessTime=self.averageProcessTime,
                 populationSize=10,
                 generationNum=100,
                 dasDennisP=1)
         elif schedulerName == 'NSGA2':
             return NSGA2(
-                edges=self.edges,
+                averagePackageSize=self.averagePackageSize,
+                averageDelay=self.averageDelay,
                 averageProcessTime=self.averageProcessTime,
                 populationSize=10,
                 generationNum=100)
         elif schedulerName == 'CTAEA':
             return CTAEA(
-                edges=self.edges,
+                averagePackageSize=self.averagePackageSize,
+                averageDelay=self.averageDelay,
                 averageProcessTime=self.averageProcessTime,
                 generationNum=100,
                 dasDennisP=1)
@@ -260,17 +263,17 @@ class Registry(Profiler, Node, ABC):
                     continue
                 childTaskTokens.append(user.taskNameTokenMap[childTaskName].token)
             user.taskNameTokenMap[taskName].childTaskTokens = childTaskTokens
-        import cProfile, pstats, io
-        from pstats import SortKey
-        pr = cProfile.Profile()
-        pr.enable()
+        # import cProfile, pstats, io
+        # from pstats import SortKey
+        # pr = cProfile.Profile()
+        # pr.enable()
         self.__schedule(user)
-        pr.disable()
-        s = io.StringIO()
-        sortby = SortKey.CUMULATIVE
-        ps = pstats.Stats(pr, stream=s).sort_stats(sortby)
-        ps.print_stats()
-        print(s.getvalue())
+        # pr.disable()
+        # s = io.StringIO()
+        # sortby = SortKey.CUMULATIVE
+        # ps = pstats.Stats(pr, stream=s).sort_stats(sortby)
+        # ps.print_stats()
+        # print(s.getvalue())
 
     def __schedule(self, user):
         allWorkers = []
@@ -283,15 +286,21 @@ class Registry(Profiler, Node, ABC):
             workersResources[key] = worker.resources
         # suppose each worker has all taskHandlers
         availableWorkers = defaultdict(lambda: allWorkers)
+
         decision = self.scheduler.schedule(
+            userName=user.name,
+            userMachine=user.machineID,
+            masterName=self.nameLogPrinting,
+            masterMachine=self.machineID,
             applicationName=user.appName,
             label=user.label,
-            userMachineID=user.machineID,
             availableWorkers=availableWorkers,
             workersResources=workersResources)
         messageForWorkers = self.__parseDecision(decision, user)
+
+        del decision.__dict__['machines']
         self.logger.info(
-            'Scheduled by %s.' % self.scheduler.name)
+            'Scheduled by %s: %s' % (self.scheduler.name, decision))
 
         for message, worker in messageForWorkers:
             self.sendMessage(message, worker.addr)

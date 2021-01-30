@@ -1,10 +1,8 @@
 import sys
 import logging
 from node import Node, Address
-from connection import Message, Average
+from connection import Message
 from logger import get_logger
-from edge import Edge
-from typing import List, Tuple
 from profilerManage import Profiler
 
 
@@ -53,34 +51,18 @@ class RemoteLogger(Profiler, Node):
         self.lock.release()
 
     def __handleAverageReceivedPackageSize(self, message: Message):
-        result = self.__handleEdgeAverage(message, 'averageReceivedPackageSize')
-        for edgeName, average in result:
-            self.edges[edgeName].averageReceivedPackageSize = average
+        source = message.source.name
+        if source not in self.averagePackageSize:
+            self.averagePackageSize[source] = {}
+        for dest, averageReceivedPackageSize in message.content['averageReceivedPackageSize'].items():
+            self.averagePackageSize[source][dest] = averageReceivedPackageSize
 
     def __handleDelays(self, message: Message):
-        result = self.__handleEdgeAverage(message, 'delays')
-        for edgeName, average in result:
-            self.edges[edgeName].delay = average
-
-    def __handleEdgeAverage(self, message: Message, keyName: str) -> List[Tuple[str, float]]:
-        result = []
-        for item in message.content[keyName].values():
-
-            if not isinstance(item, Average):
-                continue
-            if item.nameConsistent is None:
-                continue
-            edgeName = '%s,%s' % (
-                message.source.nameConsistent,
-                item.nameConsistent)
-            if edgeName not in self.edges:
-                self.edges[edgeName] = Edge(
-                    source=message.source.nameConsistent,
-                    destination=item.nameConsistent,
-                )
-            result.append((edgeName, item.average()))
-
-        return result
+        source = message.source.name
+        if source not in self.averageDelay:
+            self.averageDelay[source] = {}
+        for dest, delay in message.content['delays'].items():
+            self.averageDelay[source][dest] = delay
 
     def __handleNodeResources(self, message: Message):
         nodeName = message.source.nameConsistent
@@ -108,7 +90,8 @@ class RemoteLogger(Profiler, Node):
         msg = {
             'type': 'profiler',
             'profiler': [
-                self.edges,
+                self.averagePackageSize,
+                self.averageDelay,
                 self.nodeResources,
                 self.averageProcessTime,
                 self.averageRespondTime,

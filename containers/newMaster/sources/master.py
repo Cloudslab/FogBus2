@@ -156,14 +156,16 @@ class Master(Registry):
     def __handleProfiler(self, message: Message):
         profilers = message.content['profiler']
         # Merge
-        self.edges = {**self.edges, **profilers[0]}
-        self.nodeResources = {**self.nodeResources, **profilers[1]}
-        self.averageProcessTime = {**self.averageProcessTime, **profilers[2]}
-        self.averageRespondTime = {**self.averageRespondTime, **profilers[3]}
-        self.imagesAndRunningContainers = {**self.imagesAndRunningContainers, **profilers[4]}
+        self.averagePackageSize = {**self.averagePackageSize, **profilers[0]}
+        self.averageDelay = {**self.averageDelay, **profilers[1]}
+        self.nodeResources = {**self.nodeResources, **profilers[2]}
+        self.averageProcessTime = {**self.averageProcessTime, **profilers[3]}
+        self.averageRespondTime = {**self.averageRespondTime, **profilers[4]}
+        self.imagesAndRunningContainers = {**self.imagesAndRunningContainers, **profilers[5]}
 
         # update
-        self.scheduler.edges = self.edges
+        self.scheduler.averagePackageSize = self.averagePackageSize
+        self.scheduler.averageDelay = self.averageDelay
         self.scheduler.averageProcessTime = self.averageProcessTime
 
     def __stopClient(self, identity: Identity, reason: str = 'No reason'):
