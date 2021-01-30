@@ -8,8 +8,8 @@ build() {
 
 }
 
-build newLogger &
-build newMaster &
-build newUser &
-build newWorker &
+build newLogger
+build newMaster
+build newUser
+build newWorker
 cd newWorker/sources/tasks && ./rebuild.sh

@@ -8,5 +8,5 @@ build(){
 }
 for d in */ ; do
     echo "[*] Building $d ..."
-    build $d &
+    build $d
 done
