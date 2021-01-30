@@ -184,28 +184,24 @@ class Evaluator:
                     total += self.edges[costKey].averageReceivedPackageSize
                     total += self.edges[costKey].delay
                     continue
-                total += self.evaluateEdgeCost(costKey)
+                total += self.evaluateEdgeCost(source, individual[source], dest, individual[dest])
 
         # suppose bandwidth for all nodes are the same
         # and is 0.1 mb/ ms
         return total / (1024 ** 2 / 10)
 
-    def evaluateEdgeCost(self, costKey: str):
-        source, target = costKey.split(',')
-        sourceName, sourceMachine = source.split('#')
-        destName, destMachine = target.split('#')
-
-        allReceivedStat = []
-        averageReceivedStat = []
+    def evaluateEdgeCost(self, sourceName, sourceMachine, destName, destMachine):
+        allReceivedStat = set([])
+        averageReceivedStat = set([])
         for _, edge in self.edges.items():
             if edge.averageReceivedPackageSize is None:
                 continue
-            averageReceivedStat.append(edge.averageReceivedPackageSize)
-            if sourceName != edge.source.split('#')[0]:
+            averageReceivedStat.add(edge.averageReceivedPackageSize)
+            if sourceName != edge.source[len(sourceName)]:
                 continue
-            if destName != edge.destination.split('#')[0]:
+            if destName != edge.destination[len(destName)]:
                 continue
-            averageReceivedStat.append(edge.averageReceivedPackageSize)
+            averageReceivedStat.add(edge.averageReceivedPackageSize)
 
         if len(averageReceivedStat):
             averageReceivedPackageSize = sorted(averageReceivedStat)[len(averageReceivedStat) // 2]
@@ -214,17 +210,17 @@ class Evaluator:
         else:
             averageReceivedPackageSize = 4096
 
-        allDelayStat = []
-        delayStat = []
+        allDelayStat = set([])
+        delayStat = set([])
         for _, edge in self.edges.items():
             if edge.delay is None:
                 continue
-            allDelayStat.append(edge.delay)
-            if sourceMachine != edge.source.split('#')[-1]:
+            allDelayStat.add(edge.delay)
+            if sourceMachine != edge.source[-len(sourceMachine):]:
                 continue
-            if destMachine != edge.destination.split('#')[-1]:
+            if destMachine != edge.destination[-len(destMachine):]:
                 continue
-            delayStat.append(edge.delay)
+            delayStat.add(edge.delay)
 
         if len(delayStat):
             delay = sorted(delayStat)[len(delayStat) // 2]
@@ -238,7 +234,7 @@ class Evaluator:
     def _computingCost(self, individual: Dict[str, str]) -> float:
         total = .0
         for machineName in self.edgesByName.keys():
-            if not machineName.split('@')[-1] == 'TaskHandler':
+            if not machineName[-11:] == 'TaskHandler':
                 continue
             taskHandlerName = '%s#%s' % (machineName, individual[machineName])
             if taskHandlerName in self.averageProcessTime \

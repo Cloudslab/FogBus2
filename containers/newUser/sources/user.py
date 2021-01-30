@@ -100,6 +100,7 @@ class User(Node):
         self.__register()
 
     def __register(self):
+        print('[*] Requesting ...')
         message = {
             'type': 'register',
             'role': 'user',
