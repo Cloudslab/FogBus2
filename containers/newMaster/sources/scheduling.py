@@ -201,8 +201,7 @@ class Evaluator:
                     and self.averageProcessTime[taskHandlerName] is None:
                 total += self.averageProcessTime[taskHandlerName] * self.considerRecentResources(machineName)
                 continue
-            total += self.evaluateComputingCost(machineName, individual[machineName]) * self.considerRecentResources(
-                machineName)
+            total += 42
         return total
 
     def considerRecentResources(self, machineName):

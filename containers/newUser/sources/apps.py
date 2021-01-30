@@ -289,12 +289,14 @@ class GameOfLifeSerialised(ApplicationUserSide):
                     interpolation=cv2.INTER_AREA)
             else:
                 showWorld = self.world
-            cv2.imshow(
-                self.appName,
-                showWorld)
-            # cv2.waitKey(0)
-            if cv2.waitKey(1) == ord('q'):
-                break
+
+            if self.showWindow:
+                cv2.imshow(
+                    self.appName,
+                    showWorld)
+                # cv2.waitKey(0)
+                if cv2.waitKey(1) == ord('q'):
+                    break
             print('\r[*] Generation %d' % gen, end='')
             inputData = (
                 self.world,
@@ -328,15 +330,16 @@ class GameOfLifeSerialised(ApplicationUserSide):
             cv2.LINE_AA)
         _, self.world = cv2.threshold(world, 127, 255, cv2.THRESH_BINARY)
         self.initMayChange(theWholeWorld=True)
-        cv2.imshow(
-            self.appName,
-            cv2.resize(
-                self.world,
-                (self.width * self._resizeFactor,
-                 self.height * self._resizeFactor),
-                interpolation=cv2.INTER_AREA))
-        print('[*] This is your initial world. Press \'Space\' to start.')
-        cv2.waitKey(0)
+        if self.showWindow:
+            cv2.imshow(
+                self.appName,
+                cv2.resize(
+                    self.world,
+                    (self.width * self._resizeFactor,
+                     self.height * self._resizeFactor),
+                    interpolation=cv2.INTER_AREA))
+            print('[*] This is your initial world. Press \'Space\' to start.')
+            cv2.waitKey(0)
 
     def initMayChange(self, theWholeWorld=False):
         self.mayChange = set([])
@@ -410,12 +413,14 @@ class GameOfLifeParallelized(GameOfLifeSerialised):
                     interpolation=cv2.INTER_AREA)
             else:
                 showWorld = self.world
-            cv2.imshow(
-                self.appName,
-                showWorld)
-            # cv2.waitKey(0)
-            if cv2.waitKey(1) == ord('q'):
-                break
+
+            if self.showWindow:
+                cv2.imshow(
+                    self.appName,
+                    showWorld)
+                # cv2.waitKey(0)
+                if cv2.waitKey(1) == ord('q'):
+                    break
             print('\r[*] Generation %d' % gen, end='')
             inputData = (
                 self.world,
@@ -454,12 +459,14 @@ class GameOfLifePyramid(GameOfLifeSerialised):
                     interpolation=cv2.INTER_AREA)
             else:
                 showWorld = self.world
-            cv2.imshow(
-                self.appName,
-                showWorld)
-            # cv2.waitKey(0)
-            if cv2.waitKey(1) == ord('q'):
-                break
+
+            if self.showWindow:
+                cv2.imshow(
+                    self.appName,
+                    showWorld)
+                # cv2.waitKey(0)
+                if cv2.waitKey(1) == ord('q'):
+                    break
             print('\r[*] Generation %d' % gen, end='')
             inputData = (
                 self.world,
