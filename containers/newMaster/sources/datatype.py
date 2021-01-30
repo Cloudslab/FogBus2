@@ -1,9 +1,9 @@
 import threading
 from queue import Queue
-from typing import List, Dict, Tuple
+from typing import List, Dict, Tuple, Set
 from secrets import token_urlsafe
 from node import Identity
-from resourcesInfo import ResourcesInfo, ImagesAndContainers
+from resourcesInfo import ResourcesInfo
 
 Address = Tuple[str, int]
 
@@ -22,7 +22,8 @@ class Worker(Client):
             nameLogPrinting: str,
             nameConsistent: str,
             workerID: int,
-            resources: ResourcesInfo):
+            resources: ResourcesInfo,
+            images: Set[str]):
         # TODO Containers info
         if name is None:
             name = "Worker-%d" % workerID
@@ -34,6 +35,7 @@ class Worker(Client):
             addr=addr,
             machineID=machineID)
         self.resources: ResourcesInfo = resources
+        self.images: Set[str] = images
 
 
 class TaskHandler(Client):

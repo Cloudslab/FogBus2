@@ -126,6 +126,7 @@ class Registry(Profiler, Node, ABC):
         workerID = self.__newWorkerID()
         machineID = message.content['machineID']
         resources = message.content['resources']
+        images = message.content['images']
 
         name = 'Worker'
         nameLogPrinting = '%s-%d' % (name, workerID)
@@ -137,7 +138,8 @@ class Registry(Profiler, Node, ABC):
             addr=message.source.addr,
             workerID=workerID,
             machineID=machineID,
-            resources=resources)
+            resources=resources,
+            images=images)
 
         self.workers[workerID] = worker
         self.workers[worker.machineID] = worker
@@ -276,16 +278,14 @@ class Registry(Profiler, Node, ABC):
         # print(s.getvalue())
 
     def __schedule(self, user):
-        allWorkers = []
+        allWorkers = {}
         workersResources = {}
         for key in self.workers.keys():
             if not isinstance(key, str):
                 continue
             worker = self.workers[key]
-            allWorkers.append(key)
+            allWorkers[key] = worker.images
             workersResources[key] = worker.resources
-        # suppose each worker has all taskHandlers
-        availableWorkers = defaultdict(lambda: allWorkers)
 
         decision = self.scheduler.schedule(
             userName=user.name,
@@ -294,7 +294,7 @@ class Registry(Profiler, Node, ABC):
             masterMachine=self.machineID,
             applicationName=user.appName,
             label=user.label,
-            availableWorkers=availableWorkers,
+            availableWorkers=allWorkers,
             workersResources=workersResources)
         messageForWorkers = self.__parseDecision(decision, user)
 

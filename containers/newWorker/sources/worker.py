@@ -36,10 +36,12 @@ class Worker(Node):
         self.__register()
 
     def __register(self):
+        print('[*] Getting local available images ...')
         message = {'type': 'register',
                    'role': 'worker',
                    'machineID': self.machineID,
-                   'resources': self.resources.all()}
+                   'resources': self.resources.all(),
+                   'images': self.__getImages()}
         self.sendMessage(message, self.master.addr)
         self.isRegistered.wait()
         self.logger.info("Registered.")
@@ -136,12 +138,20 @@ class Worker(Node):
         self.logger.info('Ran %s', taskName)
 
     @staticmethod
+    def snake_to_camel(snake_str):
+        if snake_str == 'oct':
+            return 'OCR'
+        # https://stackoverflow.com/questions/19053707
+        components = snake_str.split('_')
+        return ''.join(x.title() for x in components)
+
+    @staticmethod
     def camel_to_snake(name):
         # https://stackoverflow.com/questions/1175208
         name = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', name)
         return re.sub('([a-z0-9])([A-Z])', r'\1_\2', name).lower()
 
-    def __uploadImagesAndRunningContainersList(self):
+    def __getImages(self):
         imagesList = self.dockerClient.images.list()
 
         imageNames = set()
@@ -149,8 +159,10 @@ class Worker(Node):
             tags = image.tags
             if not len(tags):
                 continue
-            imageNames.add(tags[0].split(':')[0])
+            imageNames.add(self.snake_to_camel(tags[0].split(':')[0]))
+        return imageNames
 
+    def __getContainers(self):
         containerList = self.dockerClient.containers.list()
 
         runningContainers = set()
@@ -158,12 +170,14 @@ class Worker(Node):
             tags = container.image.tags
             if not len(tags):
                 continue
-            runningContainers.add(tags[0].split(':')[0])
+            runningContainers.add(self.snake_to_camel(tags[0].split(':')[0]))
+        return runningContainers
+
+    def __uploadImagesAndRunningContainersList(self):
 
         imagesAndContainers = ImagesAndContainers(
-            images=imageNames,
-            containers=runningContainers
-        )
+            images=self.__getImages(),
+            containers=self.__getContainers())
         msg = {
             'type': 'imagesAndRunningContainers',
             'imagesAndRunningContainers': imagesAndContainers}

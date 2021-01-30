@@ -67,7 +67,7 @@ class Scheduler:
             masterMachine,
             applicationName: str,
             label: str,
-            availableWorkers: Dict[str, str],
+            availableWorkers: Dict[str, List[str]],
             workersResources: Dict[str, ResourcesInfo]
     ) -> Decision:
         edgesByName = self.__getExecutionMap(
@@ -90,7 +90,7 @@ class Scheduler:
             masterName,
             masterMachine,
             edgesByName: EdgesByName,
-            availableWorkers: Dict[str, str],
+            availableWorkers: Dict[str, List[str]],
             workersResources: Dict[str, ResourcesInfo]) -> Decision:
         raise NotImplementedError
 
@@ -201,7 +201,8 @@ class Evaluator:
                     and self.averageProcessTime[taskHandlerName] is None:
                 total += self.averageProcessTime[taskHandlerName] * self.considerRecentResources(machineName)
                 continue
-            total += self.evaluateComputingCost(machineName, individual[machineName]) * self.considerRecentResources(machineName)
+            total += self.evaluateComputingCost(machineName, individual[machineName]) * self.considerRecentResources(
+                machineName)
         return total
 
     def considerRecentResources(self, machineName):
@@ -218,7 +219,7 @@ class Evaluator:
 
     def evaluateComputingCost(self, taskName, machine):
         machineResources = self.workersResources[machine]
-        maxProcessTime = 1024
+        maxProcessTime = 0
         for taskHandlerRecord, processTime in self.averageProcessTime.items():
             if processTime is None:
                 continue
@@ -245,7 +246,7 @@ class BaseProblem(Problem, Evaluator):
             averageDelay: Dict[str, Dict[str, float]],
             averageProcessTime: Dict[str, float],
             edgesByName: EdgesByName,
-            availableWorkers: Dict[str, str],
+            availableWorkers: Dict[str, set[str]],
             workersResources: Dict[str, ResourcesInfo]):
         self.averagePackageSize: Dict[str, Dict[str, float]] = averagePackageSize
         self.averageDelay: Dict[str, Dict[str, float]] = averageDelay
@@ -261,15 +262,19 @@ class BaseProblem(Problem, Evaluator):
             edgesByName=edgesByName,
             workersResources=workersResources)
         self.variableNumber = len(edgesByName)
-        self.availableWorkers = availableWorkers
-        choicesEachVariable = []
-        for name in edgesByName.keys():
-            if len(name) == len('TaskHandler') \
-                    and name[-11:] == ' TaskHandler':
+        self.availableWorkers = defaultdict(lambda: [])
+        choicesEachVariable = [0 for _ in range(len(edgesByName.keys()))]
+        for i, name in enumerate(edgesByName.keys()):
+            if len(name) > len('TaskHandler') \
+                    and name[-11:] == 'TaskHandler':
                 # TODO: Change when support multiple masters
-                choicesEachVariable.append(len(availableWorkers[name]))
+                taskName = name[:name.find('@')]
+                for workerMachine, images in availableWorkers.items():
+                    if taskName in images:
+                        self.availableWorkers[name].append(workerMachine)
+                        choicesEachVariable[i] += 1
                 continue
-            choicesEachVariable.append(1)
+            choicesEachVariable[i] = 1
 
         lowerBound = [0 for _ in range(self.variableNumber)]
         upperBound = choicesEachVariable
@@ -331,7 +336,7 @@ class NSGABase(Scheduler):
             masterName,
             masterMachine,
             edgesByName: EdgesByName,
-            availableWorkers: Dict[str, str],
+            availableWorkers: Dict[str, set[str]],
             workersResources: Dict[str, ResourcesInfo]) -> Decision:
         problem = BaseProblem(
             userName,
