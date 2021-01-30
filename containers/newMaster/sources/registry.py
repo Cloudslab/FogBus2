@@ -71,7 +71,7 @@ class Registry(Profiler, Node, ABC):
                 averagePackageSize=self.averagePackageSize,
                 averageDelay=self.averageDelay,
                 averageProcessTime=self.averageProcessTime,
-                populationSize=10,
+                populationSize=92,
                 generationNum=100,
                 dasDennisP=1)
         elif schedulerName == 'NSGA2':
@@ -79,7 +79,7 @@ class Registry(Profiler, Node, ABC):
                 averagePackageSize=self.averagePackageSize,
                 averageDelay=self.averageDelay,
                 averageProcessTime=self.averageProcessTime,
-                populationSize=10,
+                populationSize=92,
                 generationNum=100)
         elif schedulerName == 'CTAEA':
             return CTAEA(
