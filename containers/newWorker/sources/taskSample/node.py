@@ -194,8 +194,7 @@ class Node:
             message = {'type': 'exit', 'reason': 'Manually interrupted.'}
             self.sendMessage(message, self.master.addr)
         self.__myService.serverSocket.close()
-        print('[*] Bye.')
-        os._exit(0)
+        print('[*] Exiting ...')
 
     def handleSignal(self):
         signal.signal(signal.SIGINT, self.__signalHandler)

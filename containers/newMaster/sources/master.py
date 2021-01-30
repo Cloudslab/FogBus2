@@ -182,6 +182,6 @@ if __name__ == '__main__':
         myAddr=myAddr_,
         masterAddr=masterAddr_,
         loggerAddr=loggerAddr_,
-        schedulerName='CTAEA'
+        schedulerName='NSGA3'
     )
     master_.run()

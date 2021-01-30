@@ -75,7 +75,7 @@ class Node:
         self.delays: Dict[str, Average] = {}
 
         defaultPeriodicTasks: List[PeriodicTask] = [
-            (self.__uploadResources, 1)]
+            (self.__uploadResources, 10)]
         if not self.role == 'RemoteLogger':
             defaultPeriodicTasks += [
                 (self.__uploadAverageReceivedPackageSize, 10),
@@ -194,8 +194,7 @@ class Node:
             message = {'type': 'exit', 'reason': 'Manually interrupted.'}
             self.sendMessage(message, self.master.addr)
         self.__myService.serverSocket.close()
-        print('[*] Bye.')
-        os._exit(0)
+        print('[*] Exiting ...')
 
     def handleSignal(self):
         signal.signal(signal.SIGINT, self.__signalHandler)
