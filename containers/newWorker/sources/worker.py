@@ -22,7 +22,7 @@ class Worker(Node):
 
         self.isRegistered: threading.Event = threading.Event()
         self.dockerClient = docker.from_env()
-
+        self.currPath = os.path.abspath(os.path.curdir)
         super().__init__(
             myAddr=myAddr,
             masterAddr=masterAddr,
@@ -69,71 +69,28 @@ class Worker(Node):
         token = message.content['token']
         childTaskTokens = message.content['childTaskTokens']
         workerID = self.id
-        threading.Thread(
-            target=os.system,
-            args=(
-                "cd tasks/%s && docker-compose run --rm %s %s %s %d %s %d "
-                "%d %s %s %s %s %d" % (
-                    taskName,
-                    self.camel_to_snake(taskName),
-                    self.myAddr[0],
-                    self.masterAddr[0],
-                    self.masterAddr[1],
-                    self.loggerAddr[0],
-                    self.loggerAddr[1],
-                    userID,
-                    userName,
-                    taskName,
-                    token,
-                    ','.join(childTaskTokens) if len(childTaskTokens) else 'None',
-                    workerID
-                ),)
-        ).start()
-
-        # threading.Thread(
-        #     target=os.system,
-        #     args=(
-        #         "cd taskSample && python taskHandler.py %s %s %d %s %d "
-        #         "%d %s %s %s %s %d " % (
-        #             # > /dev/null 2>&1 &
-        #             self.myAddr[0],
-        #             self.masterAddr[0],
-        #             self.masterAddr[1],
-        #             self.loggerAddr[0],
-        #             self.loggerAddr[1],
-        #             userID,
-        #             userName,
-        #             taskName,
-        #             token,
-        #             ','.join(childTaskTokens) if len(childTaskTokens) else 'None',
-        #             runningOnWorker
-        #         ),)
-        # ).start()
-
-        # import socket
-        # tmpSocket = socket.socket(
-        #     socket.AF_INET,
-        #     socket.SOCK_STREAM)
-        # tmpSocket.bind(('', 0))
-        # port = tmpSocket.getsockname()[1]
-        # tmpSocket.close()
-        # myAddr_ = (self.myAddr[0], port)
-        # from taskSample.taskHandler import TaskHandler
-        #
-        # taskHandler_ = TaskHandler(
-        #     myAddr=myAddr_,
-        #     masterAddr=self.masterAddr,
-        #     loggerAddr=self.loggerAddr,
-        #     userID=userID,
-        #     userName=userName,
-        #     taskName=taskName,
-        #     token=token,
-        #     childTaskTokens=childTaskTokens,
-        #     runningOnWorker=runningOnWorker
-        # )
-        # threading.Thread(
-        #     target=taskHandler_.run
-        # ).start()
+        self.dockerClient.containers.run(
+            name=token,
+            detach=True,
+            auto_remove=True,
+            image=self.camel_to_snake(taskName),
+            network_mode='host',
+            working_dir='/workplace',
+            command='%s %s %d %s %d '
+                    '%d %s %s %s %s %d' % (
+                        self.myAddr[0],
+                        self.masterAddr[0],
+                        self.masterAddr[1],
+                        self.loggerAddr[0],
+                        self.loggerAddr[1],
+                        userID,
+                        userName,
+                        taskName,
+                        token,
+                        ','.join(childTaskTokens) if len(childTaskTokens) else 'None',
+                        workerID
+                    )
+        )
 
         self.logger.info('Ran %s', taskName)
 
