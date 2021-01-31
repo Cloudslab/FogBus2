@@ -64,7 +64,7 @@ class Experiment:
                     '192.168.3.20 5000 '
                     '192.168.3.20 5001')
 
-    def runMaster(self):
+    def runMaster(self, schedulerName):
         return self._run(
             name='Master',
             image='master',
@@ -75,7 +75,8 @@ class Experiment:
             },
             command='192.168.3.20 5000 '
                     '192.168.3.20 5000 '
-                    '192.168.3.20 5001')
+                    '192.168.3.20 5001 '
+                    '%s' % schedulerName)
 
     def runWorker(self, core: str, cpuFreq: int, mem: str, name: str):
         return self._run(
@@ -127,17 +128,19 @@ class Experiment:
 
     @staticmethod
     def readRespondTime():
-        with open('newUser/sources/log/respondTime.json') as f:
+        filename = 'newUser/sources/log/respondTime.json'
+        with open(filename) as f:
             respondTime = json.loads(f.read())
             f.close()
+            os.remove(filename)
             if len(respondTime):
                 return list(respondTime.values())[0]
             return 0
 
-    def run(self):
+    def run(self, schedulerName):
         self.stopAllContainers()
         logger = self.runRemoteLogger()
-        master = self.runMaster()
+        master = self.runMaster(schedulerName)
         config_ = {
             'cores': ['0', '1', '2', '3', '4-5', '6-7'],
             'cpuFrequencies': [10000, 15000, 20000, 25000, 10000, 20000],
@@ -145,22 +148,24 @@ class Experiment:
         }
         workers_ = self.runWorkers(config_)
 
-        self.logger.info('Sleep 20 seconds waiting for workers connect to master ...')
+        self.logger.debug('Sleep 20 seconds waiting for workers connect to master ...')
         sleep(20)
         repeatTimes = 50
         respondTimes = [0 for _ in range(repeatTimes)]
         for i in range(repeatTimes):
             user = self.runUser('User-%d' % i)
-            self.logger.info('Sleep 10 seconds waiting for user\'s resources ...')
+            self.logger.debug('Sleep 10 seconds waiting for user\'s resources ...')
             sleep(20)
-            self.logger.info('Sleep 50 seconds waiting for respondTime to be normal ...')
+            self.logger.debug('Sleep 50 seconds waiting for respondTime to be normal ...')
             sleep(40)
             user.stop()
             respondTimes[i] = self.readRespondTime()
-            self.logger.info('[*] Result-%d/%d: %s', (i + 1), repeatTimes, str(respondTimes))
+            self.logger.debug('[*] Result-[%d/%d]: %s', (i + 1), repeatTimes, str(respondTimes))
+        self.logger.info(respondTimes)
 
 
 if __name__ == '__main__':
     experiment = Experiment()
-    experiment.run()
+    experiment.run('NSGA2')
+    experiment.run('NSGA3')
     # Experiment().runUser('User')

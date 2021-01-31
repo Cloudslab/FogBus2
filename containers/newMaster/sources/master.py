@@ -182,10 +182,12 @@ if __name__ == '__main__':
     myAddr_ = (sys.argv[1], int(sys.argv[2]))
     masterAddr_ = (sys.argv[3], int(sys.argv[4]))
     loggerAddr_ = (sys.argv[5], int(sys.argv[6]))
+    schedulerName_ = None
+    if len(sys.argv) > 7:
+        schedulerName_ = sys.argv[7]
     master_ = Master(
         myAddr=myAddr_,
         masterAddr=masterAddr_,
         loggerAddr=loggerAddr_,
-        schedulerName='NSGA3'
-    )
+        schedulerName=schedulerName_)
     master_.run()
