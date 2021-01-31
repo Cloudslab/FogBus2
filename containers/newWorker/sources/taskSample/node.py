@@ -144,9 +144,10 @@ class Node(Server):
             elif message.type == 'stop':
                 self.__handleStop(message)
                 continue
-            if message.source.addr in self.networkTimeDiff \
-                    and self.networkTimeDiff[message.source.addr] != 0:
+            if message.source.addr in self.networkTimeDiff:
                 message.content['delay'] += self.networkTimeDiff[message.source.addr]
+                if message.content['delay'] < 0:
+                    self.__testDelay(message.source.addr)
             self.__stat(message, messageSize)
             self.handleMessage(message)
 
@@ -210,9 +211,22 @@ class Node(Server):
         self.messageToSend.put((message, addr))
 
         if addr not in self.networkTimeDiff:
-            self.networkTimeDiff[addr] = 0
-            msg = {'type': 'timeDiff', 'source': source}
-            self.messageToSend.put((msg, addr))
+            self.__testDelay(addr, source)
+
+    def __testDelay(self, addr: Address, source: Source = None):
+        if source is None:
+            source = Source(
+                role=self.role,
+                id_=self.id,
+                addr=self.myAddr,
+                name=self.name,
+                nameLogPrinting=self.nameLogPrinting,
+                nameConsistent=self.nameConsistent,
+                machineID=self.machineID
+            )
+        self.networkTimeDiff[addr] = 0
+        msg = {'type': 'timeDiff', 'source': source}
+        self.messageToSend.put((msg, addr))
 
     @abstractmethod
     def handleMessage(self, message: Message):
