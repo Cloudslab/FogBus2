@@ -293,7 +293,7 @@ class Registry(Profiler, Node, ABC):
                 self.sendMessage(message, worker.addr)
                 self.logger.info('Resend %s to %s', taskName, worker.nameLogPrinting)
             user.lock.release()
-            sleep(1)
+            sleep(5)
             user.lock.acquire()
         user.lock.release()
         user.lockCheckResource.release()

@@ -79,8 +79,7 @@ class Worker(Node):
             for container in self.dockerClient.containers.list():
                 if container.name != token:
                     continue
-                container.stop()
-                break
+                return
             self.dockerClient.containers.run(
                 name='%s_%s_%s' % (taskName, userName.replace('@', ''), self.nameLogPrinting),
                 detach=True,

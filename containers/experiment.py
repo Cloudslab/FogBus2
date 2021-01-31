@@ -152,12 +152,12 @@ class Experiment:
         for i in range(repeatTimes):
             user = self.runUser('User-%d' % i)
             self.logger.info('Sleep 10 seconds waiting for user\'s resources ...')
-            sleep(10)
+            sleep(20)
             self.logger.info('Sleep 50 seconds waiting for respondTime to be normal ...')
-            sleep(30)
+            sleep(40)
             user.stop()
             respondTimes[i] = self.readRespondTime()
-            self.logger.info('[*] %d/%d result: %s', (i + 1), repeatTimes, str(respondTimes))
+            self.logger.info('[*] Result-%d/%d: %s', (i + 1), repeatTimes, str(respondTimes))
 
 
 if __name__ == '__main__':
