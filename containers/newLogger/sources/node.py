@@ -76,6 +76,7 @@ class Node(Server):
         self.lock = threading.Lock()
         self.receivedPackageSize: Dict[str, Average] = {}
         self.delays: Dict[str, Average] = {}
+        self.networkTimeDiff: Dict[Tuple[str, int], float] = {}
 
         defaultPeriodicTasks: List[PeriodicTask] = [
             (self.__uploadResources, 10)]
@@ -130,36 +131,18 @@ class Node(Server):
             message, messageSize = self.receivedMessage.get()
             _receivedAt = time() * 1000
             message.content['delay'] = _receivedAt - message.content['_sentAt']
+            if message.source.addr in self.networkTimeDiff \
+                    and self.networkTimeDiff[message.source.addr] != 0:
+                message.content['delay'] += self.networkTimeDiff[message.source.addr]
             message.content['_receivedAt'] = _receivedAt
-            if not message.source.nameConsistent == self.nameConsistent:
-                self.lock.acquire()
-                if message.source.name not in self.receivedPackageSize:
-                    receivedPackageSize = Average(
-                        addr=message.source.addr,
-                        name=message.source.name,
-                        nameLogPrinting=message.source.nameLogPrinting,
-                        nameConsistent=message.source.nameConsistent,
-                        role=message.source.role,
-                        id_=message.source.id,
-                        machineID=message.source.machineID
-                    )
-                    self.receivedPackageSize[message.source.name] = receivedPackageSize
-                self.receivedPackageSize[message.source.name].update(messageSize)
-                if message.source.machineID not in self.delays:
-                    delay = Average(
-                        addr=message.source.addr,
-                        name=message.source.name,
-                        nameLogPrinting=message.source.nameLogPrinting,
-                        nameConsistent=message.source.nameConsistent,
-                        role=message.source.role,
-                        id_=message.source.id,
-                        machineID=message.source.machineID
-                    )
-                    self.delays[message.source.machineID] = delay
-                self.delays[message.source.machineID].update(message.content['delay'])
-                self.lock.release()
-
-            if message.type == 'resourcesQuery':
+            self.__stat(message, messageSize)
+            if message.type == 'timeDiff':
+                self.__respondTimeDiff(message)
+                continue
+            elif message.type == 'respondTimeDiff':
+                self.__handleRespondTimeDiff(message)
+                continue
+            elif message.type == 'resourcesQuery':
                 self.__handleResourcesQuery(message)
                 continue
             elif message.type == 'stop':
@@ -167,7 +150,53 @@ class Node(Server):
                 continue
             self.handleMessage(message)
 
+    def __stat(self, message: Message, messageSize: int):
+        if not message.source.nameConsistent == self.nameConsistent:
+            self.lock.acquire()
+            if message.source.name not in self.receivedPackageSize:
+                receivedPackageSize = Average(
+                    addr=message.source.addr,
+                    name=message.source.name,
+                    nameLogPrinting=message.source.nameLogPrinting,
+                    nameConsistent=message.source.nameConsistent,
+                    role=message.source.role,
+                    id_=message.source.id,
+                    machineID=message.source.machineID
+                )
+                self.receivedPackageSize[message.source.name] = receivedPackageSize
+            self.receivedPackageSize[message.source.name].update(messageSize)
+            if message.source.machineID not in self.delays:
+                delay = Average(
+                    addr=message.source.addr,
+                    name=message.source.name,
+                    nameLogPrinting=message.source.nameLogPrinting,
+                    nameConsistent=message.source.nameConsistent,
+                    role=message.source.role,
+                    id_=message.source.id,
+                    machineID=message.source.machineID
+                )
+                self.delays[message.source.machineID] = delay
+            self.delays[message.source.machineID].update(message.content['delay'])
+            self.lock.release()
+
+    def __respondTimeDiff(self, message: Message):
+        msg = {
+            'type': 'respondTimeDiff',
+            'A': message.content['_sentAt'],
+            'X': message.content['_receivedAt']}
+        self.sendMessage(msg, message.source.addr)
+
+    def __handleRespondTimeDiff(self, message: Message):
+        A = message.content['A']
+        X = message.content['X']
+        Y = message.content['_sentAt']
+        B = message.content['_receivedAt']
+        delay = (B - A - Y + X) / 2
+        timeDiff = Y + delay - B
+        self.networkTimeDiff[message.source.addr] = timeDiff
+
     def sendMessage(self, message: Dict, addr: Address):
+
         source = Source(
             role=self.role,
             id_=self.id,
@@ -179,6 +208,11 @@ class Node(Server):
         )
         message['source'] = source
         self.messageToSend.put((message, addr))
+
+        if addr not in self.networkTimeDiff:
+            self.networkTimeDiff[addr] = 0
+            msg = {'type': 'timeDiff', 'source': source}
+            self.messageToSend.put((msg, addr))
 
     @abstractmethod
     def handleMessage(self, message: Message):
