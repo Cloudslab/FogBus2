@@ -131,11 +131,7 @@ class Node(Server):
             message, messageSize = self.receivedMessage.get()
             _receivedAt = time() * 1000
             message.content['delay'] = _receivedAt - message.content['_sentAt']
-            if message.source.addr in self.networkTimeDiff \
-                    and self.networkTimeDiff[message.source.addr] != 0:
-                message.content['delay'] += self.networkTimeDiff[message.source.addr]
             message.content['_receivedAt'] = _receivedAt
-            self.__stat(message, messageSize)
             if message.type == 'timeDiff':
                 self.__respondTimeDiff(message)
                 continue
@@ -148,6 +144,10 @@ class Node(Server):
             elif message.type == 'stop':
                 self.__handleStop(message)
                 continue
+            if message.source.addr in self.networkTimeDiff \
+                    and self.networkTimeDiff[message.source.addr] != 0:
+                message.content['delay'] += self.networkTimeDiff[message.source.addr]
+            self.__stat(message, messageSize)
             self.handleMessage(message)
 
     def __stat(self, message: Message, messageSize: int):

@@ -59,7 +59,8 @@ class Master(Registry):
                 message.source,
                 'No such role: %s' % message.content['role'])
         self.sendMessage(respond, message.source.addr)
-        self.logger.info('%s registered', respond['nameLogPrinting'])
+        if respond['type'] =='registered':
+            self.logger.info('%s registered', respond['nameLogPrinting'])
 
     def __handleData(self, message: Message):
         userID = message.content['userID']

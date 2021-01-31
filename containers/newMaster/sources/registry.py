@@ -175,7 +175,11 @@ class Registry(Profiler, Node, ABC):
             label=label,
             machineID=machineID)
         self.users[user.id] = user
-        self.__handleRequest(user)
+        if not self.__handleRequest(user):
+            respond = {
+                'type': 'stop',
+                'reason': 'No Worker'}
+            return respond
         respond = {
             'type': 'registered',
             'role': 'user',
@@ -269,7 +273,7 @@ class Registry(Profiler, Node, ABC):
         # from pstats import SortKey
         # pr = cProfile.Profile()
         # pr.enable()
-        self.__schedule(user)
+        return self.__schedule(user)
         # pr.disable()
         # s = io.StringIO()
         # sortby = SortKey.CUMULATIVE
@@ -280,13 +284,14 @@ class Registry(Profiler, Node, ABC):
     def __schedule(self, user):
         allWorkers = {}
         workersResources = {}
+        if len(self.workers) == 0:
+            return False
         for key in self.workers.keys():
             if not isinstance(key, str):
                 continue
             worker = self.workers[key]
             allWorkers[key] = worker.images
             workersResources[key] = worker.resources
-
         decision = self.scheduler.schedule(
             userName=user.name,
             userMachine=user.machineID,
@@ -304,6 +309,7 @@ class Registry(Profiler, Node, ABC):
 
         for message, worker in messageForWorkers:
             self.sendMessage(message, worker.addr)
+        return True
 
     def __parseDecision(self, decision: Decision, user: User) -> List[Tuple[Dict, Worker]]:
         messageForWorkers = []
