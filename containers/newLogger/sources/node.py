@@ -251,6 +251,7 @@ class Node(Server):
 
     def handleSignal(self):
         signal.signal(signal.SIGINT, self.__signalHandler)
+        signal.signal(signal.SIGTERM, self.__signalHandler)
 
     def __handleResourcesQuery(self, message: Message):
         if not message.source.addr == self.masterAddr:

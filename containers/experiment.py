@@ -2,9 +2,11 @@ import logging
 import threading
 import docker
 import os
+import json
 from logger import get_logger
 from tqdm import tqdm
 from typing import List
+from time import sleep
 
 
 class Experiment:
@@ -15,6 +17,7 @@ class Experiment:
         self.logger = get_logger('Experiment', level_name=logging.DEBUG)
 
     def stopAllContainers(self):
+        # os.system('docker stop $(docker ps -a -q) && docker rm $(docker ps -a -q)')
         containerList = self.client.containers.list()
         events: List[threading.Event] = [threading.Event() for _ in range(len(containerList))]
         for i, container in enumerate(containerList):
@@ -22,7 +25,7 @@ class Experiment:
         for event in tqdm(
                 events,
                 desc='Stopping Running Containers',
-                unit='containers'):
+                unit='container'):
             event.wait()
 
     def stopContainer(self, container, event):
@@ -30,7 +33,8 @@ class Experiment:
             target=self.__stopContainer,
             args=(container, event)).start()
 
-    def __stopContainer(self, container, event):
+    @staticmethod
+    def __stopContainer(container, event):
         # self.logger.info('[*] Stopping %s ...', container.name)
         try:
             container.stop()
@@ -42,20 +46,20 @@ class Experiment:
     def _run(self, **kwargs):
         return self.client.containers.run(
             detach=True,
+            auto_remove=True,
+            network_mode='host',
+            working_dir='/workplace',
             **kwargs)
 
     def runRemoteLogger(self):
         return self._run(
             name='RemoteLogger',
-            auto_remove=True,
             image='remote-logger',
-            network_mode='host',
             volumes={
                 '%s/newLogger/sources' % self.currPath: {
                     'bind': '/workplace',
                     'mode': 'rw'}
             },
-            working_dir='/workplace',
             command='192.168.3.20 5001 '
                     '192.168.3.20 5000 '
                     '192.168.3.20 5001')
@@ -63,15 +67,12 @@ class Experiment:
     def runMaster(self):
         return self._run(
             name='Master',
-            auto_remove=True,
             image='master',
-            network_mode='host',
             volumes={
                 '%s/newMaster/sources' % self.currPath: {
                     'bind': '/workplace',
                     'mode': 'rw'}
             },
-            working_dir='/workplace',
             command='192.168.3.20 5000 '
                     '192.168.3.20 5000 '
                     '192.168.3.20 5001')
@@ -79,22 +80,18 @@ class Experiment:
     def runWorker(self, core: str, cpuFreq: int, mem: str, name: str):
         return self._run(
             name=name,
-            auto_remove=True,
             image='worker',
             cpuset_cpus=core,
             cpu_period=cpuFreq,
             mem_limit=mem,
-            network_mode='host',
             volumes={
                 '%s/newWorker/sources' % self.currPath: {
                     'bind': '/workplace',
                     'mode': 'rw'},
-
                 '/var/run/docker.sock': {
                     'bind': '/var/run/docker.sock',
                     'mode': 'rw'}
             },
-            working_dir='/workplace',
             command='192.168.3.20 0 '
                     '192.168.3.20 5000 '
                     '192.168.3.20 5001 '
@@ -112,15 +109,58 @@ class Experiment:
             workers[i] = self.runWorker(core, freq, mem, 'Worker-%d' % (i + 1))
         return workers
 
+    def runUser(self, name):
+        return self._run(
+            name=name,
+            image='user',
+            volumes={
+                '%s/newUser/sources' % self.currPath: {
+                    'bind': '/workplace',
+                    'mode': 'rw'}
+            },
+            command='192.168.3.20 '
+                    '192.168.3.20 5000 '
+                    '192.168.3.20 5001 '
+                    'GameOfLifePyramid '
+                    'noshow '
+                    '256')
+
+    @staticmethod
+    def readRespondTime():
+        with open('newUser/sources/log/respondTime.json') as f:
+            respondTime = json.loads(f.read())
+            f.close()
+            if len(respondTime):
+                return list(respondTime.values())[0]
+            return 0
+
+    def run(self):
+        self.stopAllContainers()
+        logger = self.runRemoteLogger()
+        master = self.runMaster()
+        config_ = {
+            'cores': ['0', '1', '2', '3', '4-5', '6-7'],
+            'cpuFrequencies': [10000, 15000, 20000, 25000, 10000, 20000],
+            'memories': ['2g', '2g', '2g', '4g', '4g', '4g', '4g']
+        }
+        workers_ = self.runWorkers(config_)
+
+        self.logger.info('Sleep 20 seconds waiting for workers connect to master ...')
+        sleep(20)
+        repeatTimes = 50
+        respondTimes = [0 for _ in range(repeatTimes)]
+        for i in range(repeatTimes):
+            user = self.runUser('User-%d' % i)
+            self.logger.info('Sleep 10 seconds waiting for user\'s resources ...')
+            sleep(10)
+            self.logger.info('Sleep 50 seconds waiting for respondTime to be normal ...')
+            sleep(30)
+            user.stop()
+            respondTimes[i] = self.readRespondTime()
+            self.logger.info('[*] %d/%d result: %s', (i + 1), repeatTimes, str(respondTimes))
+
 
 if __name__ == '__main__':
     experiment = Experiment()
-    experiment.stopAllContainers()
-    logger = experiment.runRemoteLogger()
-    master = experiment.runMaster()
-    config_ = {
-        'cores': ['0', '1', '2', '3', '4-5', '6-7'],
-        'cpuFrequencies': [10000, 15000, 20000, 25000, 10000, 20000],
-        'memories': ['2g', '2g', '2g', '4g', '4g', '4g', '4g']
-    }
-    workers_ = experiment.runWorkers(config_)
+    experiment.run()
+    # Experiment().runUser('User')

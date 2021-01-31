@@ -159,16 +159,21 @@ if __name__ == '__main__':
     myAddr_ = (sys.argv[1], int(sys.argv[2]))
     masterAddr_ = (sys.argv[3], int(sys.argv[4]))
     loggerAddr_ = (sys.argv[5], int(sys.argv[6]))
-    coresCount_ = sys.argv[7]
-    if ',' in coresCount_:
-        coresCount_ = len(coresCount_.split(','))
-    elif '-' in coresCount_:
-        start, end = coresCount_.split('-')
-        coresCount_ = int(end) - int(start) + 1
+    if len(sys.argv) > 7:
+        coresCount_ = sys.argv[7]
+        if ',' in coresCount_:
+            coresCount_ = len(coresCount_.split(','))
+        elif '-' in coresCount_:
+            start, end = coresCount_.split('-')
+            coresCount_ = int(end) - int(start) + 1
+        else:
+            coresCount_ = 1
+        cpuFrequency_ = int(sys.argv[8])
+        memory_ = sys.argv[0]
     else:
-        coresCount_ = 1
-    cpuFrequency_ = int(sys.argv[8])
-    memory_ = sys.argv[0]
+        memory_ = None
+        coresCount_ = None
+        cpuFrequency_ = None
     worker_ = Worker(
         myAddr=myAddr_,
         masterAddr=masterAddr_,

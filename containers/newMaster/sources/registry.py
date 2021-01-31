@@ -271,7 +271,7 @@ class Registry(Profiler, Node, ABC):
         while time() - user.lastTaskReadyTime < 5:
             sleep(1)
         user.lock.acquire()
-        while len(user.notReadyTasks):
+        while len(user.notReadyTasks) and user.id in self.users:
             totalTasks = len(user.taskNameTokenMap)
             notReadyCount = len(user.notReadyTasks)
             self.logger.info(

@@ -21,9 +21,6 @@ class Node(Server):
             myAddr: Address,
             masterAddr: Address,
             loggerAddr: Address,
-            coresCount,
-            cpuFrequency,
-            memory,
             periodicTasks: List[PeriodicTask] = None,
             threadNumber: int = 32,
             ignoreSocketErr: bool = False,
@@ -45,10 +42,7 @@ class Node(Server):
             addr=self.loggerAddr,
         )
         self.resources: Resources = Resources(
-            addr=self.myAddr,
-            coresCount=coresCount,
-            cpuFrequency=cpuFrequency,
-            memory=memory)
+            addr=self.myAddr)
         self.name: str = None
         self.nameLogPrinting: str = None
         self.nameConsistent: str = None
@@ -257,6 +251,7 @@ class Node(Server):
 
     def handleSignal(self):
         signal.signal(signal.SIGINT, self.__signalHandler)
+        signal.signal(signal.SIGTERM, self.__signalHandler)
 
     def __handleResourcesQuery(self, message: Message):
         if not message.source.addr == self.masterAddr:

@@ -1,6 +1,7 @@
 import logging
 import sys
 import os
+import json
 from apps import *
 from node import Node
 from connection import Message, Average
@@ -151,6 +152,7 @@ class User(Node):
         respondTime = (time() - self.__lastDataSentTime) * 1000
         self.respondTime.update(respondTime)
         self.logger.info('RespondTime: %f' % self.respondTime.average())
+        self.__saveRespondTime()
         self.app.result.put(result)
 
     def __uploadAverageRespondTime(self):
@@ -160,6 +162,14 @@ class User(Node):
             'type': 'respondTime',
             'respondTime': self.respondTime.average()}
         self.sendMessage(msg, self.remoteLogger.addr)
+
+    def __saveRespondTime(self):
+        if not os.path.exists('log'):
+            os.mkdir('log')
+        with open('log/respondTime.json', 'w+') as f:
+            content = {self.nameLogPrinting: self.respondTime.average()}
+            json.dump(content, f)
+            f.close()
 
 
 if __name__ == "__main__":
