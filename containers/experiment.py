@@ -18,7 +18,11 @@ class Experiment:
 
     def stopAllContainers(self):
         # os.system('docker stop $(docker ps -a -q) && docker rm $(docker ps -a -q)')
-        containerList = self.client.containers.list()
+        try:
+            containerList = self.client.containers.list()
+        except Exception:
+            self.stopAllContainers()
+            return
         events: List[threading.Event] = [threading.Event() for _ in range(len(containerList))]
         for i, container in enumerate(containerList):
             self.stopContainer(container, events[i])
@@ -137,8 +141,37 @@ class Experiment:
                 return list(respondTime.values())[0]
             return 0
 
+    def removeLogs(self):
+        os.system('rm -rf %s/newLogger/sources/profiler/*.json' % self.currPath)
+        os.system('rm -rf %s/newMaster/sources/profiler/*.json' % self.currPath)
+
+    @staticmethod
+    def runRemoteWorkers():
+        os.system('ssh 4GB-rpi-4B \'cd new/containers/newWorker '
+                  '&& docker-compose run --rm worker '
+                  '192.168.3.49 5002 '
+                  '192.168.3.20 5000 '
+                  '192.168.3.20 5001 > /dev/null 2>&1 &\'')
+        os.system('ssh 2GB-rpi-4B \'cd new/containers/newWorker '
+                  '&& docker-compose run --rm worker '
+                  '192.168.3.14 5002 '
+                  '192.168.3.20 5000 '
+                  '192.168.3.20 5001 > /dev/null 2>&1 &\'')
+
+    @staticmethod
+    def stopRemoteWorkers():
+        os.system('ssh 4GB-rpi-4B \''
+                  'docker stop $(docker ps -a -q) '
+                  '&& docker rm $(docker ps -a -q)\'')
+        os.system('ssh 2GB-rpi-4B \''
+                  'docker stop $(docker ps -a -q) '
+                  '&& docker rm $(docker ps -a -q)\'')
+
     def run(self, schedulerName):
+        self.stopRemoteWorkers()
         self.stopAllContainers()
+        self.removeLogs()
+        self.runRemoteWorkers()
         logger = self.runRemoteLogger()
         master = self.runMaster(schedulerName)
         config_ = {
@@ -161,11 +194,19 @@ class Experiment:
             user.stop()
             respondTimes[i] = self.readRespondTime()
             self.logger.debug('[*] Result-[%d/%d]: %s', (i + 1), repeatTimes, str(respondTimes))
+        self.saveRes(schedulerName, respondTimes)
         self.logger.info(respondTimes)
+
+    @staticmethod
+    def saveRes(schedulerName, respondTimes):
+        with open(schedulerName + '.json', 'w+') as f:
+            json.dump(respondTimes, f)
+            f.close()
 
 
 if __name__ == '__main__':
     experiment = Experiment()
     experiment.run('NSGA2')
     experiment.run('NSGA3')
+    experiment.run('CTAEA')
     # Experiment().runUser('User')
