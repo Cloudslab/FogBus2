@@ -75,28 +75,36 @@ class Worker(Node):
         token = message.content['token']
         childTaskTokens = message.content['childTaskTokens']
         workerID = self.id
-        self.dockerClient.containers.run(
-            name=token,
-            detach=True,
-            auto_remove=True,
-            image=self.camel_to_snake(taskName),
-            network_mode='host',
-            working_dir='/workplace',
-            command='%s %s %d %s %d '
-                    '%d %s %s %s %s %d' % (
-                        self.myAddr[0],
-                        self.masterAddr[0],
-                        self.masterAddr[1],
-                        self.loggerAddr[0],
-                        self.loggerAddr[1],
-                        userID,
-                        userName,
-                        taskName,
-                        token,
-                        ','.join(childTaskTokens) if len(childTaskTokens) else 'None',
-                        workerID
-                    )
-        )
+        try:
+            for container in self.dockerClient.containers.list():
+                if container.name != token:
+                    continue
+                container.stop()
+                break
+            self.dockerClient.containers.run(
+                name='%s_%s_%s' % (taskName, userName.replace('@', ''), self.nameLogPrinting),
+                detach=True,
+                auto_remove=True,
+                image=self.camel_to_snake(taskName),
+                network_mode='host',
+                working_dir='/workplace',
+                command='%s %s %d %s %d '
+                        '%d %s %s %s %s %d' % (
+                            self.myAddr[0],
+                            self.masterAddr[0],
+                            self.masterAddr[1],
+                            self.loggerAddr[0],
+                            self.loggerAddr[1],
+                            userID,
+                            userName,
+                            taskName,
+                            token,
+                            ','.join(childTaskTokens) if len(childTaskTokens) else 'None',
+                            workerID
+                        )
+            )
+        except docker.errors.APIError as e:
+            self.logger.warning(str(e))
 
         self.logger.info('Ran %s', taskName)
 

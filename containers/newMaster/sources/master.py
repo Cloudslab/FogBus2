@@ -56,10 +56,10 @@ class Master(Registry):
         respond = self.registerClient(message=message)
         if respond is None:
             return self.__stopClient(
-                message.source,
-                'No such role: %s' % message.content['role'])
+                message.source, 'Invalid')
         self.sendMessage(respond, message.source.addr)
-        if respond['type'] =='registered':
+        if respond['type'] == 'registered' \
+                and respond['role'] != 'TaskHandler':
             self.logger.info('%s registered', respond['nameLogPrinting'])
 
     def __handleData(self, message: Message):

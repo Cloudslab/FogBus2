@@ -4,6 +4,7 @@ from typing import List, Dict, Tuple, Set
 from secrets import token_urlsafe
 from node import Identity
 from resourcesInfo import ResourcesInfo
+from time import time
 
 Address = Tuple[str, int]
 
@@ -102,10 +103,13 @@ class User(Client):
         self.taskNameTokenMap: Dict[str, UserTask] = {}
         if taskHandlerByTaskName is None:
             self.taskHandlerByTaskName: dict[str, TaskHandler] = {}
+            self.notReadyTasks = set([])
+            self.lastTaskReadyTime = time()
         self.entranceTasksByName: List[str] = []
         self.respondMessageQueue: Queue = Queue()
         self.lock: threading.Lock = threading.Lock()
         self.isReady = False
+        self.lockCheckResource = threading.Lock()
 
     def generateToken(self, taskName: str):
         token = token_urlsafe(16)

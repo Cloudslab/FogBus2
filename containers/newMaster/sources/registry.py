@@ -1,5 +1,6 @@
 import logging
 import os
+import threading
 from abc import ABC
 from threading import Lock
 from node import Node
@@ -10,7 +11,7 @@ from connection import Message
 from typing import Dict, Union, List, Tuple
 from dependencies import loadDependencies, Application
 from scheduling import Scheduler, Decision, NSGA3, NSGA2, CTAEA
-from collections import defaultdict
+from time import time, sleep
 
 Address = Tuple[str, int]
 
@@ -205,7 +206,10 @@ class Registry(Profiler, Node, ABC):
         user = self.users[userID]
         worker = self.workers[workerID]
 
-        # To differentiate where this taskHandler is running on
+        if (taskName, worker.machineID) not in user.notReadyTasks:
+            return None
+
+            # To differentiate where this taskHandler is running on
         # Thus use worker machineID as the taskHandler machineID
         machineID = worker.machineID
         name = '%s@%s@TaskHandler' % (taskName, user.label)
@@ -237,6 +241,15 @@ class Registry(Profiler, Node, ABC):
 
         self.taskHandlers[taskHandler.id] = taskHandler
         self.taskHandlerByToken[taskHandler.token] = taskHandler
+
+        user.lock.acquire()
+        user.notReadyTasks.remove((taskName, worker.machineID))
+        user.lastTaskReadyTime = time()
+        user.lock.release()
+
+        if user.lockCheckResource.acquire(blocking=False):
+            self._checkTaskHandlerForUser(user)
+
         respond = {
             'type': 'registered',
             'role': 'TaskHandler',
@@ -247,6 +260,43 @@ class Registry(Profiler, Node, ABC):
             'workerMachineID': worker.machineID
         }
         return respond
+
+    def _checkTaskHandlerForUser(self, user: User):
+        threading.Thread(
+            target=self.__checkTaskHandlerForUser,
+            args=(user,)
+        ).start()
+
+    def __checkTaskHandlerForUser(self, user: User):
+        while time() - user.lastTaskReadyTime < 5:
+            sleep(1)
+        user.lock.acquire()
+        while len(user.notReadyTasks):
+            totalTasks = len(user.taskNameTokenMap)
+            notReadyCount = len(user.notReadyTasks)
+            self.logger.info(
+                '%s resources: %d/%d -> %s',
+                user.nameLogPrinting,
+                totalTasks - notReadyCount,
+                totalTasks,
+                str(user.notReadyTasks))
+            for taskName, workerMachineID in user.notReadyTasks:
+                userTask = user.taskNameTokenMap[taskName]
+                message = {
+                    'type': 'runTaskHandler',
+                    'userID': user.id,
+                    'userName': user.name,
+                    'taskName': taskName,
+                    'token': userTask.token,
+                    'childTaskTokens': userTask.childTaskTokens}
+                worker = self.workers[workerMachineID]
+                self.sendMessage(message, worker.addr)
+                self.logger.info('Resend %s to %s', taskName, worker.nameLogPrinting)
+            user.lock.release()
+            sleep(1)
+            user.lock.acquire()
+        user.lock.release()
+        user.lockCheckResource.release()
 
     def __handleRequest(self, user: User):
 
@@ -318,6 +368,7 @@ class Registry(Profiler, Node, ABC):
             machineRole = nameSplit[-1]
             taskName = nameSplit[0]
             if machineRole == 'TaskHandler':
+                user.notReadyTasks.add((taskName, machineID))
                 userTask = user.taskNameTokenMap[taskName]
                 message = {
                     'type': 'runTaskHandler',

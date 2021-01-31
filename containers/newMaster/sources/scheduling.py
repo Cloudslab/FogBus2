@@ -297,7 +297,7 @@ class BaseProblem(Problem, Evaluator):
         # edgePackageSize = self._edgePackageSize()
         edgeDelay = self._edgeDelay(individual)
         computingCost = self._computingCost(individual)
-        print(x, 0, edgeDelay, computingCost)
+        # print(x, 0, edgeDelay, computingCost)
         out['F'] = anp.column_stack([0, edgeDelay, computingCost])
 
     def indexesToMachines(self, indexes: List[int]):
