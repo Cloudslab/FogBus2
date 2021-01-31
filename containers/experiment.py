@@ -76,12 +76,14 @@ class Experiment:
                     '192.168.3.20 5000 '
                     '192.168.3.20 5001')
 
-    def runWorker(self):
+    def runWorker(self, core: str, cpuFreq: int, mem: str, name: str):
         return self._run(
-            name='Worker',
-            privileged=True,
+            name=name,
             auto_remove=True,
             image='worker',
+            cpuset_cpus=core,
+            cpu_period=cpuFreq,
+            mem_limit=mem,
             network_mode='host',
             volumes={
                 '%s/newWorker/sources' % self.currPath: {
@@ -95,7 +97,20 @@ class Experiment:
             working_dir='/workplace',
             command='192.168.3.20 0 '
                     '192.168.3.20 5000 '
-                    '192.168.3.20 5001')
+                    '192.168.3.20 5001 '
+                    '%s %s %s' % (core, cpuFreq, mem))
+
+    def runWorkers(self, config):
+        cores = config['cores']
+        cpuFrequencies = config['cpuFrequencies']
+        memories = config['memories']
+        workers = [None for _ in range(len(cores))]
+        for i in range(len(cores)):
+            core = cores[i]
+            freq = cpuFrequencies[i]
+            mem = memories[i]
+            workers[i] = self.runWorker(core, freq, mem, 'Worker-%d' % (i + 1))
+        return workers
 
 
 if __name__ == '__main__':
@@ -103,4 +118,9 @@ if __name__ == '__main__':
     experiment.stopAllContainers()
     logger = experiment.runRemoteLogger()
     master = experiment.runMaster()
-    # worker = experiment.runWorker()
+    config_ = {
+        'cores': ['0', '1', '2', '3', '4-5', '6-7'],
+        'cpuFrequencies': [10000, 15000, 20000, 25000, 10000, 20000],
+        'memories': ['2g', '2g', '2g', '4g', '4g', '4g', '4g']
+    }
+    workers_ = experiment.runWorkers(config_)

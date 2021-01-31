@@ -112,7 +112,17 @@ class ResourcesInfo(Dictionary):
 
 class Resources:
 
-    def __init__(self, addr: Tuple[str, int], formatSize: bool = False):
+    def __init__(
+            self,
+            addr: Tuple[str, int],
+            coresCount=None,
+            cpuFrequency=None,
+            memory=None,
+            formatSize: bool = False):
+
+        self.__coresCount = coresCount,
+        self.__cpuFrequency = cpuFrequency,
+        self.__memory = memory
         self.__addr: Tuple[str, int] = addr
         self.__formatSize = formatSize
         self.__res: ResourcesInfo = ResourcesInfo()
@@ -313,12 +323,11 @@ class Resources:
             self.__res.operatingSystemVersion,
             self.__res.operatingSystemName,
             self.__res.operatingSystemArch,
-            self.__res.physicalCPUCores,
-            self.__res.totalCPUCores,
-            self.__res.maxCPUFrequency,
+            self.__res.totalCPUCores if self.__coresCount is None else self.__coresCount,
+            self.__res.maxCPUFrequency if self.__cpuFrequency is None else self.__cpuFrequency,
             self.__res.minCPUFrequency,
             # The total memory changes sometimes after reboot
-            self.__res.totalMemory // (1024 * 100),
+            self.__res.totalMemory // (1024 * 100) if self.__memory is None else self.__memory,
             self.__res.totalSwapMemory,
             self.__res.disk[:4]
         ]
@@ -328,7 +337,4 @@ class Resources:
 
 
 if __name__ == '__main__':
-    resources = Resources(formatSize=True)
-    resourcesAll = resources.all()
-    uniqueID = resources.uniqueID()
-    print(uniqueID)
+    pass
