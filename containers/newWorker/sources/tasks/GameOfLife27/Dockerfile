@@ -44,8 +44,4 @@ RUN python -m pip install -r requirements.txt --no-cache-dir
 ## Copy files
 ADD ./taskSample/*.py /workplace/
 
-# Hostname
-RUN echo "GameOfLife27" > /etc/hostname
-
-# Run GameOfLife27
 ENTRYPOINT ["python", "taskHandler.py"]
