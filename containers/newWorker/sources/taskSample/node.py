@@ -186,7 +186,7 @@ class Node(Server):
         delayAtMost = B - A - Y + X
         self.lock.acquire()
         if message.source.machineID not in self.delays:
-            delay = Average(
+            averageDelay = Average(
                 addr=message.source.addr,
                 name=message.source.name,
                 nameLogPrinting=message.source.nameLogPrinting,
@@ -195,7 +195,7 @@ class Node(Server):
                 id_=message.source.id,
                 machineID=message.source.machineID
             )
-            self.delays[message.source.machineID] = delay
+            self.delays[message.source.machineID] = averageDelay
         self.delays[message.source.machineID].update(delayAtMost)
         self.lock.release()
 
