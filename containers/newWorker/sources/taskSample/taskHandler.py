@@ -308,13 +308,6 @@ if __name__ == '__main__':
     cpuFrequency_ = None
     if len(sys.argv) > 12:
         coresCount_ = sys.argv[12]
-        if ',' in coresCount_:
-            coresCount_ = len(coresCount_.split(','))
-        elif '-' in coresCount_:
-            start, end = coresCount_.split('-')
-            coresCount_ = int(end) - int(start) + 1
-        else:
-            coresCount_ = 1
         cpuFrequency_ = int(sys.argv[13])
         memory_ = sys.argv[14]
 
