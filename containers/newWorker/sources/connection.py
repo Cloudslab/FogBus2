@@ -66,7 +66,7 @@ class Source(Identity):
         )
 
 
-class Average(Identity):
+class Median(Identity):
 
     def __init__(
             self,
@@ -76,7 +76,8 @@ class Average(Identity):
             name: str = None,
             nameLogPrinting: str = None,
             nameConsistent: str = None,
-            machineID: str = None):
+            machineID: str = None,
+            maxRecordNumber: int = 1000):
         super().__init__(
             role=role,
             id_=id_,
@@ -86,29 +87,35 @@ class Average(Identity):
             nameConsistent=nameConsistent,
             machineID=machineID
         )
-        self.__maxRecordNumber = 100
+        self.__maxRecordNumber = maxRecordNumber
         self.__index = 0
         self.__table: List[int] = [0 for _ in range(self.__maxRecordNumber)]
+        self.__flag = True
 
-    def update(self, bytes_):
-        self.__table[self.__index] = bytes_
-        self.__index = (self.__index + 1) % self.__maxRecordNumber
+    def update(self, value):
+        self.__table[self.__index] = value
+        self.__index += 1
+        if self.__index < self.__maxRecordNumber:
+            return
+        self.__index = 0
+        if not self.__flag:
+            return
+        self.__flag = False
 
-    def average(self):
-        total = 0
-        count = 0
-        for record in self.__table:
-            if record == 0:
-                break
-            total += record
-            count += 1
+    def median(self):
+        if self.__flag:
 
-        if count == 0:
-            return None
-        return total / count
+            table = self.__table[:self.__index]
+            if len(table) == 0:
+                return 0
+            sortedT = sorted(table)
+            return sortedT[len(table) // 2]
+
+        sortedT = sorted(self.__table)
+        return sortedT[len(self.__table) // 2]
 
     def __str__(self):
-        return str(self.average())
+        return str(self.median())
 
 
 class Connection:

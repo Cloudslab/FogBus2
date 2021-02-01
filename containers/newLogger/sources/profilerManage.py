@@ -7,11 +7,11 @@ from persistentStorage import PersistentStorage
 class Profiler:
     def __init__(self):
         self.lock = threading.Lock()
-        self.averagePackageSize: Dict[str, Dict[str, float]] = {}
-        self.averageDelay: Dict[str, Dict[str, float]] = {}
+        self.medianPackageSize: Dict[str, Dict[str, float]] = {}
+        self.medianDelay: Dict[str, Dict[str, float]] = {}
         self.nodeResources: Dict[str, ResourcesInfo] = {}
-        self.averageProcessTime: Dict[str, float] = {}
-        self.averageRespondTime: Dict[str, float] = {}
+        self.medianProcessTime: Dict[str, float] = {}
+        self.medianRespondTime: Dict[str, float] = {}
         self.imagesAndRunningContainers: Dict[str, ImagesAndContainers] = {}
 
         self.persistentStorage: PersistentStorage = PersistentStorage()
@@ -19,20 +19,20 @@ class Profiler:
 
     def _saveToPersistentStorage(self):
         self.lock.acquire()
-        self.persistentStorage.write('averagePackageSize', self.averagePackageSize)
-        self.persistentStorage.write('averageDelay', self.averageDelay)
+        self.persistentStorage.write('medianPackageSize', self.medianPackageSize)
+        self.persistentStorage.write('medianDelay', self.medianDelay)
         self.persistentStorage.write('nodeResources', self.nodeResources)
-        self.persistentStorage.write('averageProcessTime', self.averageProcessTime)
-        self.persistentStorage.write('averageRespondTime', self.averageRespondTime)
+        self.persistentStorage.write('medianProcessTime', self.medianProcessTime)
+        self.persistentStorage.write('medianRespondTime', self.medianRespondTime)
         self.persistentStorage.write('imagesAndRunningContainers', self.imagesAndRunningContainers)
         self.lock.release()
 
     def __readFromPersistentStorage(self):
         self.lock.acquire()
-        self.averagePackageSize = self.persistentStorage.read('averagePackageSize')
-        self.averageDelay = self.persistentStorage.read('averageDelay')
+        self.medianPackageSize = self.persistentStorage.read('medianPackageSize')
+        self.medianDelay = self.persistentStorage.read('medianDelay')
         self.nodeResources = self.persistentStorage.read('nodeResources', )
-        self.averageProcessTime = self.persistentStorage.read('averageProcessTime')
-        self.averageRespondTime = self.persistentStorage.read('averageRespondTime')
+        self.medianProcessTime = self.persistentStorage.read('medianProcessTime')
+        self.medianRespondTime = self.persistentStorage.read('medianRespondTime')
         self.imagesAndRunningContainers = self.persistentStorage.read('imagesAndRunningContainers')
         self.lock.release()

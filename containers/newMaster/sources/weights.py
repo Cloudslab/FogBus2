@@ -19,8 +19,8 @@ class EdgeWeight(Weight):
             resolution: int,
             source: str,
             destination: str,
-            averageReceivedPackageSize: float,
-            averageSentPackageSize: float,
+            medianReceivedPackageSize: float,
+            medianSentPackageSize: float,
             lowestReceivingSpeed: float,
             highestReceivingSpeed: float,
             lowestSendingSpeed: float,
@@ -29,8 +29,8 @@ class EdgeWeight(Weight):
         super().__init__(app, resolution)
         self.source = source
         self.destination = destination
-        self.averageReceivedPackageSize = averageReceivedPackageSize
-        self.averageSentPackageSize = averageSentPackageSize
+        self.medianReceivedPackageSize = medianReceivedPackageSize
+        self.medianSentPackageSize = medianSentPackageSize
         self.lowestReceivingSpeed = lowestReceivingSpeed
         self.highestReceivingSpeed = highestReceivingSpeed
         self.lowestSendingSpeed = lowestSendingSpeed
@@ -73,8 +73,8 @@ def loadEdgeWeights(applications: Dict[str, Application]) -> EdgeWeights:
                 resolution=int(row[1][:-1]),
                 source=row[2],
                 destination=row[3],
-                averageReceivedPackageSize=float(row[4]),
-                averageSentPackageSize=float(row[5]),
+                medianReceivedPackageSize=float(row[4]),
+                medianSentPackageSize=float(row[5]),
                 lowestReceivingSpeed=float(row[6]),
                 highestReceivingSpeed=float(row[7]),
                 lowestSendingSpeed=float(row[8]),
@@ -94,14 +94,14 @@ class TaskWeight(Weight):
             app: Application,
             resolution: int,
             task: Task,
-            averageProcessingTime: float,
-            averageCalls: float,
+            medianProcessingTime: float,
+            medianCalls: float,
             CPUFrequency: float,
     ):
         super().__init__(app, resolution)
         self.task: Task = task
-        self.averageProcessingTime = averageProcessingTime
-        self.averageCalls = averageCalls
+        self.medianProcessingTime = medianProcessingTime
+        self.medianCalls = medianCalls
         self.CPUFrequency = CPUFrequency
 
 
@@ -140,8 +140,8 @@ def loadTaskWeights(tasks: Dict[str, Task], applications: Dict[str, Application]
                 app=applications[row[0]],
                 resolution=int(row[1][:-1]),
                 task=tasks[row[2]],
-                averageProcessingTime=float(row[3]),
-                averageCalls=float(row[4]),
+                medianProcessingTime=float(row[3]),
+                medianCalls=float(row[4]),
                 CPUFrequency=float(row[5]),
             )
 

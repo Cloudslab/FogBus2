@@ -5,12 +5,11 @@ from abc import ABC
 from threading import Lock
 from node import Node
 from profilerManage import Profiler
-from queue import Queue
 from datatype import Worker, User, TaskHandler
 from connection import Message
 from typing import Dict, Union, List, Tuple
 from dependencies import loadDependencies, Application
-from scheduling import Scheduler, Decision, NSGA3, NSGA2, CTAEA
+from scheduling import genMachineIDForTaskHandler, Scheduler, Decision, NSGA3, NSGA2, CTAEA
 from time import time, sleep
 
 Address = Tuple[str, int]
@@ -43,10 +42,10 @@ class Registry(Profiler, Node, ABC):
         self.__currentTaskHandlerID: int = 0
         self.__lockCurrentTaskHandlerID: Lock = Lock()
         self.workers: Dict[Union[int, str], Worker] = {}
+        self.workersCount = 0
         self.__currentUserID: int = 0
         self.__lockCurrentUserID: Lock = Lock()
         self.users: Dict[int, User] = {}
-        self.workersQueue: Queue[Worker] = Queue()
         self.taskHandlerByToken: Dict[str, TaskHandler] = {}
 
         self.taskHandlers: Dict[int, TaskHandler] = {}
@@ -69,25 +68,25 @@ class Registry(Profiler, Node, ABC):
     def __getScheduler(self, schedulerName: str) -> Scheduler:
         if schedulerName in {None, 'NSGA3'}:
             return NSGA3(
-                averagePackageSize=self.averagePackageSize,
-                averageDelay=self.averageDelay,
-                averageProcessTime=self.averageProcessTime,
-                populationSize=120,
-                generationNum=300,
+                medianPackageSize=self.medianPackageSize,
+                medianDelay=self.medianDelay,
+                medianProcessTime=self.medianProcessTime,
+                populationSize=300,
+                generationNum=100,
                 dasDennisP=1)
         elif schedulerName == 'NSGA2':
             return NSGA2(
-                averagePackageSize=self.averagePackageSize,
-                averageDelay=self.averageDelay,
-                averageProcessTime=self.averageProcessTime,
-                populationSize=120,
-                generationNum=300)
+                medianPackageSize=self.medianPackageSize,
+                medianDelay=self.medianDelay,
+                medianProcessTime=self.medianProcessTime,
+                populationSize=300,
+                generationNum=100)
         elif schedulerName == 'CTAEA':
             return CTAEA(
-                averagePackageSize=self.averagePackageSize,
-                averageDelay=self.averageDelay,
-                averageProcessTime=self.averageProcessTime,
-                generationNum=300,
+                medianPackageSize=self.medianPackageSize,
+                medianDelay=self.medianDelay,
+                medianProcessTime=self.medianProcessTime,
+                generationNum=100,
                 dasDennisP=1)
         self.logger.warning('Unknown scheduler: %s', schedulerName)
         os._exit(0)
@@ -144,6 +143,7 @@ class Registry(Profiler, Node, ABC):
 
         self.workers[workerID] = worker
         self.workers[worker.machineID] = worker
+        self.workersCount += 1
         respond = {
             'type': 'registered',
             'role': 'worker',
@@ -152,8 +152,6 @@ class Registry(Profiler, Node, ABC):
             'nameConsistent': worker.nameConsistent,
             'id': workerID
         }
-
-        self.workersQueue.put(worker)
         return respond
 
     def __addUser(self, message: Message):
@@ -198,6 +196,7 @@ class Registry(Profiler, Node, ABC):
         taskName = message.content['taskName']
         token = message.content['token']
         workerID = message.content['workerID']
+        pureMachineId = message.content['machineID']
 
         if userID not in self.users:
             return
@@ -211,8 +210,12 @@ class Registry(Profiler, Node, ABC):
 
             # To differentiate where this taskHandler is running on
         # Thus use worker machineID as the taskHandler machineID
-        machineID = worker.machineID
+
         name = '%s@%s@TaskHandler' % (taskName, user.label)
+        machineID = genMachineIDForTaskHandler(
+            user.machineID,
+            worker.machineID,
+            name)
         nameLogPrinting = '%s-%d' % (name, taskHandlerID)
         nameConsistent = '%s#%s' % (name, machineID)
 
@@ -226,7 +229,7 @@ class Registry(Profiler, Node, ABC):
             name='%s@TaskHandler' % taskName,
             nameLogPrinting=nameLogPrinting,
             nameConsistent=nameConsistent,
-            machineID=machineID)
+            pureMachineID=pureMachineId)
 
         isTaskValid = user.verifyTaskHandler(
             taskName=taskName,
@@ -257,7 +260,8 @@ class Registry(Profiler, Node, ABC):
             'name': taskHandler.name,
             'nameLogPrinting': taskHandler.nameLogPrinting,
             'nameConsistent': taskHandler.nameConsistent,
-            'workerMachineID': worker.machineID
+            'workerMachineID': worker.machineID,
+            'machineID': taskHandler.machineID
         }
         return respond
 
@@ -380,28 +384,6 @@ class Registry(Profiler, Node, ABC):
                     'childTaskTokens': userTask.childTaskTokens}
                 worker = self.workers[machineID]
                 messageForWorkers.append((message, worker))
-        return messageForWorkers
-
-    def __randomlySchedule(self, user) -> List[Tuple[Dict, Worker]]:
-
-        messageForWorkers = []
-        for taskName, userTask in user.taskNameTokenMap.items():
-            token = userTask.token
-            childTaskTokens = userTask.childTaskTokens
-            # Scheduling Algorithm
-            while True:
-                worker = self.workersQueue.get(timeout=1)
-                if worker.id in self.workers:
-                    break
-            message = {
-                'type': 'runTaskHandler',
-                'userID': user.id,
-                'userName': user.name,
-                'taskName': taskName,
-                'token': token,
-                'childTaskTokens': childTaskTokens}
-            messageForWorkers.append((message, worker))
-            self.workersQueue.put(worker)
         return messageForWorkers
 
     def __requestProfiler(self):

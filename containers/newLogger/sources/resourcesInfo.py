@@ -134,8 +134,7 @@ class Resources:
                         self.memory,
                         self.disk,
                         self.network,
-                        self.gpu,
-                        ]
+                        self.gpu]
 
     def __getSize(self, bytes_, suffix="B"):
         if not self.__formatSize:
@@ -171,6 +170,7 @@ class Resources:
         self.__res.operatingSystemVersion = uname.version
         self.__res.operatingSystemArch = uname.machine
         event.set()
+
         self.__res.currentTimestamp = datetime.now().timestamp()
         return resOS
 
@@ -293,31 +293,27 @@ class Resources:
         self.__res.currentTimestamp = datetime.now().timestamp()
         return resGPU
 
-    def all(self):
+    def allResources(self):
 
-        events: List[threading.Event] = []
-        for thread in self.threads:
-            event = threading.Event()
-            events.append(event)
+        events: List[threading.Event] = [threading.Event() for _ in range(len(self.threads))]
+        for i, thread in enumerate(self.threads):
             threading.Thread(
                 target=thread,
-                args=(event,)
+                args=(events[i],)
             ).start()
 
         for event in events:
             event.wait()
-        self.uniqueID(getInfo=False)
         result = self.__res
-        for event in events:
-            event.clear()
         return result
 
-    def uniqueID(self, getInfo=True):
-        if self.__uniqueID is not None:
-            return self.__uniqueID
+    def uniqueID(self, definedFactor=None, getInfo=True):
+        if self.__uniqueID is None:
+            print('[*] Collecting machine information ...')
         if getInfo:
-            self.all()
+            self.allResources()
         items = [
+            definedFactor,
             self.__addr[0],
             self.__res.operatingSystemReleaseName,
             self.__res.operatingSystemVersion,

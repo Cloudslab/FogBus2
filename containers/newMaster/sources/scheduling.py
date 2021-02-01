@@ -1,7 +1,7 @@
 import numpy as np
 import autograd.numpy as anp
 
-from random import randint
+from random import randint, shuffle
 from pymoo.algorithms.genetic_algorithm import GeneticAlgorithm
 from pymoo.algorithms.ctaea import CTAEA as CTAEA_
 from pymoo.algorithms.nsga3 import NSGA3 as NSGA3_
@@ -17,9 +17,20 @@ from collections import defaultdict
 from pprint import pformat
 from pymoo.configuration import Configuration
 from resourcesInfo import ResourcesInfo
+from hashlib import sha256
 
 Configuration.show_compile_hint = False
 EdgesByName = Dict[str, List[str]]
+
+
+def genMachineIDForTaskHandler(
+        userMachineID: str,
+        workerMachineID: str,
+        machineName: str):
+    info = machineName
+    info += userMachineID
+    info += workerMachineID
+    return sha256(info.encode('utf-8')).hexdigest()
 
 
 class Decision:
@@ -50,13 +61,13 @@ class Scheduler:
     def __init__(
             self,
             name: str,
-            averagePackageSize: Dict[str, Dict[str, float]],
-            averageDelay: Dict[str, Dict[str, float]],
-            averageProcessTime: Dict[str, float]):
+            medianPackageSize: Dict[str, Dict[str, float]],
+            medianDelay: Dict[str, Dict[str, float]],
+            medianProcessTime: Dict[str, float]):
         self.name: str = name
-        self.averagePackageSize: Dict[str, Dict[str, float]] = averagePackageSize
-        self.averageDelay: Dict[str, Dict[str, float]] = averageDelay
-        self.averageProcessTime: Dict[str, float] = averageProcessTime
+        self.medianPackageSize: Dict[str, Dict[str, float]] = medianPackageSize
+        self.medianDelay: Dict[str, Dict[str, float]] = medianDelay
+        self.medianProcessTime: Dict[str, float] = medianProcessTime
         tasksAndApps = loadDependencies()
         self.tasks: Dict[str, Task] = tasksAndApps[0]
         self.applications: Dict[str, Application] = tasksAndApps[1]
@@ -149,33 +160,33 @@ class Evaluator:
             userMachine,
             masterName,
             masterMachine,
-            averagePackageSize: Dict[str, Dict[str, float]],
-            averageDelay: Dict[str, Dict[str, float]],
-            averageProcessTime: Dict[str, float],
+            medianPackageSize: Dict[str, Dict[str, float]],
+            medianDelay: Dict[str, Dict[str, float]],
+            medianProcessTime: Dict[str, float],
             edgesByName: EdgesByName,
             workersResources: Dict[str, ResourcesInfo]):
 
         self.userName = userName
-        self.userMachine = userMachine
+        self.userMachineID = userMachine
         self.masterName = masterName
         self.masterMachine = masterMachine
-        self.averagePackageSize: Dict[str, Dict[str, float]] = averagePackageSize
-        self.averageDelay: Dict[str, Dict[str, float]] = averageDelay
-        self.averageProcessTime: Dict[str, float] = averageProcessTime
+        self.medianPackageSize: Dict[str, Dict[str, float]] = medianPackageSize
+        self.medianDelay: Dict[str, Dict[str, float]] = medianDelay
+        self.medianProcessTime: Dict[str, float] = medianProcessTime
         self.edgesByName = edgesByName
         self.workersResources = workersResources
 
     def _edgePackageSize(self) -> float:
         packageSize = .0
         for source, destinations in self.edgesByName.items():
-            if source not in self.averagePackageSize:
+            if source not in self.medianPackageSize:
                 packageSize += 4096 * len(destinations)
                 continue
             for dest in destinations:
-                if dest not in self.averagePackageSize[source]:
+                if dest not in self.medianPackageSize[source]:
                     packageSize += 4096
                     continue
-                packageSize += self.averagePackageSize[source][dest]
+                packageSize += self.medianPackageSize[source][dest]
         # suppose bandwidth for all nodes are the same
         # and is 10 mb/ s
         # packageSize /= 10485
@@ -184,14 +195,22 @@ class Evaluator:
     def _edgeDelay(self, individual: Dict[str, str]) -> float:
         delay = .0
         for source, destinations in self.edgesByName.items():
-            if individual[source] not in self.averageDelay:
+            sourceMachineID = individual[source]
+            if sourceMachineID not in self.medianDelay:
                 delay += 0
                 continue
             for dest in destinations:
-                if individual[dest] not in self.averageDelay[individual[source]]:
+                destMachineID = individual[dest]
+                if not dest[-11:] == 'TaskHandler':
+                    workerMachineID = destMachineID
+                    destMachineID = genMachineIDForTaskHandler(
+                        self.userMachineID,
+                        workerMachineID,
+                        dest)
+                if destMachineID not in self.medianDelay[sourceMachineID]:
                     delay += 0
                     continue
-                delay += self.averageDelay[individual[source]][individual[dest]]
+                delay += self.medianDelay[sourceMachineID][destMachineID]
         return delay
 
     def _computingCost(self, individual: Dict[str, str]) -> float:
@@ -199,10 +218,16 @@ class Evaluator:
         for machineName in self.edgesByName.keys():
             if not machineName[-11:] == 'TaskHandler':
                 continue
-            taskHandlerName = '%s#%s' % (machineName, individual[machineName])
-            if taskHandlerName in self.averageProcessTime \
-                    and self.averageProcessTime[taskHandlerName] is not None:
-                total += self.averageProcessTime[taskHandlerName] * self.considerRecentResources(machineName)
+            workerMachineId = individual[machineName]
+            taskHandlerMachineID = genMachineIDForTaskHandler(
+                self.userMachineID,
+                workerMachineId,
+                machineName
+            )
+            taskHandlerName = '%s#%s' % (machineName, taskHandlerMachineID)
+            if taskHandlerName in self.medianProcessTime \
+                    and self.medianProcessTime[taskHandlerName] is not None:
+                total += self.medianProcessTime[taskHandlerName] * self.considerRecentResources(machineName)
                 continue
             total += 0
         return total
@@ -220,9 +245,10 @@ class Evaluator:
         return factor
 
     def evaluateComputingCost(self, taskName, machine):
+        # TODO: change before reuse
         machineResources = self.workersResources[machine]
         maxProcessTime = 0
-        for taskHandlerRecord, processTime in self.averageProcessTime.items():
+        for taskHandlerRecord, processTime in self.medianProcessTime.items():
             if processTime is None:
                 continue
             if processTime > maxProcessTime:
@@ -244,23 +270,23 @@ class BaseProblem(Problem, Evaluator):
             userMachine,
             masterName,
             masterMachine,
-            averagePackageSize: Dict[str, Dict[str, float]],
-            averageDelay: Dict[str, Dict[str, float]],
-            averageProcessTime: Dict[str, float],
+            medianPackageSize: Dict[str, Dict[str, float]],
+            medianDelay: Dict[str, Dict[str, float]],
+            medianProcessTime: Dict[str, float],
             edgesByName: EdgesByName,
             availableWorkers: Dict[str, set[str]],
             workersResources: Dict[str, ResourcesInfo]):
-        self.averagePackageSize: Dict[str, Dict[str, float]] = averagePackageSize
-        self.averageDelay: Dict[str, Dict[str, float]] = averageDelay
+        self.medianPackageSize: Dict[str, Dict[str, float]] = medianPackageSize
+        self.medianDelay: Dict[str, Dict[str, float]] = medianDelay
         Evaluator.__init__(
             self,
             userName,
             userMachine,
             masterName,
             masterMachine,
-            averagePackageSize=self.averagePackageSize,
-            averageDelay=self.averageDelay,
-            averageProcessTime=averageProcessTime,
+            medianPackageSize=self.medianPackageSize,
+            medianDelay=self.medianDelay,
+            medianProcessTime=medianProcessTime,
             edgesByName=edgesByName,
             workersResources=workersResources)
         self.variableNumber = len(edgesByName)
@@ -275,6 +301,7 @@ class BaseProblem(Problem, Evaluator):
                     if taskName in images:
                         self.availableWorkers[name].append(workerMachine)
                         choicesEachVariable[i] += 1
+                shuffle(self.availableWorkers[name])
                 continue
             choicesEachVariable[i] = 1
 
@@ -312,7 +339,7 @@ class BaseProblem(Problem, Evaluator):
                 continue
             res[key] = None
         res[self.masterName] = self.masterMachine
-        res[self.userName] = self.userMachine
+        res[self.userName] = self.userMachineID
         return res
 
 
@@ -321,17 +348,17 @@ class NSGABase(Scheduler):
             self,
             name: str,
             algorithm: GeneticAlgorithm,
-            averagePackageSize: Dict[str, Dict[str, float]],
-            averageDelay: Dict[str, Dict[str, float]],
-            averageProcessTime: Dict[str, float],
+            medianPackageSize: Dict[str, Dict[str, float]],
+            medianDelay: Dict[str, Dict[str, float]],
+            medianProcessTime: Dict[str, float],
             generationNum: int,
     ):
         self.__generationNum: int = generationNum
         super().__init__(
             name=name,
-            averagePackageSize=averagePackageSize,
-            averageDelay=averageDelay,
-            averageProcessTime=averageProcessTime)
+            medianPackageSize=medianPackageSize,
+            medianDelay=medianDelay,
+            medianProcessTime=medianProcessTime)
         self.__algorithm = algorithm
 
     def _schedule(
@@ -348,9 +375,9 @@ class NSGABase(Scheduler):
             userMachine,
             masterName,
             masterMachine,
-            averagePackageSize=self.averagePackageSize,
-            averageDelay=self.averageDelay,
-            averageProcessTime=self.averageProcessTime,
+            medianPackageSize=self.medianPackageSize,
+            medianDelay=self.medianDelay,
+            medianProcessTime=self.medianProcessTime,
             edgesByName=edgesByName,
             availableWorkers=availableWorkers,
             workersResources=workersResources)
@@ -377,17 +404,17 @@ class NSGA2(NSGABase):
     def __init__(self,
                  populationSize: int,
                  generationNum: int,
-                 averagePackageSize: Dict[str, Dict[str, float]],
-                 averageDelay: Dict[str, Dict[str, float]],
-                 averageProcessTime: Dict[str, float]):
+                 medianPackageSize: Dict[str, Dict[str, float]],
+                 medianDelay: Dict[str, Dict[str, float]],
+                 medianProcessTime: Dict[str, float]):
         super().__init__(
             'NSGA2',
             NSGA2_(
                 pop_size=populationSize,
                 eliminate_duplicates=True),
-            averagePackageSize=averagePackageSize,
-            averageDelay=averageDelay,
-            averageProcessTime=averageProcessTime,
+            medianPackageSize=medianPackageSize,
+            medianDelay=medianDelay,
+            medianProcessTime=medianProcessTime,
             generationNum=generationNum)
 
 
@@ -397,9 +424,9 @@ class NSGA3(NSGABase):
                  populationSize: int,
                  generationNum: int,
                  dasDennisP: int,
-                 averagePackageSize: Dict[str, Dict[str, float]],
-                 averageDelay: Dict[str, Dict[str, float]],
-                 averageProcessTime: Dict[str, float]):
+                 medianPackageSize: Dict[str, Dict[str, float]],
+                 medianDelay: Dict[str, Dict[str, float]],
+                 medianProcessTime: Dict[str, float]):
         refDirs = get_reference_directions(
             "das-dennis",
             3,
@@ -410,9 +437,9 @@ class NSGA3(NSGABase):
                 pop_size=populationSize,
                 ref_dirs=refDirs,
                 eliminate_duplicates=True),
-            averagePackageSize=averagePackageSize,
-            averageDelay=averageDelay,
-            averageProcessTime=averageProcessTime,
+            medianPackageSize=medianPackageSize,
+            medianDelay=medianDelay,
+            medianProcessTime=medianProcessTime,
             generationNum=generationNum)
 
 
@@ -421,9 +448,9 @@ class CTAEA(NSGABase):
     def __init__(self,
                  generationNum: int,
                  dasDennisP: int,
-                 averagePackageSize: Dict[str, Dict[str, float]],
-                 averageDelay: Dict[str, Dict[str, float]],
-                 averageProcessTime: Dict[str, float]):
+                 medianPackageSize: Dict[str, Dict[str, float]],
+                 medianDelay: Dict[str, Dict[str, float]],
+                 medianProcessTime: Dict[str, float]):
         refDirs = get_reference_directions(
             "das-dennis",
             3,
@@ -433,9 +460,9 @@ class CTAEA(NSGABase):
             CTAEA_(
                 ref_dirs=refDirs,
                 seed=randint(0, 100)),
-            averagePackageSize=averagePackageSize,
-            averageDelay=averageDelay,
-            averageProcessTime=averageProcessTime,
+            medianPackageSize=medianPackageSize,
+            medianDelay=medianDelay,
+            medianProcessTime=medianProcessTime,
             generationNum=generationNum)
 
 

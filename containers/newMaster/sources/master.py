@@ -51,6 +51,8 @@ class Master(Registry):
             self.__handleExit(message=message)
         elif message.type == 'profiler':
             self.__handleProfiler(message=message)
+        elif message.type == 'workersCount':
+            self.__handleWorkersCount(message=message)
 
     def __handleRegister(self, message: Message):
         respond = self.registerClient(message=message)
@@ -157,21 +159,26 @@ class Master(Registry):
                 return
             del self.workers[message.source.id]
             del self.workers[message.source.machineID]
+            self.workersCount -= 1
 
     def __handleProfiler(self, message: Message):
         profilers = message.content['profiler']
         # Merge
-        self.averagePackageSize = {**self.averagePackageSize, **profilers[0]}
-        self.averageDelay = {**self.averageDelay, **profilers[1]}
+        self.medianPackageSize = {**self.medianPackageSize, **profilers[0]}
+        self.medianDelay = {**self.medianDelay, **profilers[1]}
         self.nodeResources = {**self.nodeResources, **profilers[2]}
-        self.averageProcessTime = {**self.averageProcessTime, **profilers[3]}
-        self.averageRespondTime = {**self.averageRespondTime, **profilers[4]}
+        self.medianProcessTime = {**self.medianProcessTime, **profilers[3]}
+        self.medianRespondTime = {**self.medianRespondTime, **profilers[4]}
         self.imagesAndRunningContainers = {**self.imagesAndRunningContainers, **profilers[5]}
 
         # update
-        self.scheduler.averagePackageSize = self.averagePackageSize
-        self.scheduler.averageDelay = self.averageDelay
-        self.scheduler.averageProcessTime = self.averageProcessTime
+        self.scheduler.medianPackageSize = self.medianPackageSize
+        self.scheduler.medianDelay = self.medianDelay
+        self.scheduler.medianProcessTime = self.medianProcessTime
+
+    def __handleWorkersCount(self, message: Message):
+        msg = {'type': 'workersCount', 'workersCount': self.workersCount}
+        self.sendMessage(msg, message.source.addr)
 
     def __stopClient(self, identity: Identity, reason: str = 'No reason'):
         msg = {'type': 'stop', 'reason': reason}

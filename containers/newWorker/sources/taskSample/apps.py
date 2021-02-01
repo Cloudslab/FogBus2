@@ -148,11 +148,11 @@ class BlurAndPHash(TasksWorkerSide):
         matrix.resize(self.hashLen, self.hashLen)
         matrixFlatten = matrix.flatten()
 
-        averageValue = sum(matrixFlatten) * 1. / len(matrixFlatten)
+        medianValue = sum(matrixFlatten) * 1. / len(matrixFlatten)
         pHash = 0
         for i in matrixFlatten:
             pHash <<= 1
-            if i >= averageValue:
+            if i >= medianValue:
                 pHash += 1
         return pHash
 

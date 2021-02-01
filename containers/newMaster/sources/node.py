@@ -3,7 +3,7 @@ import logging
 import os
 import signal
 from queue import Queue
-from connection import Server, Message, Connection, Source, Average, Identity
+from connection import Server, Message, Connection, Source, Median, Identity
 from abc import abstractmethod
 from typing import Dict, Tuple, List, Callable
 from logging import Logger
@@ -14,7 +14,7 @@ Address = Tuple[str, int]
 PeriodicTask = Tuple[Callable, float]
 
 
-class Node(Server):
+class Node(Server, Resources):
 
     def __init__(
             self,
@@ -31,6 +31,9 @@ class Node(Server):
         self.myAddr = myAddr
         self.masterAddr = masterAddr
         self.loggerAddr = loggerAddr
+        self.coresCount = coresCount
+        self.cpuFrequency = cpuFrequency
+        self.memorySize = memory
         self.ignoreSocketErr = ignoreSocketErr
         self.me = Identity(
             nameLogPrinting='Me',
@@ -44,18 +47,21 @@ class Node(Server):
             nameLogPrinting='RemoteLogger',
             addr=self.loggerAddr,
         )
-        self.resources: Resources = Resources(
+
+        Resources.__init__(
+            self,
             addr=self.myAddr,
-            coresCount=coresCount,
-            cpuFrequency=cpuFrequency,
-            memory=memory)
+            coresCount=self.coresCount,
+            cpuFrequency=self.cpuFrequency,
+            memory=self.memorySize
+        )
         self.name: str = None
         self.nameLogPrinting: str = None
         self.nameConsistent: str = None
         self.__gotName: threading.Event = threading.Event()
         self.role: str = None
         self.id: int = None
-        self.machineID: str = self.resources.uniqueID()
+        self.machineID: str = self.uniqueID()
 
         self.receivedMessage: Queue[Tuple[Message, int]] = Queue()
         self.messageToSend: Queue[Tuple[Dict, Tuple[str, int]]] = Queue()
@@ -80,15 +86,15 @@ class Node(Server):
         self.handleSignal()
         # Node stats
         self.lock = threading.Lock()
-        self.receivedPackageSize: Dict[str, Average] = {}
-        self.delays: Dict[str, Average] = {}
+        self.receivedPackageSize: Dict[str, Median] = {}
+        self.delays: Dict[str, Median] = {}
         self.networkTimeDiff: Dict[Tuple[str, int], float] = {}
 
         defaultPeriodicTasks: List[PeriodicTask] = [
             (self.__uploadResources, 10)]
         if not self.role == 'RemoteLogger':
             defaultPeriodicTasks += [
-                (self.__uploadAverageReceivedPackageSize, 10),
+                (self.__uploadMedianReceivedPackageSize, 10),
                 (self.__uploadDelays, 10)]
         if periodicTasks is None:
             periodicTasks = []
@@ -149,23 +155,22 @@ class Node(Server):
                 continue
             if message.source.addr in self.networkTimeDiff:
                 message.content['delay'] += self.networkTimeDiff[message.source.addr]
-            self.__statAveragePackageSize(message, messageSize)
+            self.__statMedianPackageSize(message, messageSize)
             self.handleMessage(message)
             self.__respondTimeDiff(message)
 
-    def __statAveragePackageSize(self, message: Message, messageSize: int):
+    def __statMedianPackageSize(self, message: Message, messageSize: int):
         if not message.source.nameConsistent == self.nameConsistent:
             self.lock.acquire()
             if message.source.name not in self.receivedPackageSize:
-                receivedPackageSize = Average(
+                receivedPackageSize = Median(
                     addr=message.source.addr,
                     name=message.source.name,
                     nameLogPrinting=message.source.nameLogPrinting,
                     nameConsistent=message.source.nameConsistent,
                     role=message.source.role,
                     id_=message.source.id,
-                    machineID=message.source.machineID
-                )
+                    machineID=message.source.machineID)
                 self.receivedPackageSize[message.source.name] = receivedPackageSize
             self.receivedPackageSize[message.source.name].update(messageSize)
             self.lock.release()
@@ -186,21 +191,19 @@ class Node(Server):
         delayAtMost = B - A - Y + X
         self.lock.acquire()
         if message.source.machineID not in self.delays:
-            averageDelay = Average(
+            medianDelay = Median(
                 addr=message.source.addr,
                 name=message.source.name,
                 nameLogPrinting=message.source.nameLogPrinting,
                 nameConsistent=message.source.nameConsistent,
                 role=message.source.role,
                 id_=message.source.id,
-                machineID=message.source.machineID
-            )
-            self.delays[message.source.machineID] = averageDelay
+                machineID=message.source.machineID)
+            self.delays[message.source.machineID] = medianDelay
         self.delays[message.source.machineID].update(delayAtMost)
         self.lock.release()
 
     def sendMessage(self, message: Dict, addr: Address):
-
         source = Source(
             role=self.role,
             id_=self.id,
@@ -241,7 +244,7 @@ class Node(Server):
     def __handleResourcesQuery(self, message: Message):
         if not message.source.addr == self.masterAddr:
             return
-        msg = {'type': 'nodeResources', 'resources': self.resources.all()}
+        msg = {'type': 'nodeResources', 'resources': self.allResources()}
         self.sendMessage(msg, message.source.addr)
 
     def __handleStop(self, message: Message):
@@ -269,29 +272,29 @@ class Node(Server):
             runner()
 
     def __uploadResources(self):
-        msg = {'type': 'nodeResources', 'resources': self.resources.all()}
+        msg = {'type': 'nodeResources', 'resources': self.allResources()}
         self.sendMessage(msg, self.remoteLogger.addr)
 
-    def __uploadAverageReceivedPackageSize(self):
+    def __uploadMedianReceivedPackageSize(self):
         self.lock.acquire()
-        allAverage = {}
-        for k, average in self.receivedPackageSize.items():
+        allMedian = {}
+        for k, median in self.receivedPackageSize.items():
             if k is None:
                 continue
-            allAverage[k] = average.average()
+            allMedian[k] = median.median()
         msg = {
-            'type': 'averageReceivedPackageSize',
-            'averageReceivedPackageSize': allAverage}
+            'type': 'medianReceivedPackageSize',
+            'medianReceivedPackageSize': allMedian}
         self.sendMessage(msg, self.remoteLogger.addr)
         self.lock.release()
 
     def __uploadDelays(self):
         self.lock.acquire()
         allDelay = {}
-        for k, average in self.delays.items():
+        for k, median in self.delays.items():
             if k is None:
                 continue
-            allDelay[k] = average.average()
+            allDelay[k] = median.median()
         msg = {
             'type': 'delays',
             'delays': allDelay}

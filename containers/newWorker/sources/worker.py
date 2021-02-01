@@ -46,7 +46,7 @@ class Worker(Node):
         message = {'type': 'register',
                    'role': 'worker',
                    'machineID': self.machineID,
-                   'resources': self.resources.all(),
+                   'resources': self.allResources(),
                    'images': self.__getImages()}
         self.sendMessage(message, self.master.addr)
         self.isRegistered.wait()
@@ -86,6 +86,9 @@ class Worker(Node):
                 detach=True,
                 auto_remove=True,
                 image=self.camel_to_snake(taskName),
+                cpuset_cpus=self.coresCount,
+                cpu_period=self.cpuFrequency,
+                mem_limit=self.memorySize,
                 network_mode='host',
                 working_dir='/workplace',
                 command='%s %s %d %s %d '
@@ -106,7 +109,6 @@ class Worker(Node):
             self.logger.info('Ran %s', taskName)
         except docker.errors.APIError as e:
             self.logger.warning(str(e))
-
 
     @staticmethod
     def snake_to_camel(snake_str):
@@ -159,6 +161,10 @@ if __name__ == '__main__':
     myAddr_ = (sys.argv[1], int(sys.argv[2]))
     masterAddr_ = (sys.argv[3], int(sys.argv[4]))
     loggerAddr_ = (sys.argv[5], int(sys.argv[6]))
+
+    memory_ = None
+    coresCount_ = None
+    cpuFrequency_ = None
     if len(sys.argv) > 7:
         coresCount_ = sys.argv[7]
         if ',' in coresCount_:
@@ -169,11 +175,8 @@ if __name__ == '__main__':
         else:
             coresCount_ = 1
         cpuFrequency_ = int(sys.argv[8])
-        memory_ = sys.argv[0]
-    else:
-        memory_ = None
-        coresCount_ = None
-        cpuFrequency_ = None
+        memory_ = sys.argv[9]
+
     worker_ = Worker(
         myAddr=myAddr_,
         masterAddr=masterAddr_,

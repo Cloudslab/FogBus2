@@ -4,6 +4,8 @@ import numpy as np
 from abc import abstractmethod
 from queue import Queue
 from random import randint
+from connection import Median
+from time import time
 
 
 class ApplicationUserSide:
@@ -30,6 +32,8 @@ class ApplicationUserSide:
         self.targetHeight = targetHeight
         self.showWindow: bool = showWindow
         self.videoPath: str = videoPath
+        self.respondTime: Median = Median(maxRecordNumber=100)
+        self.respondTimeCount = 0
 
     def resizeFrame(self, frame):
         width = frame.shape[1]
@@ -66,8 +70,11 @@ class FaceDetection(ApplicationUserSide):
                 break
             frame = self.resizeFrame(frame)
             self.dataToSubmit.put(frame)
-
+            lastDataSentTime = time()
             faces = self.result.get()
+            respondTime = (time() - lastDataSentTime) * 1000
+            self.respondTime.update(respondTime)
+            self.respondTimeCount += 1
             for (x, y, w, h, roi_gray) in faces:
                 cv2.rectangle(
                     frame,
@@ -104,8 +111,11 @@ class FaceAndEyeDetection(ApplicationUserSide):
                 break
             frame = self.resizeFrame(frame)
             self.dataToSubmit.put(frame)
-
+            lastDataSentTime = time()
             faces = self.result.get()
+            respondTime = (time() - lastDataSentTime) * 1000
+            self.respondTime.update(respondTime)
+            self.respondTimeCount += 1
             for (x, y, w, h, eyes) in faces:
                 roi_color = frame[y:y + h, x:x + w]
                 cv2.rectangle(frame, (x, y), (x + w, y + h), (255, 0, 0), 2)
@@ -196,7 +206,11 @@ class ColorTracking(ApplicationUserSide):
                          l_b2, u_b2
                          )
             self.dataToSubmit.put(inputData)
+            lastDataSentTime = time()
             resultData = self.result.get()
+            respondTime = (time() - lastDataSentTime) * 1000
+            self.respondTime.update(respondTime)
+            self.respondTimeCount += 1
             (FGmaskComp, frame) = resultData
 
             if self.showWindow:
@@ -248,7 +262,11 @@ class VideoOCR(ApplicationUserSide):
         self.dataToSubmit.put(inputData)
         print("[*] Sent all the frames and waiting for result ...")
 
+        lastDataSentTime = time()
         result = self.result.get()
+        respondTime = (time() - lastDataSentTime) * 1000
+        self.respondTime.update(respondTime)
+        self.respondTimeCount += 1
         print(result, '\r\n [*] The text is at above.')
 
 
@@ -306,7 +324,11 @@ class GameOfLifeSerialised(ApplicationUserSide):
                 set([]),
                 set([]))
             self.dataToSubmit.put(inputData)
+            lastDataSentTime = time()
             result = self.result.get()
+            respondTime = (time() - lastDataSentTime) * 1000
+            self.respondTime.update(respondTime)
+            self.respondTimeCount += 1
             self.newStates.update(result[4])
             self.mayChange.update(result[5])
             self.changeStates()
@@ -430,6 +452,7 @@ class GameOfLifeParallelized(GameOfLifeSerialised):
                 set([]),
                 set([]))
             self.dataToSubmit.put(inputData)
+            lastDataSentTime = time()
             resCount = 0
             self.newStates = set([])
             self.mayChange = set([])
@@ -438,6 +461,9 @@ class GameOfLifeParallelized(GameOfLifeSerialised):
                 resCount += 1
                 self.newStates.update(result[4])
                 self.mayChange.update(result[5])
+            respondTime = (time() - lastDataSentTime) * 1000
+            self.respondTime.update(respondTime)
+            self.respondTimeCount += 1
             self.changeStates()
 
         print('[*] Bye')
@@ -476,6 +502,7 @@ class GameOfLifePyramid(GameOfLifeSerialised):
                 set([]),
                 set([]))
             self.dataToSubmit.put(inputData)
+            lastDataSentTime = time()
             resCount = 0
             self.newStates = set([])
             self.mayChange = set([])
@@ -484,6 +511,9 @@ class GameOfLifePyramid(GameOfLifeSerialised):
                 resCount += 1
                 self.newStates.update(result[4])
                 self.mayChange.update(result[5])
+            respondTime = (time() - lastDataSentTime) * 1000
+            self.respondTime.update(respondTime)
+            self.respondTimeCount += 1
             self.changeStates()
 
         print('[*] Bye')

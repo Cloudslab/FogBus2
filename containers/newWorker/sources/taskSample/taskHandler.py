@@ -2,7 +2,7 @@ import sys
 import logging
 import threading
 from exceptions import *
-from connection import Message, Average
+from connection import Message, Median
 from node import Node
 from logger import get_logger
 from typing import List, Dict
@@ -23,6 +23,9 @@ class TaskHandler(Node):
             token: str,
             childTaskTokens: List[str],
             workerID: int,
+            coresCount,
+            cpuFrequency,
+            memory,
             logLevel=logging.DEBUG):
 
         self.userID: int = userID
@@ -33,14 +36,17 @@ class TaskHandler(Node):
         self.workerID: int = workerID
         self.isRegistered: threading.Event = threading.Event()
         self.childrenAddr: Dict[str, tuple] = {}
-        self.processTime: Average = Average()
+        self.processTime: Median = Median()
 
         super().__init__(
             myAddr=myAddr,
             masterAddr=masterAddr,
             loggerAddr=loggerAddr,
+            coresCount=coresCount,
+            cpuFrequency=cpuFrequency,
+            memory=memory,
             periodicTasks=[
-                (self.__uploadAverageProcessTime, 10)],
+                (self.__uploadMedianProcessTime, 10)],
             logLevel=logLevel
         )
 
@@ -187,12 +193,12 @@ class TaskHandler(Node):
         else:
             self.app: TasksWorkerSide = app
 
-    def __uploadAverageProcessTime(self):
-        if self.processTime.average() is None:
+    def __uploadMedianProcessTime(self):
+        if self.processTime.median() is None:
             return
         msg = {
-            'type': 'averageProcessTime',
-            'averageProcessTime': self.processTime.average()}
+            'type': 'medianProcessTime',
+            'medianProcessTime': self.processTime.median()}
         self.sendMessage(msg, self.remoteLogger.addr)
 
     def run(self):
@@ -235,13 +241,13 @@ class TaskHandler(Node):
             self.__handleData(message)
 
     def __handleRegistered(self, message: Message):
-        role = message.content['role'
-        ]
+        role = message.content['role']
         if not role == 'TaskHandler':
             raise RegisteredAsWrongRole
         self.id = message.content['id']
         self.role = role
         self.setName(message)
+        self.machineID = message.content['machineID']
         self.logger = get_logger(self.nameLogPrinting, self.logLevel)
         self.isRegistered.set()
 
@@ -282,34 +288,8 @@ class TaskHandler(Node):
         self.sendMessage(msg, self.master.addr)
 
 
-def run(
-        masterAddr,
-        loggerAddr,
-        userID,
-        userName,
-        taskName,
-        token,
-        childTaskTokens,
-        workerID):
-    myAddr = (sys.argv[1], 0)
-
-    taskHandler_ = TaskHandler(
-        myAddr=myAddr,
-        masterAddr=masterAddr,
-        loggerAddr=loggerAddr,
-        userID=userID,
-        userName=userName,
-        taskName=taskName,
-        token=token,
-        childTaskTokens=childTaskTokens,
-        workerID=workerID
-    )
-    taskHandler_.run()
-
-
 if __name__ == '__main__':
-    import socket
-
+    myAddr_ = (sys.argv[1], 0)
     masterAddr_ = (sys.argv[2], int(sys.argv[3]))
     loggerAddr_ = (sys.argv[4], int(sys.argv[5]))
 
@@ -323,12 +303,33 @@ if __name__ == '__main__':
         childTaskTokens_ = sys.argv[10].split(',')
     workerID_ = int(sys.argv[11])
 
-    run(
+    memory_ = None
+    coresCount_ = None
+    cpuFrequency_ = None
+    if len(sys.argv) > 12:
+        coresCount_ = sys.argv[12]
+        if ',' in coresCount_:
+            coresCount_ = len(coresCount_.split(','))
+        elif '-' in coresCount_:
+            start, end = coresCount_.split('-')
+            coresCount_ = int(end) - int(start) + 1
+        else:
+            coresCount_ = 1
+        cpuFrequency_ = int(sys.argv[13])
+        memory_ = sys.argv[14]
+
+    taskHandler_ = TaskHandler(
+        myAddr=myAddr_,
         masterAddr=masterAddr_,
         loggerAddr=loggerAddr_,
         userID=userID_,
-        taskName=taskName_,
         userName=userName_,
+        taskName=taskName_,
         token=token_,
+        childTaskTokens=childTaskTokens_,
         workerID=workerID_,
-        childTaskTokens=childTaskTokens_)
+        coresCount=coresCount_,
+        cpuFrequency=cpuFrequency_,
+        memory=memory_)
+
+    taskHandler_.run()

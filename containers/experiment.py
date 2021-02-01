@@ -131,11 +131,11 @@ class Experiment:
                     '256')
 
     @staticmethod
-    def readRespondTime():
-        filename = 'newUser/sources/log/respondTime.json'
+    def readRespondTime(filename):
         with open(filename) as f:
             respondTime = json.loads(f.read())
             f.close()
+            os.system('rm -f %s' % filename)
             if len(respondTime):
                 return list(respondTime.values())[0]
             return 0
@@ -172,26 +172,31 @@ class Experiment:
         config_ = {
             'cores': ['0', '1', '2', '3', '4-5', '6-7'],
             'cpuFrequencies': [10000, 15000, 20000, 25000, 10000, 20000],
-            'memories': ['2g', '2g', '2g', '4g', '4g', '4g', '4g']
+            'memories': ['2gb', '2gb', '2gb', '4gb', '4gb', '4gb', '4gb']
         }
 
-        repeatTimes = 50
-        sleepEachRound = 50
+        # config_ = {
+        #     'cores': ['0-7'],
+        #     'cpuFrequencies': [25000],
+        #     'memories': ['32gb']
+        # }
+
+        repeatTimes = 35
+        respondTimeFilePath = '%s/newUser/sources/log/respondTime.json' % self.currPath
         respondTimes = [0 for _ in range(repeatTimes)]
-        for i in range(repeatTimes):
+        for i in tqdm(range(repeatTimes)):
             self.stopRemoteWorkers()
             self.stopAllContainers()
             self.runRemoteWorkers()
             logger = self.runRemoteLogger()
             master = self.runMaster(schedulerName)
             workers_ = self.runWorkers(config_)
-            self.logger.debug('Sleep 20 seconds waiting for workers connect to master ...')
-            sleep(20)
             user = self.runUser('User')
-            self.logger.debug('Sleep %d seconds waiting for respondTime to be normal ...' % sleepEachRound)
-            sleep(sleepEachRound)
+            self.logger.debug('Waiting for respondTime log file to be created ...')
+            while not os.path.exists(respondTimeFilePath):
+                sleep(1)
             user.stop()
-            respondTimes[i] = self.readRespondTime()
+            respondTimes[i] = self.readRespondTime(respondTimeFilePath)
             self.logger.debug('[*] Result-[%d/%d]: %s', (i + 1), repeatTimes, str(respondTimes))
         self.saveRes(schedulerName, respondTimes)
         self.logger.info(respondTimes)
@@ -209,3 +214,6 @@ if __name__ == '__main__':
     experiment.run('NSGA3')
     experiment.run('CTAEA')
     # Experiment().runUser('User')
+    # experiment.runRemoteLogger()
+    # experiment.runRemoteWorkers()
+    # experiment.runUser('User')

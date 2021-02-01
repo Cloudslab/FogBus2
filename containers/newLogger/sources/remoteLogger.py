@@ -34,10 +34,10 @@ class RemoteLogger(Profiler, Node):
 
     def handleMessage(self, message: Message):
         self.lock.acquire()
-        if message.type == 'averageReceivedPackageSize':
-            self.__handleAverageReceivedPackageSize(message=message)
-        elif message.type == 'averageProcessTime':
-            self.__handleAverageProcessTime(message=message)
+        if message.type == 'medianReceivedPackageSize':
+            self.__handleMedianReceivedPackageSize(message=message)
+        elif message.type == 'medianProcessTime':
+            self.__handleMedianProcessTime(message=message)
         elif message.type == 'nodeResources':
             self.__handleNodeResources(message=message)
         elif message.type == 'respondTime':
@@ -50,34 +50,34 @@ class RemoteLogger(Profiler, Node):
             self.__handleRequestProfiler(message=message)
         self.lock.release()
 
-    def __handleAverageReceivedPackageSize(self, message: Message):
+    def __handleMedianReceivedPackageSize(self, message: Message):
         source = message.source.name
-        if source not in self.averagePackageSize:
-            self.averagePackageSize[source] = {}
-        for dest, averageReceivedPackageSize in message.content['averageReceivedPackageSize'].items():
-            self.averagePackageSize[source][dest] = averageReceivedPackageSize
+        if source not in self.medianPackageSize:
+            self.medianPackageSize[source] = {}
+        for dest, medianReceivedPackageSize in message.content['medianReceivedPackageSize'].items():
+            self.medianPackageSize[source][dest] = medianReceivedPackageSize
 
     def __handleDelays(self, message: Message):
         source = message.source.machineID
-        if source not in self.averageDelay:
-            self.averageDelay[source] = {}
+        if source not in self.medianDelay:
+            self.medianDelay[source] = {}
         for dest, delay in message.content['delays'].items():
-            self.averageDelay[source][dest] = delay
+            self.medianDelay[source][dest] = delay
 
     def __handleNodeResources(self, message: Message):
         nodeName = message.source.nameConsistent
         nodeResources = message.content['resources']
         self.nodeResources[nodeName] = nodeResources
 
-    def __handleAverageProcessTime(self, message: Message):
+    def __handleMedianProcessTime(self, message: Message):
         workerName = message.source.nameConsistent
-        averageProcessTime = message.content['averageProcessTime']
-        self.averageProcessTime[workerName] = averageProcessTime
+        medianProcessTime = message.content['medianProcessTime']
+        self.medianProcessTime[workerName] = medianProcessTime
 
     def __handleResponseTime(self, message: Message):
         userName = message.source.nameConsistent
         respondTime = message.content['respondTime']
-        self.averageRespondTime[userName] = respondTime
+        self.medianRespondTime[userName] = respondTime
 
     def __handleImagesAndRunningContainers(self, message: Message):
         workerName = message.source.nameConsistent
@@ -90,11 +90,11 @@ class RemoteLogger(Profiler, Node):
         msg = {
             'type': 'profiler',
             'profiler': [
-                self.averagePackageSize,
-                self.averageDelay,
+                self.medianPackageSize,
+                self.medianDelay,
                 self.nodeResources,
-                self.averageProcessTime,
-                self.averageRespondTime,
+                self.medianProcessTime,
+                self.medianRespondTime,
                 self.imagesAndRunningContainers,
             ]}
         self.sendMessage(msg, message.source.addr)

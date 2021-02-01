@@ -4,10 +4,10 @@ import os
 import json
 from apps import *
 from node import Node
-from connection import Message, Average
+from connection import Message
 from exceptions import *
 from logger import get_logger
-from time import time
+from time import time, sleep
 from typing import List, Tuple
 
 Address = Tuple[str, int]
@@ -38,7 +38,7 @@ class User(Node):
             masterAddr=masterAddr,
             loggerAddr=loggerAddr,
             periodicTasks=[
-                (self.__uploadAverageRespondTime, 10)],
+                (self.__uploadMedianRespondTime, 10)],
             logLevel=logLevel
         )
 
@@ -49,7 +49,7 @@ class User(Node):
         self.videoPath: str = videoPath
 
         self.__lastDataSentTime = time()
-        self.respondTime: Average = Average()
+        self.workersCount = 0
 
         if self.appName == 'FaceDetection':
             self.app: ApplicationUserSide = FaceDetection(
@@ -100,8 +100,22 @@ class User(Node):
     def run(self):
         self.__register()
 
+    def __waitForWorkers(self):
+        targetCount = 8
+        msg = {'type': 'workersCount'}
+        while True:
+            self.sendMessage(msg, self.master.addr)
+            sleep(1)
+            if self.workersCount >= targetCount:
+                break
+            self.logger.info(
+                'Waiting for enough workers '
+                '[%d/%d]' % (self.workersCount, targetCount))
+
     def __register(self):
-        print('[*] Requesting ...')
+        self.logger = get_logger('User', logging.DEBUG)
+        self.__waitForWorkers()
+        self.logger.info('Waiting for scheduling decision ...')
         message = {
             'type': 'register',
             'role': 'user',
@@ -119,6 +133,8 @@ class User(Node):
             self.__handleReady()
         elif message.type == 'result':
             self.__handleResult(message)
+        elif message.type == 'workersCount':
+            self.__handleWorkersCount(message)
 
     def __handleRegistered(self, message: Message):
         role = message.content['role']
@@ -149,25 +165,31 @@ class User(Node):
 
     def __handleResult(self, message: Message):
         result = message.content['result']
-        respondTime = (time() - self.__lastDataSentTime) * 1000
-        self.respondTime.update(respondTime)
-        self.logger.info('RespondTime: %f' % self.respondTime.average())
-        self.__saveRespondTime()
         self.app.result.put(result)
+        self.__saveRespondTime()
 
-    def __uploadAverageRespondTime(self):
-        if self.respondTime.average() is None:
+    def __handleWorkersCount(self, message: Message):
+        self.workersCount = message.content['workersCount']
+
+    def __uploadMedianRespondTime(self):
+        if self.app.respondTime.median() is None:
             return
         msg = {
             'type': 'respondTime',
-            'respondTime': self.respondTime.average()}
+            'respondTime': self.app.respondTime.median()}
         self.sendMessage(msg, self.remoteLogger.addr)
 
     def __saveRespondTime(self):
+        if self.app.respondTimeCount != 120:
+            return
+        logFilename = 'log/respondTime.json'
+        if os.path.exists(logFilename):
+            return
+        self.logger.info(self.app.respondTimeCount)
         if not os.path.exists('log'):
             os.mkdir('log')
-        with open('log/respondTime.json', 'w+') as f:
-            content = {self.nameLogPrinting: self.respondTime.average()}
+        with open(logFilename, 'w+') as f:
+            content = {self.nameLogPrinting: self.app.respondTime.median()}
             json.dump(content, f)
             f.close()
 
