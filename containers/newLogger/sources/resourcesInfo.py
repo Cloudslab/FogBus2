@@ -120,6 +120,14 @@ class Resources:
             memory=None,
             formatSize: bool = False):
 
+        if ',' in coresCount:
+            coresCount = len(coresCount.split(','))
+        elif '-' in coresCount:
+            start, end = coresCount.split('-')
+            coresCount = int(end) - int(start) + 1
+        else:
+            coresCount = 1
+
         self.__coresCount = coresCount,
         self.__cpuFrequency = cpuFrequency,
         self.__memory = memory

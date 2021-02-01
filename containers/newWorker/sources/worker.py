@@ -92,7 +92,8 @@ class Worker(Node):
                 network_mode='host',
                 working_dir='/workplace',
                 command='%s %s %d %s %d '
-                        '%d %s %s %s %s %d' % (
+                        '%d %s %s %s %s %d '
+                        '%s %s %s' % (
                             self.myAddr[0],
                             self.masterAddr[0],
                             self.masterAddr[1],
@@ -103,7 +104,10 @@ class Worker(Node):
                             taskName,
                             token,
                             ','.join(childTaskTokens) if len(childTaskTokens) else 'None',
-                            workerID
+                            workerID,
+                            self.coresCount,
+                            self.cpuFrequency,
+                            self.memorySize
                         )
             )
             self.logger.info('Ran %s', taskName)
@@ -167,13 +171,6 @@ if __name__ == '__main__':
     cpuFrequency_ = None
     if len(sys.argv) > 7:
         coresCount_ = sys.argv[7]
-        if ',' in coresCount_:
-            coresCount_ = len(coresCount_.split(','))
-        elif '-' in coresCount_:
-            start, end = coresCount_.split('-')
-            coresCount_ = int(end) - int(start) + 1
-        else:
-            coresCount_ = 1
         cpuFrequency_ = int(sys.argv[8])
         memory_ = sys.argv[9]
 
