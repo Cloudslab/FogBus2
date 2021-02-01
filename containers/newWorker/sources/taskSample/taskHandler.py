@@ -25,7 +25,7 @@ class TaskHandler(Node):
             workerID: int,
             coresCount,
             cpuFrequency,
-            memory,
+            memorySize,
             logLevel=logging.DEBUG):
 
         self.userID: int = userID
@@ -44,7 +44,7 @@ class TaskHandler(Node):
             loggerAddr=loggerAddr,
             coresCount=coresCount,
             cpuFrequency=cpuFrequency,
-            memory=memory,
+            memorySize=memorySize,
             periodicTasks=[
                 (self.__uploadMedianProcessTime, 10)],
             logLevel=logLevel
@@ -323,6 +323,6 @@ if __name__ == '__main__':
         workerID=workerID_,
         coresCount=coresCount_,
         cpuFrequency=cpuFrequency_,
-        memory=memory_)
+        memorySize=memory_)
 
     taskHandler_.run()
