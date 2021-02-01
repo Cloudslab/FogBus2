@@ -10,16 +10,13 @@ def camel_to_snake(name):
 
 
 def run():
-    for i in range(62):
+    for i in range(63):
         name = 'GameOfLife%d' % i
         shutil.rmtree(name)
         shutil.copytree('OCR', name, False, None)
         f = open('%s/Dockerfile' % name, 'r+')
         content = f.read()
-        content = content.replace(
-            '\n# Hostname\n'
-            'RUN echo "OCR" > /etc/hostname\n\n'
-            '# Run OCR', '')
+        content = content.replace('OCR', name)
         f.seek(0)
         f.write(content)
         f.truncate()
