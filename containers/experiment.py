@@ -167,26 +167,27 @@ class Experiment:
                   '&& docker rm $(docker ps -a -q)\'')
 
     def run(self, schedulerName):
-        self.stopRemoteWorkers()
-        self.stopAllContainers()
         self.removeLogs()
-        self.runRemoteWorkers()
-        logger = self.runRemoteLogger()
-        master = self.runMaster(schedulerName)
+
         config_ = {
             'cores': ['0', '1', '2', '3', '4-5', '6-7'],
             'cpuFrequencies': [10000, 15000, 20000, 25000, 10000, 20000],
             'memories': ['2g', '2g', '2g', '4g', '4g', '4g', '4g']
         }
-        workers_ = self.runWorkers(config_)
 
-        self.logger.debug('Sleep 20 seconds waiting for workers connect to master ...')
-        sleep(20)
         repeatTimes = 50
-        sleepEachRound = 70
+        sleepEachRound = 50
         respondTimes = [0 for _ in range(repeatTimes)]
         for i in range(repeatTimes):
-            user = self.runUser('User-%d' % (i + 1))
+            self.stopRemoteWorkers()
+            self.stopAllContainers()
+            self.runRemoteWorkers()
+            logger = self.runRemoteLogger()
+            master = self.runMaster(schedulerName)
+            workers_ = self.runWorkers(config_)
+            self.logger.debug('Sleep 20 seconds waiting for workers connect to master ...')
+            sleep(20)
+            user = self.runUser('User')
             self.logger.debug('Sleep %d seconds waiting for respondTime to be normal ...' % sleepEachRound)
             sleep(sleepEachRound)
             user.stop()

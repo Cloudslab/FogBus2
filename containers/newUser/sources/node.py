@@ -138,10 +138,7 @@ class Node(Server):
             _receivedAt = time() * 1000
             message.content['delay'] = _receivedAt - message.content['_sentAt']
             message.content['_receivedAt'] = _receivedAt
-            if message.type == 'timeDiff':
-                self.__respondTimeDiff(message)
-                continue
-            elif message.type == 'respondTimeDiff':
+            if message.type == 'respondTimeDiff':
                 self.__handleRespondTimeDiff(message)
                 continue
             elif message.type == 'resourcesQuery':
@@ -152,12 +149,11 @@ class Node(Server):
                 continue
             if message.source.addr in self.networkTimeDiff:
                 message.content['delay'] += self.networkTimeDiff[message.source.addr]
-                if message.content['delay'] < 0:
-                    self.__testDelay(message.source.addr)
-            self.__stat(message, messageSize)
+            self.__statAveragePackageSize(message, messageSize)
             self.handleMessage(message)
+            self.__respondTimeDiff(message)
 
-    def __stat(self, message: Message, messageSize: int):
+    def __statAveragePackageSize(self, message: Message, messageSize: int):
         if not message.source.nameConsistent == self.nameConsistent:
             self.lock.acquire()
             if message.source.name not in self.receivedPackageSize:
@@ -172,18 +168,6 @@ class Node(Server):
                 )
                 self.receivedPackageSize[message.source.name] = receivedPackageSize
             self.receivedPackageSize[message.source.name].update(messageSize)
-            if message.source.machineID not in self.delays:
-                delay = Average(
-                    addr=message.source.addr,
-                    name=message.source.name,
-                    nameLogPrinting=message.source.nameLogPrinting,
-                    nameConsistent=message.source.nameConsistent,
-                    role=message.source.role,
-                    id_=message.source.id,
-                    machineID=message.source.machineID
-                )
-                self.delays[message.source.machineID] = delay
-            self.delays[message.source.machineID].update(message.content['delay'])
             self.lock.release()
 
     def __respondTimeDiff(self, message: Message):
@@ -198,9 +182,22 @@ class Node(Server):
         X = message.content['X']
         Y = message.content['_sentAt']
         B = message.content['_receivedAt']
-        delay = (B - A - Y + X) / 2
-        timeDiff = Y + delay - B
-        self.networkTimeDiff[message.source.addr] = timeDiff
+        # delay = (B - A - Y + X) / 2
+        delayAtMost = B - A - Y + X
+        self.lock.acquire()
+        if message.source.machineID not in self.delays:
+            delay = Average(
+                addr=message.source.addr,
+                name=message.source.name,
+                nameLogPrinting=message.source.nameLogPrinting,
+                nameConsistent=message.source.nameConsistent,
+                role=message.source.role,
+                id_=message.source.id,
+                machineID=message.source.machineID
+            )
+            self.delays[message.source.machineID] = delay
+        self.delays[message.source.machineID].update(delayAtMost)
+        self.lock.release()
 
     def sendMessage(self, message: Dict, addr: Address):
 
@@ -215,24 +212,6 @@ class Node(Server):
         )
         message['source'] = source
         self.messageToSend.put((message, addr))
-
-        if addr not in self.networkTimeDiff:
-            self.__testDelay(addr, source)
-
-    def __testDelay(self, addr: Address, source: Source = None):
-        if source is None:
-            source = Source(
-                role=self.role,
-                id_=self.id,
-                addr=self.myAddr,
-                name=self.name,
-                nameLogPrinting=self.nameLogPrinting,
-                nameConsistent=self.nameConsistent,
-                machineID=self.machineID
-            )
-        self.networkTimeDiff[addr] = 0
-        msg = {'type': 'timeDiff', 'source': source}
-        self.messageToSend.put((msg, addr))
 
     @abstractmethod
     def handleMessage(self, message: Message):
