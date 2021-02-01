@@ -183,13 +183,12 @@ class Experiment:
         self.logger.debug('Sleep 20 seconds waiting for workers connect to master ...')
         sleep(20)
         repeatTimes = 50
+        sleepEachRound = 70
         respondTimes = [0 for _ in range(repeatTimes)]
         for i in range(repeatTimes):
-            user = self.runUser('User-%d' % i)
-            self.logger.debug('Sleep 10 seconds waiting for user\'s resources ...')
-            sleep(20)
-            self.logger.debug('Sleep 50 seconds waiting for respondTime to be normal ...')
-            sleep(40)
+            user = self.runUser('User-%d' % (i + 1))
+            self.logger.debug('Sleep %d seconds waiting for respondTime to be normal ...' % sleepEachRound)
+            sleep(sleepEachRound)
             user.stop()
             respondTimes[i] = self.readRespondTime()
             self.logger.debug('[*] Result-[%d/%d]: %s', (i + 1), repeatTimes, str(respondTimes))

@@ -72,22 +72,22 @@ class Registry(Profiler, Node, ABC):
                 averagePackageSize=self.averagePackageSize,
                 averageDelay=self.averageDelay,
                 averageProcessTime=self.averageProcessTime,
-                populationSize=100,
-                generationNum=200,
+                populationSize=120,
+                generationNum=300,
                 dasDennisP=1)
         elif schedulerName == 'NSGA2':
             return NSGA2(
                 averagePackageSize=self.averagePackageSize,
                 averageDelay=self.averageDelay,
                 averageProcessTime=self.averageProcessTime,
-                populationSize=100,
-                generationNum=200)
+                populationSize=120,
+                generationNum=300)
         elif schedulerName == 'CTAEA':
             return CTAEA(
                 averagePackageSize=self.averagePackageSize,
                 averageDelay=self.averageDelay,
                 averageProcessTime=self.averageProcessTime,
-                generationNum=200,
+                generationNum=300,
                 dasDennisP=1)
         self.logger.warning('Unknown scheduler: %s', schedulerName)
         os._exit(0)
@@ -319,17 +319,17 @@ class Registry(Profiler, Node, ABC):
                     continue
                 childTaskTokens.append(user.taskNameTokenMap[childTaskName].token)
             user.taskNameTokenMap[taskName].childTaskTokens = childTaskTokens
-        # import cProfile, pstats, io
-        # from pstats import SortKey
-        # pr = cProfile.Profile()
-        # pr.enable()
-        return self.__schedule(user)
-        # pr.disable()
-        # s = io.StringIO()
-        # sortby = SortKey.CUMULATIVE
-        # ps = pstats.Stats(pr, stream=s).sort_stats(sortby)
-        # ps.print_stats()
-        # print(s.getvalue())
+        import cProfile, pstats, io
+        from pstats import SortKey
+        pr = cProfile.Profile()
+        pr.enable()
+        self.__schedule(user)
+        pr.disable()
+        s = io.StringIO()
+        sortby = SortKey.CUMULATIVE
+        ps = pstats.Stats(pr, stream=s).sort_stats(sortby)
+        ps.print_stats()
+        print(s.getvalue())
 
     def __schedule(self, user):
         allWorkers = {}

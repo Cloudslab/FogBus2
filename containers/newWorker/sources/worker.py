@@ -103,10 +103,10 @@ class Worker(Node):
                             workerID
                         )
             )
+            self.logger.info('Ran %s', taskName)
         except docker.errors.APIError as e:
             self.logger.warning(str(e))
 
-        self.logger.info('Ran %s', taskName)
 
     @staticmethod
     def snake_to_camel(snake_str):

@@ -235,7 +235,8 @@ class TaskHandler(Node):
             self.__handleData(message)
 
     def __handleRegistered(self, message: Message):
-        role = message.content['role']
+        role = message.content['role'
+        ]
         if not role == 'TaskHandler':
             raise RegisteredAsWrongRole
         self.id = message.content['id']
