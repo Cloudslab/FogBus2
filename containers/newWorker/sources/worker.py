@@ -20,7 +20,7 @@ class Worker(Node):
             loggerAddr,
             coresCount,
             cpuFrequency,
-            memory,
+            memorySize,
             logLevel=logging.DEBUG):
 
         self.isRegistered: threading.Event = threading.Event()
@@ -32,7 +32,7 @@ class Worker(Node):
             loggerAddr=loggerAddr,
             coresCount=coresCount,
             cpuFrequency=cpuFrequency,
-            memory=memory,
+            memorySize=memorySize,
             periodicTasks=[
                 (self.__uploadImagesAndRunningContainersList, 10)],
             logLevel=logLevel
@@ -180,5 +180,5 @@ if __name__ == '__main__':
         loggerAddr=loggerAddr_,
         coresCount=coresCount_,
         cpuFrequency=cpuFrequency_,
-        memory=memory_)
+        memorySize=memory_)
     worker_.run()

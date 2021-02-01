@@ -23,7 +23,7 @@ class Node(Server, Resources):
             loggerAddr: Address,
             coresCount=None,
             cpuFrequency=None,
-            memory=None,
+            memorySize=None,
             periodicTasks: List[PeriodicTask] = None,
             threadNumber: int = 32,
             ignoreSocketErr: bool = False,
@@ -33,7 +33,7 @@ class Node(Server, Resources):
         self.loggerAddr = loggerAddr
         self.coresCount = coresCount
         self.cpuFrequency = cpuFrequency
-        self.memorySize = memory
+        self.memorySize = memorySize
         self.ignoreSocketErr = ignoreSocketErr
         self.me = Identity(
             nameLogPrinting='Me',
