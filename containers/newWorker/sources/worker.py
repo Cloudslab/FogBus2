@@ -76,12 +76,13 @@ class Worker(Node):
         childTaskTokens = message.content['childTaskTokens']
         workerID = self.id
         try:
+            containerName = '%s_%s_%s' % (taskName, userName.replace('@', ''), self.nameLogPrinting)
             for container in self.dockerClient.containers.list():
-                if container.name != token:
+                if container.name != containerName:
                     continue
                 return
             self.dockerClient.containers.run(
-                name='%s_%s_%s' % (taskName, userName.replace('@', ''), self.nameLogPrinting),
+                name=containerName,
                 detach=True,
                 auto_remove=True,
                 image=self.camel_to_snake(taskName),

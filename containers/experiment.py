@@ -136,7 +136,6 @@ class Experiment:
         with open(filename) as f:
             respondTime = json.loads(f.read())
             f.close()
-            os.remove(filename)
             if len(respondTime):
                 return list(respondTime.values())[0]
             return 0
