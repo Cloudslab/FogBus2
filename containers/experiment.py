@@ -217,3 +217,4 @@ if __name__ == '__main__':
     # experiment.runRemoteLogger()
     # experiment.runRemoteWorkers()
     # experiment.runUser('User')
+    os.system('systemctl suspend')

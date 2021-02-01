@@ -105,9 +105,9 @@ class Worker(Node):
                             token,
                             ','.join(childTaskTokens) if len(childTaskTokens) else 'None',
                             workerID,
-                            self.coresCount,
-                            self.cpuFrequency,
-                            self.memorySize
+                            self.coresCount if self.coresCount is not None else '',
+                            self.cpuFrequency if self.coresCount is not None else '',
+                            self.memorySize if self.coresCount is not None else ''
                         )
             )
             self.logger.info('Ran %s', taskName)
