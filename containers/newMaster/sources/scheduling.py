@@ -41,11 +41,13 @@ class Decision:
             edgePackageSize: float,
             edgeDelay: float,
             computingCost: float,
+            varReciprocal: float,
     ):
         self.machines: Dict[str, str] = machines
         self.edgePackageSize: float = edgePackageSize
         self.edgeDelay: float = edgeDelay
         self.computingCost: float = computingCost
+        self.varReciprocal: float = varReciprocal
 
     def __repr__(self):
         return self.__str__()
@@ -223,16 +225,20 @@ class Evaluator:
             if workerMachineId in self.medianProcessTime:
                 total += self.considerRecentResources(workerMachineId, workerMachineId)
                 continue
-            total += 0.1
+            total += self.considerRecentResources(None, workerMachineId)
         return total
 
     def considerRecentResources(self, index, workerMachineId):
-        if workerMachineId not in self.workersResources:
-            return 0.1
-        if index is None:
-            return 0.1
         resources = self.workersResources[workerMachineId]
+        if index is None:
+            availableMemFactor = 0.5 * resources.availableMemory
+            availableCPUFactor = 0.5 * resources.currentCPUFrequency * (1 - resources.currentTotalCPUUsage)
+            processTime = 1 / (availableCPUFactor + availableMemFactor)
+            return processTime
+
         record = self.medianProcessTime[index]
+
+        resourceMemPercent = resources.availableMemory / resources.totalMemory
 
         processTime = record[0]
         availableMemory = record[1]
@@ -240,7 +246,6 @@ class Evaluator:
         totalCPUUsage = record[3]
         recordCPUFrequency = record[4]
 
-        resourceMemPercent = resources.availableMemory / resources.totalMemory
         recordMemPerCent = availableMemory / totalMemory
 
         factor = 0.5 * availableMemory / resources.availableMemory
@@ -301,7 +306,7 @@ class BaseProblem(Problem, Evaluator):
             self,
             xl=lowerBound,
             xu=upperBound,
-            n_obj=3,
+            n_obj=4,
             n_var=self.variableNumber,
             type_var=np.int,
             elementwise_evaluation=True)
@@ -314,8 +319,13 @@ class BaseProblem(Problem, Evaluator):
         # edgePackageSize = self._edgePackageSize()
         edgeDelay = self._edgeDelay(individual)
         computingCost = self._computingCost(individual)
+        varReciprocal = self.considerVariance(x)
         # print(x, 0, edgeDelay, computingCost)
-        out['F'] = anp.column_stack([0, edgeDelay, computingCost])
+        out['F'] = anp.column_stack([0, edgeDelay, computingCost, varReciprocal])
+
+    @staticmethod
+    def considerVariance(indexes: List[int]):
+        return 1 / np.var(indexes)
 
     def indexesToMachines(self, indexes: List[int]):
         res = {}
@@ -380,11 +390,13 @@ class NSGABase(Scheduler):
         edgePackageSize = res.F[0][0]
         edgeDelay = res.F[0][1]
         computingCost = res.F[0][2]
+        varReciprocal = res.F[0][3]
         decision = Decision(
             machines=machines,
             edgePackageSize=edgePackageSize,
             edgeDelay=edgeDelay,
-            computingCost=computingCost)
+            computingCost=computingCost,
+            varReciprocal=varReciprocal)
         return decision
 
 
@@ -418,7 +430,7 @@ class NSGA3(NSGABase):
                  medianProcessTime: Dict[str, Tuple[float, int, int, float]]):
         refDirs = get_reference_directions(
             "das-dennis",
-            3,
+            4,
             n_partitions=dasDennisP)
         super().__init__(
             'NSGA3',
@@ -442,7 +454,7 @@ class CTAEA(NSGABase):
                  medianProcessTime: Dict[str, Tuple[float, int, int, float]]):
         refDirs = get_reference_directions(
             "das-dennis",
-            3,
+            4,
             n_partitions=dasDennisP)
         super().__init__(
             'CTAEA',
