@@ -40,14 +40,11 @@ class Decision:
             machines: Dict[str, str],
             edgePackageSize: float,
             edgeDelay: float,
-            computingCost: float,
-            varReciprocal: float,
-    ):
+            computingCost: float):
         self.machines: Dict[str, str] = machines
         self.edgePackageSize: float = edgePackageSize
         self.edgeDelay: float = edgeDelay
         self.computingCost: float = computingCost
-        self.varReciprocal: float = varReciprocal
 
     def __repr__(self):
         return self.__str__()
@@ -306,7 +303,7 @@ class BaseProblem(Problem, Evaluator):
             self,
             xl=lowerBound,
             xu=upperBound,
-            n_obj=4,
+            n_obj=3,
             n_var=self.variableNumber,
             type_var=np.int,
             elementwise_evaluation=True)
@@ -319,13 +316,15 @@ class BaseProblem(Problem, Evaluator):
         # edgePackageSize = self._edgePackageSize()
         edgeDelay = self._edgeDelay(individual)
         computingCost = self._computingCost(individual)
-        varReciprocal = self.considerVariance(x)
+        # logVar = self.considerVariance(x)
         # print(x, 0, edgeDelay, computingCost)
-        out['F'] = anp.column_stack([0, edgeDelay, computingCost, varReciprocal])
+        out['F'] = anp.column_stack([0, edgeDelay, computingCost])
 
     @staticmethod
     def considerVariance(indexes: List[int]):
-        return 1 / np.var(indexes)
+        # prevent all task going to the same worker
+        # although even the worker died it can be reran
+        return -np.log(np.var(indexes))
 
     def indexesToMachines(self, indexes: List[int]):
         res = {}
@@ -390,13 +389,12 @@ class NSGABase(Scheduler):
         edgePackageSize = res.F[0][0]
         edgeDelay = res.F[0][1]
         computingCost = res.F[0][2]
-        varReciprocal = res.F[0][3]
+        # logVar = res.F[0][3]
         decision = Decision(
             machines=machines,
             edgePackageSize=edgePackageSize,
             edgeDelay=edgeDelay,
-            computingCost=computingCost,
-            varReciprocal=varReciprocal)
+            computingCost=computingCost)
         return decision
 
 
@@ -430,7 +428,7 @@ class NSGA3(NSGABase):
                  medianProcessTime: Dict[str, Tuple[float, int, int, float]]):
         refDirs = get_reference_directions(
             "das-dennis",
-            4,
+            3,
             n_partitions=dasDennisP)
         super().__init__(
             'NSGA3',
@@ -454,7 +452,7 @@ class CTAEA(NSGABase):
                  medianProcessTime: Dict[str, Tuple[float, int, int, float]]):
         refDirs = get_reference_directions(
             "das-dennis",
-            4,
+            3,
             n_partitions=dasDennisP)
         super().__init__(
             'CTAEA',
