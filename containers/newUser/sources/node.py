@@ -9,7 +9,7 @@ from typing import Dict, Tuple, List, Callable
 from logging import Logger
 from time import time, sleep
 from resourcesInfo import Resources
-
+from logger import get_logger
 Address = Tuple[str, int]
 PeriodicTask = Tuple[Callable, float]
 
@@ -82,7 +82,9 @@ class Node(Server, Resources):
                 name="MessageSender-%d" % i
             ).start()
         self.logLevel = logLevel
-        self.logger: Logger = None
+        self.logger: Logger = get_logger(
+            logger_name='NodeTemp',
+            level_name=self.logLevel)
         self.handleSignal()
         # Node stats
         self.lock = threading.Lock()
