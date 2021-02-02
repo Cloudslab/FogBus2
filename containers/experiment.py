@@ -82,13 +82,18 @@ class Experiment:
                     '192.168.3.20 5001 '
                     '%s' % schedulerName)
 
-    def runWorker(self, core: str, cpuFreq: int, mem: str, name: str):
+    def runWorker(
+            self,
+            name: str,
+            core: str = None,
+            cpuFreq: int = None,
+            mem: str = None):
         return self._run(
             name=name,
             image='worker',
-            cpuset_cpus=core,
-            cpu_period=cpuFreq,
-            mem_limit=mem,
+            # cpuset_cpus=core,
+            # cpu_period=cpuFreq,
+            # mem_limit=mem,
             volumes={
                 '%s/newWorker/sources' % self.currPath: {
                     'bind': '/workplace',
@@ -100,7 +105,10 @@ class Experiment:
             command='192.168.3.20 0 '
                     '192.168.3.20 5000 '
                     '192.168.3.20 5001 '
-                    '%s %s %s' % (core, cpuFreq, mem))
+                    '%s %s %s' % (
+                        core if core is not None else '',
+                        cpuFreq if cpuFreq is not None else '',
+                        mem if mem is not None else '',))
 
     def runWorkers(self, config):
         cores = config['cores']
@@ -146,12 +154,22 @@ class Experiment:
 
     @staticmethod
     def runRemoteWorkers():
-        os.system('ssh 4GB-rpi-4B \'cd new/containers/newWorker '
+        os.system('ssh 4GB-rpi-4B-alpha \'cd new/containers/newWorker '
                   '&& docker-compose run --rm worker '
                   '192.168.3.49 5002 '
                   '192.168.3.20 5000 '
                   '192.168.3.20 5001 > /dev/null 2>&1 &\'')
-        os.system('ssh 2GB-rpi-4B \'cd new/containers/newWorker '
+        os.system('ssh 2GB-rpi-4B-alpha \'cd new/containers/newWorker '
+                  '&& docker-compose run --rm worker '
+                  '192.168.3.14 5002 '
+                  '192.168.3.20 5000 '
+                  '192.168.3.20 5001 > /dev/null 2>&1 &\'')
+        os.system('ssh 4GB-rpi-4B-beta \'cd new/containers/newWorker '
+                  '&& docker-compose run --rm worker '
+                  '192.168.3.49 5002 '
+                  '192.168.3.20 5000 '
+                  '192.168.3.20 5001 > /dev/null 2>&1 &\'')
+        os.system('ssh 2GB-rpi-4B-beta \'cd new/containers/newWorker '
                   '&& docker-compose run --rm worker '
                   '192.168.3.14 5002 '
                   '192.168.3.20 5000 '
@@ -159,21 +177,49 @@ class Experiment:
 
     @staticmethod
     def stopRemoteWorkers():
-        os.system('ssh 4GB-rpi-4B \''
+        os.system('ssh 4GB-rpi-4B-alpha \''
                   'docker stop $(docker ps -a -q) '
                   '&& docker rm $(docker ps -a -q)\'')
-        os.system('ssh 2GB-rpi-4B \''
+        os.system('ssh 2GB-rpi-4B-alpha \''
                   'docker stop $(docker ps -a -q) '
                   '&& docker rm $(docker ps -a -q)\'')
+        os.system('ssh 4GB-rpi-4B-beta \''
+                  'docker stop $(docker ps -a -q) '
+                  '&& docker rm $(docker ps -a -q)\'')
+        os.system('ssh 2GB-rpi-4B-beta \''
+                  'docker stop $(docker ps -a -q) '
+                  '&& docker rm $(docker ps -a -q)\'')
+
+    @staticmethod
+    def stopLocalTaskHandler():
+        os.system('docker stop $(docker ps -a -q --filter="name=TaskHandler")')
+
+    @staticmethod
+    def stopRemoteTaskHandler():
+        os.system('ssh 4GB-rpi-4B-alpha \''
+                  'docker stop '
+                  '$(docker ps -a -q '
+                  '--filter="name=TaskHandler")\'')
+        os.system('ssh 2GB-rpi-4B-alpha \''
+                  'docker stop '
+                  '$(docker ps -a -q '
+                  '--filter="name=TaskHandler")\'')
+        os.system('ssh 4GB-rpi-4B-beta \''
+                  'docker stop '
+                  '$(docker ps -a -q '
+                  '--filter="name=TaskHandler")\'')
+        os.system('ssh 2GB-rpi-4B-beta \''
+                  'docker stop '
+                  '$(docker ps -a -q '
+                  '--filter="name=TaskHandler")\'')
 
     def run(self, schedulerName):
-        self.removeLogs()
 
-        config_ = {
-            'cores': ['0', '1', '2', '3', '4-5', '6-7'],
-            'cpuFrequencies': [10000, 15000, 20000, 25000, 10000, 20000],
-            'memories': ['2gb', '2gb', '2gb', '4gb', '4gb', '4gb', '4gb']
-        }
+        # config_ = {
+        #     'cores': ['0', '1', '2', '3', '4-5', '6-7'],
+        #     'cpuFrequencies': [10000, 15000, 20000, 25000, 10000, 20000],
+        #     'memories': ['2gb', '2gb', '2gb', '4gb', '4gb', '4gb', '4gb']
+        # }
 
         # config_ = {
         #     'cores': ['0-7'],
@@ -185,19 +231,31 @@ class Experiment:
         respondTimeFilePath = '%s/newUser/sources/log/respondTime.json' % self.currPath
         respondTimes = [0 for _ in range(repeatTimes)]
 
+        self.removeLogs()
+        self.stopAllContainers()
+        self.stopRemoteWorkers()
+
+        self.runRemoteLogger()
+        self.runMaster(schedulerName)
+        self.runWorker('Worker')
         self.runRemoteWorkers()
-        logger = self.runRemoteLogger()
-        master = self.runMaster(schedulerName)
-        workers_ = self.runWorkers(config_)
 
         for i in tqdm(range(repeatTimes)):
-            self.stopRemoteWorkers()
-            self.stopAllContainers()
             user = self.runUser('User')
             self.logger.debug('Waiting for respondTime log file to be created ...')
+            sleepCount = 0
             while not os.path.exists(respondTimeFilePath):
+                sleepCount += 1
                 sleep(1)
+                if sleepCount > 200:
+                    break
             user.stop()
+            self.stopLocalTaskHandler()
+            self.stopRemoteTaskHandler()
+            if sleepCount > 200:
+                i -= 1
+                continue
+
             respondTimes[i] = self.readRespondTime(respondTimeFilePath)
             self.logger.debug('[*] Result-[%d/%d]: %s', (i + 1), repeatTimes, str(respondTimes))
         self.saveRes(schedulerName, respondTimes)
@@ -212,11 +270,8 @@ class Experiment:
 
 if __name__ == '__main__':
     experiment = Experiment()
-    experiment.run('NSGA2')
-    experiment.run('NSGA3')
-    experiment.run('CTAEA')
-    # Experiment().runUser('User')
-    # experiment.runRemoteLogger()
-    # experiment.runRemoteWorkers()
-    # experiment.runUser('User')
-    # os.system('systemctl suspend')
+    for roundNum in range(10):
+        experiment.run('NSGA3-%i' % roundNum)
+        experiment.run('NSGA2-%i' % roundNum)
+        experiment.run('CTAEA-%i' % roundNum)
+    os.system('systemctl suspend')

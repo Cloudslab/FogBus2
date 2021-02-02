@@ -32,7 +32,7 @@ class ApplicationUserSide:
         self.targetHeight = targetHeight
         self.showWindow: bool = showWindow
         self.videoPath: str = videoPath
-        self.respondTime: Median = Median(maxRecordNumber=100)
+        self.respondTime: Median = Median(maxRecordNumber=32)
         self.respondTimeCount = 0
 
     def resizeFrame(self, frame):
