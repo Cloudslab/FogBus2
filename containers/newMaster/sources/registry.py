@@ -212,12 +212,8 @@ class Registry(Profiler, Node, ABC):
         # Thus use worker machineID as the taskHandler machineID
 
         name = '%s@%s@TaskHandler' % (taskName, user.label)
-        machineID = genMachineIDForTaskHandler(
-            user.machineID,
-            worker.machineID,
-            name)
         nameLogPrinting = '%s-%d' % (name, taskHandlerID)
-        nameConsistent = '%s#%s' % (name, machineID)
+        nameConsistent = '%s#%s' % (name, worker.machineID)
 
         taskHandler = TaskHandler(
             taskHandlerID=taskHandlerID,
@@ -229,7 +225,7 @@ class Registry(Profiler, Node, ABC):
             name='%s@TaskHandler' % taskName,
             nameLogPrinting=nameLogPrinting,
             nameConsistent=nameConsistent,
-            pureMachineID=pureMachineId)
+            machineID=worker.machineID)
 
         isTaskValid = user.verifyTaskHandler(
             taskName=taskName,
@@ -260,8 +256,7 @@ class Registry(Profiler, Node, ABC):
             'name': taskHandler.name,
             'nameLogPrinting': taskHandler.nameLogPrinting,
             'nameConsistent': taskHandler.nameConsistent,
-            'workerMachineID': worker.machineID,
-            'machineID': taskHandler.machineID
+            'workerMachineID': worker.machineID
         }
         return respond
 

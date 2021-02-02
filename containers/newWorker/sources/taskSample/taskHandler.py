@@ -198,7 +198,11 @@ class TaskHandler(Node):
             return
         msg = {
             'type': 'medianProcessTime',
-            'medianProcessTime': self.processTime.median()}
+            'medianProcessTime': (self.processTime.median(),
+                                  self._res.availableMemory,
+                                  self._res.totalMemory,
+                                  self._res.currentTotalCPUUsage,
+                                  self._res.currentCPUFrequency)}
         self.sendMessage(msg, self.remoteLogger.addr)
 
     def run(self):
@@ -247,7 +251,7 @@ class TaskHandler(Node):
         self.id = message.content['id']
         self.role = role
         self.setName(message)
-        self.machineID = message.content['machineID']
+        self.machineID = message.content['workerMachineID']
         self.logger = get_logger(self.nameLogPrinting, self.logLevel)
         self.isRegistered.set()
 

@@ -4,6 +4,7 @@ from node import Node, Address
 from connection import Message
 from logger import get_logger
 from profilerManage import Profiler
+from connection import Median
 
 
 class RemoteLogger(Profiler, Node):
@@ -58,11 +59,24 @@ class RemoteLogger(Profiler, Node):
             self.medianPackageSize[source][dest] = medianReceivedPackageSize
 
     def __handleDelays(self, message: Message):
-        source = message.source.machineID
+        source = message.source.nameConsistent
+
         if source not in self.medianDelay:
             self.medianDelay[source] = {}
+
+        sourceMachineID = message.source.machineID
+        if sourceMachineID not in self._medianDelay:
+            self._medianDelay[sourceMachineID] = {}
+            self.medianDelay[sourceMachineID] = {}
+
         for dest, delay in message.content['delays'].items():
             self.medianDelay[source][dest] = delay
+            destMachineID = dest[-64:]
+            if destMachineID not in self._medianDelay[sourceMachineID]:
+                self._medianDelay[sourceMachineID][destMachineID] = Median()
+            self._medianDelay[sourceMachineID][destMachineID].update(delay)
+            self.medianDelay[sourceMachineID][destMachineID] = self._medianDelay[sourceMachineID][
+                destMachineID].median()
 
     def __handleNodeResources(self, message: Message):
         nodeName = message.source.nameConsistent
@@ -70,9 +84,21 @@ class RemoteLogger(Profiler, Node):
         self.nodeResources[nodeName] = nodeResources
 
     def __handleMedianProcessTime(self, message: Message):
-        workerName = message.source.nameConsistent
+        workerNameConsistent = message.source.nameConsistent
+        workerMachineID = message.source.machineID
+
         medianProcessTime = message.content['medianProcessTime']
-        self.medianProcessTime[workerName] = medianProcessTime
+        self.medianProcessTime[workerNameConsistent] = medianProcessTime
+
+        if workerMachineID not in self._medianProcessTime:
+            self._medianProcessTime[workerMachineID] = Median()
+        self._medianProcessTime[workerMachineID].update(medianProcessTime[0])
+        self.medianProcessTime[workerMachineID] = (
+            self._medianProcessTime[workerMachineID].median(),
+            medianProcessTime[1],
+            medianProcessTime[2],
+            medianProcessTime[3],
+            medianProcessTime[4])
 
     def __handleResponseTime(self, message: Message):
         userName = message.source.nameConsistent

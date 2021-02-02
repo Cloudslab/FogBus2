@@ -141,9 +141,7 @@ class Node(Server, Resources):
     def __messageHandler(self):
         while True:
             message, messageSize = self.receivedMessage.get()
-            _receivedAt = time() * 1000
-            message.content['delay'] = _receivedAt - message.content['_sentAt']
-            message.content['_receivedAt'] = _receivedAt
+            message.content['_receivedAt'] = time() * 1000
             if message.type == 'respondTimeDiff':
                 self.__handleRespondTimeDiff(message)
                 continue
@@ -153,8 +151,6 @@ class Node(Server, Resources):
             elif message.type == 'stop':
                 self.__handleStop(message)
                 continue
-            if message.source.addr in self.networkTimeDiff:
-                message.content['delay'] += self.networkTimeDiff[message.source.addr]
             self.__statMedianPackageSize(message, messageSize)
             self.handleMessage(message)
             self.__respondTimeDiff(message)
@@ -190,7 +186,7 @@ class Node(Server, Resources):
         # delay = (B - A - Y + X) / 2
         delayAtMost = B - A - Y + X
         self.lock.acquire()
-        if message.source.machineID not in self.delays:
+        if message.source.nameConsistent not in self.delays:
             medianDelay = Median(
                 addr=message.source.addr,
                 name=message.source.name,
@@ -199,8 +195,8 @@ class Node(Server, Resources):
                 role=message.source.role,
                 id_=message.source.id,
                 machineID=message.source.machineID)
-            self.delays[message.source.machineID] = medianDelay
-        self.delays[message.source.machineID].update(delayAtMost)
+            self.delays[message.source.nameConsistent] = medianDelay
+        self.delays[message.source.nameConsistent].update(delayAtMost)
         self.lock.release()
 
     def sendMessage(self, message: Dict, addr: Address):
@@ -286,7 +282,8 @@ class Node(Server, Resources):
         msg = {
             'type': 'medianReceivedPackageSize',
             'medianReceivedPackageSize': allMedian}
-        self.sendMessage(msg, self.remoteLogger.addr)
+        if len(allMedian):
+            self.sendMessage(msg, self.remoteLogger.addr)
         self.lock.release()
 
     def __uploadDelays(self):
@@ -299,5 +296,6 @@ class Node(Server, Resources):
         msg = {
             'type': 'delays',
             'delays': allDelay}
-        self.sendMessage(msg, self.remoteLogger.addr)
+        if len(allDelay):
+            self.sendMessage(msg, self.remoteLogger.addr)
         self.lock.release()

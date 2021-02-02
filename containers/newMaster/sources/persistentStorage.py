@@ -70,6 +70,10 @@ class PersistentStorage:
             for k, v in objDict.items():
                 objDict[k] = list(v)
             return objDict
+        if isinstance(obj, tuple):
+            return obj
+        if isinstance(obj, list):
+            return obj
         if isinstance(obj, Iterable):
             return dict(obj)
         return obj

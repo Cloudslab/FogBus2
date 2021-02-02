@@ -184,13 +184,15 @@ class Experiment:
         repeatTimes = 35
         respondTimeFilePath = '%s/newUser/sources/log/respondTime.json' % self.currPath
         respondTimes = [0 for _ in range(repeatTimes)]
+
+        self.runRemoteWorkers()
+        logger = self.runRemoteLogger()
+        master = self.runMaster(schedulerName)
+        workers_ = self.runWorkers(config_)
+
         for i in tqdm(range(repeatTimes)):
             self.stopRemoteWorkers()
             self.stopAllContainers()
-            self.runRemoteWorkers()
-            logger = self.runRemoteLogger()
-            master = self.runMaster(schedulerName)
-            workers_ = self.runWorkers(config_)
             user = self.runUser('User')
             self.logger.debug('Waiting for respondTime log file to be created ...')
             while not os.path.exists(respondTimeFilePath):
@@ -217,4 +219,4 @@ if __name__ == '__main__':
     # experiment.runRemoteLogger()
     # experiment.runRemoteWorkers()
     # experiment.runUser('User')
-    os.system('systemctl suspend')
+    # os.system('systemctl suspend')

@@ -134,7 +134,7 @@ class Resources:
         self.__memory = memory
         self.__addr: Tuple[str, int] = addr
         self.__formatSize = formatSize
-        self.__res: ResourcesInfo = ResourcesInfo()
+        self._res: ResourcesInfo = ResourcesInfo()
         self.__uniqueID: str = None
 
         self.threads = [self.cpu,
@@ -163,24 +163,24 @@ class Resources:
         dateFormatted = f"{bt.month}/{bt.day}/{bt.year} {bt.hour}:{bt.minute}:{bt.second}"
 
         resBootTime = timeZone, bootTimestamp, dateFormatted
-        self.__res.bootTimeZone = timeZone
-        self.__res.bootTimestamp = bootTimestamp
-        self.__res.bootTimeDate = dateFormatted
+        self._res.bootTimeZone = timeZone
+        self._res.bootTimestamp = bootTimestamp
+        self._res.bootTimeDate = dateFormatted
         event.set()
-        self.__res.currentTimestamp = datetime.now().timestamp()
+        self._res.currentTimestamp = datetime.now().timestamp()
         return resBootTime
 
     def operatingSystem(self, event: threading.Event = None):
         uname = platform.uname()
         resOS = uname.system, uname.node, uname.release, uname.version, uname.machine
-        self.__res.operatingSystemName = uname.system
-        self.__res.nodeName = uname.node
-        self.__res.operatingSystemReleaseName = uname.release
-        self.__res.operatingSystemVersion = uname.version
-        self.__res.operatingSystemArch = uname.machine
+        self._res.operatingSystemName = uname.system
+        self._res.nodeName = uname.node
+        self._res.operatingSystemReleaseName = uname.release
+        self._res.operatingSystemVersion = uname.version
+        self._res.operatingSystemArch = uname.machine
         event.set()
 
-        self.__res.currentTimestamp = datetime.now().timestamp()
+        self._res.currentTimestamp = datetime.now().timestamp()
         return resOS
 
     def cpu(self, event: threading.Event = None):
@@ -197,15 +197,15 @@ class Resources:
         totalPercentage = psutil.cpu_percent()
 
         resCPU = physicalCoresCount, totalCoresCount, maxFreq, minFreq, currFreq, coresPercentage, totalPercentage
-        self.__res.physicalCPUCores = physicalCoresCount
-        self.__res.totalCPUCores = totalCoresCount
-        self.__res.maxCPUFrequency = maxFreq
-        self.__res.minCPUFrequency = minFreq
-        self.__res.currentCPUFrequency = currFreq
-        self.__res.currentTotalCPUUsagePerCore = coresPercentage
-        self.__res.currentTotalCPUUsage = totalPercentage
+        self._res.physicalCPUCores = physicalCoresCount
+        self._res.totalCPUCores = totalCoresCount
+        self._res.maxCPUFrequency = maxFreq
+        self._res.minCPUFrequency = minFreq
+        self._res.currentCPUFrequency = currFreq
+        self._res.currentTotalCPUUsagePerCore = coresPercentage
+        self._res.currentTotalCPUUsage = totalPercentage
         event.set()
-        self.__res.currentTimestamp = datetime.now().timestamp()
+        self._res.currentTimestamp = datetime.now().timestamp()
         return resCPU
 
     def memory(self, event: threading.Event = None):
@@ -221,16 +221,16 @@ class Resources:
         swapUsedPercentage = swap.percent
 
         resMemory = totalMem, availableMem, usedMem, usedPercentage, swapTotalMem, swapFreeMem, swapUsedMem, swapUsedPercentage
-        self.__res.totalMemory = totalMem
-        self.__res.availableMemory = availableMem
-        self.__res.usedMemory = usedMem
-        self.__res.usedMemoryPercentage = usedPercentage
-        self.__res.totalSwapMemory = swapTotalMem
-        self.__res.availableSwapMemory = swapFreeMem
-        self.__res.usedSwapMemory = swapUsedMem
-        self.__res.usedSwapMemoryPercentage = swapUsedPercentage
+        self._res.totalMemory = totalMem
+        self._res.availableMemory = availableMem
+        self._res.usedMemory = usedMem
+        self._res.usedMemoryPercentage = usedPercentage
+        self._res.totalSwapMemory = swapTotalMem
+        self._res.availableSwapMemory = swapFreeMem
+        self._res.usedSwapMemory = swapUsedMem
+        self._res.usedSwapMemoryPercentage = swapUsedPercentage
         event.set()
-        self.__res.currentTimestamp = datetime.now().timestamp()
+        self._res.currentTimestamp = datetime.now().timestamp()
         return resMemory
 
     def disk(self, event: threading.Event = None):
@@ -258,11 +258,11 @@ class Resources:
         resPartitions.append(self.__getSize(diskIO.read_bytes))
         resPartitions.append(self.__getSize(diskIO.write_bytes))
         resDiskIO = self.__getSize(diskIO.read_bytes), self.__getSize(diskIO.write_bytes)
-        self.__res.diskTotalRead = self.__getSize(diskIO.read_bytes)
-        self.__res.diskTotalWrite = self.__getSize(diskIO.write_bytes)
-        self.__res.disk = resPartitions[0]
+        self._res.diskTotalRead = self.__getSize(diskIO.read_bytes)
+        self._res.diskTotalWrite = self.__getSize(diskIO.write_bytes)
+        self._res.disk = resPartitions[0]
         event.set()
-        self.__res.currentTimestamp = datetime.now().timestamp()
+        self._res.currentTimestamp = datetime.now().timestamp()
         return resDiskIO, resPartitions
 
     def network(self, event: threading.Event = None):
@@ -283,10 +283,10 @@ class Resources:
         networkIO = psutil.net_io_counters()
         resNetwork['total'] = self.__getSize(networkIO.bytes_sent), self.__getSize(networkIO.bytes_recv)
         resNetworkIO = self.__getSize(networkIO.bytes_sent), self.__getSize(networkIO.bytes_recv)
-        self.__res.networkTotalSent = self.__getSize(networkIO.bytes_sent)
-        self.__res.networkTotalReceived = self.__getSize(networkIO.bytes_recv)
+        self._res.networkTotalSent = self.__getSize(networkIO.bytes_sent)
+        self._res.networkTotalReceived = self.__getSize(networkIO.bytes_recv)
         event.set()
-        self.__res.currentTimestamp = datetime.now().timestamp()
+        self._res.currentTimestamp = datetime.now().timestamp()
         return resNetworkIO
 
     def gpu(self, event: threading.Event = None):
@@ -297,9 +297,9 @@ class Resources:
                 gpu.id, gpu.name, gpu.load * 100, gpu.memoryFree, gpu.memoryUsed,
                 gpu.memoryTotal, gpu.temperature, gpu.uuid
             ])
-        self.__res.gpus = resGPU
+        self._res.gpus = resGPU
         event.set()
-        self.__res.currentTimestamp = datetime.now().timestamp()
+        self._res.currentTimestamp = datetime.now().timestamp()
         return resGPU
 
     def allResources(self):
@@ -313,7 +313,7 @@ class Resources:
 
         for event in events:
             event.wait()
-        result = self.__res
+        result = self._res
         return result
 
     def uniqueID(self, definedFactor=None, getInfo=True):
@@ -324,17 +324,17 @@ class Resources:
         items = [
             definedFactor,
             self.__addr[0],
-            self.__res.operatingSystemReleaseName,
-            self.__res.operatingSystemVersion,
-            self.__res.operatingSystemName,
-            self.__res.operatingSystemArch,
-            self.__res.totalCPUCores if self.__coresCount is None else self.__coresCount,
-            self.__res.maxCPUFrequency if self.__cpuFrequency is None else self.__cpuFrequency,
-            self.__res.minCPUFrequency,
+            self._res.operatingSystemReleaseName,
+            self._res.operatingSystemVersion,
+            self._res.operatingSystemName,
+            self._res.operatingSystemArch,
+            self._res.totalCPUCores if self.__coresCount is None else self.__coresCount,
+            self._res.maxCPUFrequency if self.__cpuFrequency is None else self.__cpuFrequency,
+            self._res.minCPUFrequency,
             # The total memory changes sometimes after reboot
-            self.__res.totalMemory // (1024 * 100) if self.__memory is None else self.__memory,
-            self.__res.totalSwapMemory,
-            self.__res.disk[:4]
+            self._res.totalMemory // (1024 * 100) if self.__memory is None else self.__memory,
+            self._res.totalSwapMemory,
+            self._res.disk[:4]
         ]
         info = ''.join(str(items))
         self.__uniqueID = sha256(info.encode('utf-8')).hexdigest()

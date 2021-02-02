@@ -43,7 +43,6 @@ class TaskHandler(Client):
 
     def __init__(
             self,
-            pureMachineID: str,
             addr,
             taskHandlerID: int,
             taskName: str,
@@ -66,7 +65,6 @@ class TaskHandler(Client):
         self.worker: Worker = worker
         self.user: User = user
         self.ready: threading.Event = threading.Event()
-        self.pureMachineID = pureMachineID
 
 
 class UserTask:

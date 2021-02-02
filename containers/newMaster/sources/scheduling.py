@@ -10,7 +10,7 @@ from pymoo.factory import get_reference_directions
 from pymoo.optimize import minimize
 from abc import abstractmethod
 from pymoo.model.problem import Problem
-from typing import Dict, List
+from typing import Dict, List, Tuple
 from dependencies import loadDependencies, Task, Application
 from copy import deepcopy
 from collections import defaultdict
@@ -63,11 +63,11 @@ class Scheduler:
             name: str,
             medianPackageSize: Dict[str, Dict[str, float]],
             medianDelay: Dict[str, Dict[str, float]],
-            medianProcessTime: Dict[str, float]):
+            medianProcessTime: Dict[str, Tuple[float, int, int, float]]):
         self.name: str = name
         self.medianPackageSize: Dict[str, Dict[str, float]] = medianPackageSize
         self.medianDelay: Dict[str, Dict[str, float]] = medianDelay
-        self.medianProcessTime: Dict[str, float] = medianProcessTime
+        self.medianProcessTime: Dict[str, Tuple[float, int, int, float]] = medianProcessTime
         tasksAndApps = loadDependencies()
         self.tasks: Dict[str, Task] = tasksAndApps[0]
         self.applications: Dict[str, Application] = tasksAndApps[1]
@@ -162,7 +162,7 @@ class Evaluator:
             masterMachine,
             medianPackageSize: Dict[str, Dict[str, float]],
             medianDelay: Dict[str, Dict[str, float]],
-            medianProcessTime: Dict[str, float],
+            medianProcessTime: Dict[str, Tuple[float, int, int, float]],
             edgesByName: EdgesByName,
             workersResources: Dict[str, ResourcesInfo]):
 
@@ -172,7 +172,7 @@ class Evaluator:
         self.masterMachine = masterMachine
         self.medianPackageSize: Dict[str, Dict[str, float]] = medianPackageSize
         self.medianDelay: Dict[str, Dict[str, float]] = medianDelay
-        self.medianProcessTime: Dict[str, float] = medianProcessTime
+        self.medianProcessTime: Dict[str, Tuple[float, int, int, float]] = medianProcessTime
         self.edgesByName = edgesByName
         self.workersResources = workersResources
 
@@ -195,22 +195,19 @@ class Evaluator:
     def _edgeDelay(self, individual: Dict[str, str]) -> float:
         delay = .0
         for source, destinations in self.edgesByName.items():
-            sourceMachineID = individual[source]
-            if sourceMachineID not in self.medianDelay:
-                delay += 0
+            sourceName = '%s#%s' % (source, individual[source])
+            if sourceName not in self.medianDelay:
+                delay += 0.01
                 continue
             for dest in destinations:
-                destMachineID = individual[dest]
-                if not dest[-11:] == 'TaskHandler':
-                    workerMachineID = destMachineID
-                    destMachineID = genMachineIDForTaskHandler(
-                        self.userMachineID,
-                        workerMachineID,
-                        dest)
-                if destMachineID not in self.medianDelay[sourceMachineID]:
-                    delay += 0
+                destName = '%s#%s' % (dest, individual[dest])
+                if destName in self.medianDelay[sourceName]:
+                    delay += self.medianDelay[sourceName][destName]
                     continue
-                delay += self.medianDelay[sourceMachineID][destMachineID]
+                if individual[dest] in self.medianDelay[sourceName]:
+                    delay += self.medianDelay[sourceName][individual[dest]]
+                    continue
+                delay += 0.01
         return delay
 
     def _computingCost(self, individual: Dict[str, str]) -> float:
@@ -219,47 +216,40 @@ class Evaluator:
             if not machineName[-11:] == 'TaskHandler':
                 continue
             workerMachineId = individual[machineName]
-            taskHandlerMachineID = genMachineIDForTaskHandler(
-                self.userMachineID,
-                workerMachineId,
-                machineName
-            )
-            taskHandlerName = '%s#%s' % (machineName, taskHandlerMachineID)
-            if taskHandlerName in self.medianProcessTime \
-                    and self.medianProcessTime[taskHandlerName] is not None:
-                total += self.medianProcessTime[taskHandlerName] * self.considerRecentResources(machineName)
+            taskHandlerName = '%s#%s' % (machineName, workerMachineId)
+            if taskHandlerName in self.medianProcessTime:
+                total += self.considerRecentResources(taskHandlerName, workerMachineId)
                 continue
-            total += 0
+            if workerMachineId in self.medianProcessTime:
+                total += self.considerRecentResources(workerMachineId, workerMachineId)
+                continue
+            total += 0.1
         return total
 
-    def considerRecentResources(self, machineName):
-        if machineName not in self.workersResources:
-            return 1
-        resources = self.workersResources[machineName]
+    def considerRecentResources(self, index, workerMachineId):
+        if workerMachineId not in self.workersResources:
+            return 0.1
+        if index is None:
+            return 0.1
+        resources = self.workersResources[workerMachineId]
+        record = self.medianProcessTime[index]
 
-        factor = 0
-        factor += resources.totalSwapMemory / resources.availableSwapMemory
-        factor += resources.totalMemory / resources.availableMemory
-        factor += resources.currentTotalCPUUsage / 100
+        processTime = record[0]
+        availableMemory = record[1]
+        totalMemory = record[2]
+        totalCPUUsage = record[3]
+        recordCPUFrequency = record[4]
 
-        return factor
+        resourceMemPercent = resources.availableMemory / resources.totalMemory
+        recordMemPerCent = availableMemory / totalMemory
 
-    def evaluateComputingCost(self, taskName, machine):
-        # TODO: change before reuse
-        machineResources = self.workersResources[machine]
-        maxProcessTime = 0
-        for taskHandlerRecord, processTime in self.medianProcessTime.items():
-            if processTime is None:
-                continue
-            if processTime > maxProcessTime:
-                maxProcessTime = processTime
-            taskNameRecord, machineRecord = taskHandlerRecord.split('#')
-            if machineRecord not in self.workersResources:
-                continue
-            if taskNameRecord == taskName:
-                recordResources = self.workersResources[machineRecord]
-                return processTime * recordResources.currentCPUFrequency / machineResources.currentCPUFrequency
-        return maxProcessTime
+        factor = 0.5 * availableMemory / resources.availableMemory
+        factor += 0.5 * recordCPUFrequency / resources.currentCPUFrequency
+        factor *= resourceMemPercent / recordMemPerCent
+        factor *= resources.currentTotalCPUUsage / totalCPUUsage
+        processTime = processTime * factor
+
+        return processTime
 
 
 class BaseProblem(Problem, Evaluator):
@@ -272,7 +262,7 @@ class BaseProblem(Problem, Evaluator):
             masterMachine,
             medianPackageSize: Dict[str, Dict[str, float]],
             medianDelay: Dict[str, Dict[str, float]],
-            medianProcessTime: Dict[str, float],
+            medianProcessTime: Dict[str, Tuple[float, int, int, float]],
             edgesByName: EdgesByName,
             availableWorkers: Dict[str, set[str]],
             workersResources: Dict[str, ResourcesInfo]):
@@ -328,16 +318,15 @@ class BaseProblem(Problem, Evaluator):
         out['F'] = anp.column_stack([0, edgeDelay, computingCost])
 
     def indexesToMachines(self, indexes: List[int]):
-
         res = {}
         keys = list(self.edgesByName.keys())
         for keysIndex, index in enumerate(indexes):
             key = keys[keysIndex]
-            if len(key) > len('TaskHandler') \
-                    and key[-11:] == 'TaskHandler':
-                res[key] = self.availableWorkers[key][index]
+            if len(key) <= len('TaskHandler'):
                 continue
-            res[key] = None
+            if key[-11:] != 'TaskHandler':
+                continue
+            res[key] = self.availableWorkers[key][index]
         res[self.masterName] = self.masterMachine
         res[self.userName] = self.userMachineID
         return res
@@ -350,7 +339,7 @@ class NSGABase(Scheduler):
             algorithm: GeneticAlgorithm,
             medianPackageSize: Dict[str, Dict[str, float]],
             medianDelay: Dict[str, Dict[str, float]],
-            medianProcessTime: Dict[str, float],
+            medianProcessTime: Dict[str, Tuple[float, int, int, float]],
             generationNum: int,
     ):
         self.__generationNum: int = generationNum
@@ -406,7 +395,7 @@ class NSGA2(NSGABase):
                  generationNum: int,
                  medianPackageSize: Dict[str, Dict[str, float]],
                  medianDelay: Dict[str, Dict[str, float]],
-                 medianProcessTime: Dict[str, float]):
+                 medianProcessTime: Dict[str, Tuple[float, int, int, float]]):
         super().__init__(
             'NSGA2',
             NSGA2_(
@@ -426,7 +415,7 @@ class NSGA3(NSGABase):
                  dasDennisP: int,
                  medianPackageSize: Dict[str, Dict[str, float]],
                  medianDelay: Dict[str, Dict[str, float]],
-                 medianProcessTime: Dict[str, float]):
+                 medianProcessTime: Dict[str, Tuple[float, int, int, float]]):
         refDirs = get_reference_directions(
             "das-dennis",
             3,
@@ -450,7 +439,7 @@ class CTAEA(NSGABase):
                  dasDennisP: int,
                  medianPackageSize: Dict[str, Dict[str, float]],
                  medianDelay: Dict[str, Dict[str, float]],
-                 medianProcessTime: Dict[str, float]):
+                 medianProcessTime: Dict[str, Tuple[float, int, int, float]]):
         refDirs = get_reference_directions(
             "das-dennis",
             3,
