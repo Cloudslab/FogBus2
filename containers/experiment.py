@@ -178,16 +178,16 @@ class Experiment:
     @staticmethod
     def stopRemoteWorkers():
         os.system('ssh 4GB-rpi-4B-alpha \''
-                  'docker stop $(docker ps -a -q) '
+                  'sudo service docker restart '
                   '&& docker rm $(docker ps -a -q)\' > /dev/null 2>&1')
         os.system('ssh 2GB-rpi-4B-alpha \''
-                  'docker stop $(docker ps -a -q) '
+                  'sudo service docker restart '
                   '&& docker rm $(docker ps -a -q)\' > /dev/null 2>&1')
         os.system('ssh 4GB-rpi-4B-beta \''
-                  'docker stop $(docker ps -a -q) '
+                  'sudo service docker restart '
                   '&& docker rm $(docker ps -a -q)\' > /dev/null 2>&1')
         os.system('ssh 2GB-rpi-4B-beta \''
-                  'docker stop $(docker ps -a -q) '
+                  'sudo service docker restart '
                   '&& docker rm $(docker ps -a -q)\' > /dev/null 2>&1')
 
     @staticmethod
@@ -292,5 +292,4 @@ if __name__ == '__main__':
     for num in range(targetRound_):
         experiment.run('NSGA3', num, targetRound_)
         experiment.run('NSGA2', num, targetRound_)
-        experiment.run('CTAEA', num, targetRound_)
     os.system('systemctl suspend')

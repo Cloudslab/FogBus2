@@ -46,7 +46,7 @@ class TaskHandler(Node):
             cpuFrequency=cpuFrequency,
             memorySize=memorySize,
             periodicTasks=[
-                (self.__uploadMedianProcessTime, 10)],
+                (self.__uploadMedianProcessTime, 1)],
             logLevel=logLevel
         )
 
