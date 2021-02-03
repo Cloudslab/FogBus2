@@ -196,7 +196,7 @@ class Evaluator:
         for source, destinations in self.edgesByName.items():
             sourceName = '%s#%s' % (source, individual[source])
             if sourceName not in self.medianDelay:
-                delay += 0.01
+                delay += 1
                 continue
             for dest in destinations:
                 destName = '%s#%s' % (dest, individual[dest])
@@ -206,33 +206,39 @@ class Evaluator:
                 if individual[dest] in self.medianDelay[sourceName]:
                     delay += self.medianDelay[sourceName][individual[dest]]
                     continue
-                delay += 0.01
+                delay += 1
         return delay
 
     def _computingCost(self, individual: Dict[str, str]) -> float:
-        total = .0
-        for machineName in self.edgesByName.keys():
+        total = [0 for _ in self.edgesByName]
+        for i, machineName in enumerate(self.edgesByName.keys()):
             if not machineName[-11:] == 'TaskHandler':
                 continue
             workerMachineId = individual[machineName]
             taskHandlerName = '%s#%s' % (machineName, workerMachineId)
             if taskHandlerName in self.medianProcessTime:
-                total += self.considerRecentResources(taskHandlerName, workerMachineId)
+                total[i] = self.considerRecentResources(taskHandlerName, workerMachineId)
                 continue
             if workerMachineId in self.medianProcessTime:
-                total += self.considerRecentResources(workerMachineId, workerMachineId)
+                total[i] = self.considerRecentResources(workerMachineId, workerMachineId)
                 continue
-            total += self.considerRecentResources(None, workerMachineId)
-        return total
+            previousCost = total[:i]
+            medianProcessTime = previousCost[len(previousCost)]
+            if medianProcessTime < 0.01:
+                total[i] = self.evaluateComputingCost(workerMachineId)
+                continue
+            total[i] = medianProcessTime
+        return sum(total)
+
+    def evaluateComputingCost(self, workerMachineId):
+        resources = self.workersResources[workerMachineId]
+        availableMemFactor = 0.5 * resources.availableMemory
+        availableCPUFactor = 0.5 * resources.currentCPUFrequency * (1 - resources.currentTotalCPUUsage)
+        processTime = 1 / (availableCPUFactor + availableMemFactor)
+        return processTime
 
     def considerRecentResources(self, index, workerMachineId):
         resources = self.workersResources[workerMachineId]
-        if index is None:
-            availableMemFactor = 0.5 * resources.availableMemory
-            availableCPUFactor = 0.5 * resources.currentCPUFrequency * (1 - resources.currentTotalCPUUsage)
-            processTime = 1 / (availableCPUFactor + availableMemFactor)
-            return processTime
-
         record = self.medianProcessTime[index]
 
         resourceMemPercent = resources.availableMemory / resources.totalMemory

@@ -93,7 +93,7 @@ class Node(Server, Resources):
         self.networkTimeDiff: Dict[Tuple[str, int], float] = {}
 
         defaultPeriodicTasks: List[PeriodicTask] = [
-            (self.__uploadResources, 10)]
+            (self.__uploadResources, 1)]
         if not self.role == 'RemoteLogger':
             defaultPeriodicTasks += [
                 (self.__uploadMedianReceivedPackageSize, 1),
