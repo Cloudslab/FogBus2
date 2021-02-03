@@ -42,7 +42,7 @@ class Graph:
     def draw(self, statMethod: str):
         fig, ax = plt.subplots()
         # fig.ylabel('Respond Time (ms)')
-        x = [i for i in range(1, 36)]
+        x = [i for i in range(1, 61)]
         algorithms = []
         for algorithmName, data in self.data.items():
             if statMethod == 'mean':

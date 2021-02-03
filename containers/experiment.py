@@ -235,7 +235,7 @@ class Experiment:
         #     'memories': ['32gb']
         # }
 
-        repeatTimes = 35
+        repeatTimes = 60
         respondTimeFilePath = '%s/newUser/sources/log/respondTime.json' % self.currPath
         respondTimes = [0 for _ in range(repeatTimes)]
 
