@@ -267,7 +267,7 @@ class Registry(Profiler, Node, ABC):
         ).start()
 
     def __checkTaskHandlerForUser(self, user: User):
-        while time() - user.lastTaskReadyTime < 5:
+        while time() - user.lastTaskReadyTime < 15:
             sleep(1)
         user.lock.acquire()
         while len(user.notReadyTasks) and user.id in self.users:

@@ -223,7 +223,7 @@ class Evaluator:
                 total[i] = self.considerRecentResources(workerMachineId, workerMachineId)
                 continue
             previousCost = total[:i]
-            medianProcessTime = previousCost[len(previousCost)]
+            medianProcessTime = previousCost[len(previousCost) // 2]
             if medianProcessTime < 0.01:
                 total[i] = self.evaluateComputingCost(workerMachineId)
                 continue
@@ -232,30 +232,29 @@ class Evaluator:
 
     def evaluateComputingCost(self, workerMachineId):
         resources = self.workersResources[workerMachineId]
-        availableMemFactor = 0.5 * resources.availableMemory
-        availableCPUFactor = 0.5 * resources.currentCPUFrequency * (1 - resources.currentTotalCPUUsage)
-        processTime = 1 / (availableCPUFactor + availableMemFactor)
+        memFactor = resources.availableMemory
+        cpuFactor = resources.currentCPUFrequency
+        cpuFactor *= resources.totalCPUCores
+        cpuFactor *= (1 - resources.currentTotalCPUUsage)
+        processTime = 1 / (memFactor + cpuFactor)
         return processTime
 
     def considerRecentResources(self, index, workerMachineId):
         resources = self.workersResources[workerMachineId]
         record = self.medianProcessTime[index]
 
-        resourceMemPercent = resources.availableMemory / resources.totalMemory
-
         processTime = record[0]
         availableMemory = record[1]
-        totalMemory = record[2]
+        totalCores = record[2]
         totalCPUUsage = record[3]
         recordCPUFrequency = record[4]
 
-        recordMemPerCent = availableMemory / totalMemory
+        memFactor = availableMemory / resources.availableMemory
 
-        factor = 0.5 * availableMemory / resources.availableMemory
-        factor += 0.5 * recordCPUFrequency / resources.currentCPUFrequency
-        factor *= resourceMemPercent / recordMemPerCent
-        factor *= resources.currentTotalCPUUsage / totalCPUUsage
-        processTime = processTime * factor
+        cpuFactor = recordCPUFrequency / resources.currentCPUFrequency
+        cpuFactor *= totalCores / resources.totalCPUCores
+        cpuFactor *= (1 - totalCPUUsage) / (1 - resources.currentTotalCPUUsage)
+        processTime = processTime * (memFactor + cpuFactor)
 
         return processTime
 

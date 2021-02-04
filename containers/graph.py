@@ -64,7 +64,7 @@ class Graph:
 
 if __name__ == '__main__':
     graph_ = Graph(
-        'results',
+        './',
         ['NSGA2', 'NSGA3']
     )
     graph_.run()

@@ -200,7 +200,7 @@ class TaskHandler(Node):
             'type': 'medianProcessTime',
             'medianProcessTime': (self.processTime.median(),
                                   self._res.availableMemory,
-                                  self._res.totalMemory,
+                                  self._res.totalCPUCores,
                                   self._res.currentTotalCPUUsage,
                                   self._res.currentCPUFrequency)}
         self.sendMessage(msg, self.remoteLogger.addr)

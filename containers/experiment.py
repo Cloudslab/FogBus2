@@ -235,7 +235,8 @@ class Experiment:
         #     'memories': ['32gb']
         # }
 
-        repeatTimes = 60
+        repeatTimes = 100
+        userMaxWaitTime = 300
         respondTimeFilePath = '%s/newUser/sources/log/respondTime.json' % self.currPath
         respondTimes = [0 for _ in range(repeatTimes)]
 
@@ -257,7 +258,7 @@ class Experiment:
             while not os.path.exists(respondTimeFilePath):
                 sleepCount += 1
                 sleep(1)
-                if sleepCount > 200:
+                if sleepCount > userMaxWaitTime:
                     break
             try:
                 user.stop()
@@ -265,7 +266,7 @@ class Experiment:
                 pass
             self.stopLocalTaskHandler()
             self.stopRemoteTaskHandler()
-            if sleepCount > 200:
+            if sleepCount > userMaxWaitTime:
                 self.rerunNecessaryContainers(schedulerName)
                 continue
             respondTimes[i] = self.readRespondTime(respondTimeFilePath)
