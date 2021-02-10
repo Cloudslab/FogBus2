@@ -9,7 +9,9 @@ RUN apk add --no-cache \
     make automake gcc g++ subversion \
     linux-headers
 ADD sources/requirements.txt /workplace/requirements.txt
-RUN python -m pip install -r requirements.txt --no-cache-dir
+RUN python -m \
+    pip install --no-cache-dir \
+    numpy psutil GPUtil docker
 
 # Hostname
 RUN echo "RemoteLogger" > /etc/hostname

@@ -19,6 +19,7 @@ class Registry(Profiler, Node, ABC):
 
     def __init__(
             self,
+            containerName,
             myAddr,
             masterAddr,
             loggerAddr,
@@ -28,6 +29,8 @@ class Registry(Profiler, Node, ABC):
         Profiler.__init__(self)
         Node.__init__(
             self,
+            role='Master',
+            containerName=containerName,
             myAddr=myAddr,
             masterAddr=masterAddr,
             loggerAddr=loggerAddr,
@@ -93,9 +96,9 @@ class Registry(Profiler, Node, ABC):
 
     def registerClient(self, message: Message):
         targetRole = message.content['role']
-        if targetRole == 'user':
+        if targetRole == 'User':
             return self.__addUser(message)
-        if targetRole == 'worker':
+        if targetRole == 'Worker':
             return self.__addWorker(message)
         if targetRole == 'TaskHandler':
             return self.__addTaskHandler(message)
@@ -146,7 +149,7 @@ class Registry(Profiler, Node, ABC):
         self.workersCount += 1
         respond = {
             'type': 'registered',
-            'role': 'worker',
+            'role': 'Worker',
             'name': worker.name,
             'nameLogPrinting': worker.nameLogPrinting,
             'nameConsistent': worker.nameConsistent,
@@ -181,7 +184,7 @@ class Registry(Profiler, Node, ABC):
             return respond
         respond = {
             'type': 'registered',
-            'role': 'user',
+            'role': 'User',
             'id': userID,
             'name': user.name,
             'nameLogPrinting': user.nameLogPrinting,

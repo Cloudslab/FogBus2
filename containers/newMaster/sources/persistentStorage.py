@@ -2,8 +2,9 @@ import json
 import os
 from typing import Dict
 from copy import deepcopy
-from resourcesInfo import ResourcesInfo, ImagesAndContainers
+from node import ImagesAndContainers
 from collections.abc import Iterable
+
 
 class PersistentStorage:
 
@@ -34,9 +35,6 @@ class PersistentStorage:
 
         if content == {}:
             return content
-
-        if name == 'nodeResources':
-            return self.__recoverObject(content, 'nodeResources', ResourcesInfo)
 
         if name == 'imagesAndRunningContainers':
             res = self.__recoverObject(content, 'imagesAndRunningContainers', ImagesAndContainers)

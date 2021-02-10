@@ -4,35 +4,32 @@ import threading
 import os
 import re
 import docker
+import argparse
 from exceptions import *
 from connection import Message
-from node import Node
+from node import Node, ImagesAndContainers
 from logger import get_logger
-from resourcesInfo import ImagesAndContainers
 
 
 class Worker(Node):
 
     def __init__(
             self,
+            containerName,
             myAddr,
             masterAddr,
             loggerAddr,
-            coresCount,
-            cpuFrequency,
-            memorySize,
             logLevel=logging.DEBUG):
 
         self.isRegistered: threading.Event = threading.Event()
         self.dockerClient = docker.from_env()
         self.currPath = os.path.abspath(os.path.curdir)
         super().__init__(
+            role='Worker',
+            containerName=containerName,
             myAddr=myAddr,
             masterAddr=masterAddr,
             loggerAddr=loggerAddr,
-            coresCount=coresCount,
-            cpuFrequency=cpuFrequency,
-            memorySize=memorySize,
             periodicTasks=[
                 (self.__uploadImagesAndRunningContainersList, 10)],
             logLevel=logLevel
@@ -44,9 +41,10 @@ class Worker(Node):
     def __register(self):
         print('[*] Getting local available images ...')
         message = {'type': 'register',
-                   'role': 'worker',
+                   'role': 'Worker',
                    'machineID': self.machineID,
-                   'resources': self.allResources(),
+                   'resources': self.container.stats(
+                       stream=False),
                    'images': self.__getImages()}
         self.sendMessage(message, self.master.addr)
         self.isRegistered.wait()
@@ -60,7 +58,7 @@ class Worker(Node):
 
     def __handleRegistered(self, message: Message):
         role = message.content['role']
-        if not role == 'worker':
+        if not role == 'Worker':
             raise RegisteredAsWrongRole
         self.id = message.content['id']
         self.role = role
@@ -86,14 +84,11 @@ class Worker(Node):
                 detach=True,
                 auto_remove=True,
                 image=self.camel_to_snake(taskName),
-                cpuset_cpus=self.coresCount,
-                cpu_period=self.cpuFrequency,
-                mem_limit=self.memorySize,
                 network_mode='host',
                 working_dir='/workplace',
-                command='%s %s %d %s %d '
-                        '%d %s %s %s %s %d '
-                        '%s %s %s' % (
+                command='%s %s %s %d %s %d '
+                        '%d %s %s %s %s %d ' % (
+                            containerName,
                             self.myAddr[0],
                             self.masterAddr[0],
                             self.masterAddr[1],
@@ -105,9 +100,6 @@ class Worker(Node):
                             token,
                             ','.join(childTaskTokens) if len(childTaskTokens) else 'None',
                             workerID,
-                            self.coresCount if self.coresCount is not None else '',
-                            self.cpuFrequency if self.coresCount is not None else '',
-                            self.memorySize if self.coresCount is not None else ''
                         )
             )
             self.logger.info('Ran %s', taskName)
@@ -161,24 +153,54 @@ class Worker(Node):
         self.sendMessage(msg, self.remoteLogger.addr)
 
 
+def parseArg():
+    parser = argparse.ArgumentParser(
+        description='User'
+    )
+    parser.add_argument(
+        'containerName',
+        metavar='ContainerName',
+        type=str,
+        help='Current container name, used for getting runtime usages.'
+    )
+    parser.add_argument(
+        'ip',
+        metavar='BindIP',
+        type=str,
+        help='User ip.'
+    )
+    parser.add_argument(
+        'masterIP',
+        metavar='MasterIP',
+        type=str,
+        help='Master ip.'
+    )
+    parser.add_argument(
+        'masterPort',
+        metavar='MasterPort',
+        type=int,
+        help='Master port'
+    )
+    parser.add_argument(
+        'loggerIP',
+        metavar='RemoteLoggerIP',
+        type=str,
+        help='Remote logger ip.'
+    )
+    parser.add_argument(
+        'loggerPort',
+        metavar='RemoteLoggerPort',
+        type=int,
+        help='Remote logger port'
+    )
+    return parser.parse_args()
+
+
 if __name__ == '__main__':
-    myAddr_ = (sys.argv[1], int(sys.argv[2]))
-    masterAddr_ = (sys.argv[3], int(sys.argv[4]))
-    loggerAddr_ = (sys.argv[5], int(sys.argv[6]))
-
-    memory_ = None
-    coresCount_ = None
-    cpuFrequency_ = None
-    if len(sys.argv) > 7:
-        coresCount_ = sys.argv[7]
-        cpuFrequency_ = int(sys.argv[8])
-        memory_ = sys.argv[9]
-
+    args = parseArg()
     worker_ = Worker(
-        myAddr=myAddr_,
-        masterAddr=masterAddr_,
-        loggerAddr=loggerAddr_,
-        coresCount=coresCount_,
-        cpuFrequency=cpuFrequency_,
-        memorySize=memory_)
+        containerName=args.containerName,
+        myAddr=(args.ip, args.port),
+        masterAddr=(args.masterIP, args.masterPort),
+        loggerAddr=(args.loggerIP, args.loggerPort), )
     worker_.run()

@@ -1,6 +1,6 @@
-import sys
 import logging
 import threading
+import argparse
 from exceptions import *
 from connection import Message, Median
 from node import Node
@@ -14,6 +14,7 @@ class TaskHandler(Node):
 
     def __init__(
             self,
+            containerName,
             myAddr,
             masterAddr,
             loggerAddr,
@@ -23,9 +24,6 @@ class TaskHandler(Node):
             token: str,
             childTaskTokens: List[str],
             workerID: int,
-            coresCount,
-            cpuFrequency,
-            memorySize,
             logLevel=logging.DEBUG):
 
         self.userID: int = userID
@@ -39,12 +37,11 @@ class TaskHandler(Node):
         self.processTime: Median = Median()
 
         super().__init__(
+            role='TaskHandler',
+            containerName=containerName,
             myAddr=myAddr,
             masterAddr=masterAddr,
             loggerAddr=loggerAddr,
-            coresCount=coresCount,
-            cpuFrequency=cpuFrequency,
-            memorySize=memorySize,
             periodicTasks=[
                 (self.__uploadMedianProcessTime, 1)],
             logLevel=logLevel
@@ -292,41 +289,103 @@ class TaskHandler(Node):
         self.sendMessage(msg, self.master.addr)
 
 
+def parseArg():
+    parser = argparse.ArgumentParser(
+        description='User'
+    )
+    parser.add_argument(
+        'containerName',
+        metavar='ContainerName',
+        type=str,
+        help='Current container name, used for getting runtime usages.'
+    )
+    parser.add_argument(
+        'ip',
+        metavar='BindIP',
+        type=str,
+        help='User ip.'
+    )
+    parser.add_argument(
+        'masterIP',
+        metavar='MasterIP',
+        type=str,
+        help='Master ip.'
+    )
+    parser.add_argument(
+        'masterPort',
+        metavar='MasterPort',
+        type=int,
+        help='Master port'
+    )
+    parser.add_argument(
+        'loggerIP',
+        metavar='RemoteLoggerIP',
+        type=str,
+        help='Remote logger ip.'
+    )
+    parser.add_argument(
+        'loggerPort',
+        metavar='RemoteLoggerPort',
+        type=int,
+        help='Remote logger port'
+    )
+    parser.add_argument(
+        'userID',
+        metavar='UserID',
+        type=int,
+        help='User id.'
+    )
+    parser.add_argument(
+        'userName',
+        metavar='UserName',
+        type=str,
+        help='User name.'
+    )
+    parser.add_argument(
+        'taskName',
+        metavar='TaskName',
+        type=str,
+        help='Task name.'
+    )
+    parser.add_argument(
+        'token',
+        metavar='Token',
+        type=str,
+        help='Task token.'
+    )
+    parser.add_argument(
+        'childTaskTokens',
+        metavar='ChildTaskTokens',
+        type=str,
+        help='Children task token. E.g. token0,token1,token2'
+    )
+    parser.add_argument(
+        'workerID',
+        metavar='WorkerID',
+        type=int,
+        help='Worker id.'
+    )
+    return parser.parse_args()
+
+
 if __name__ == '__main__':
-    myAddr_ = (sys.argv[1], 0)
-    masterAddr_ = (sys.argv[2], int(sys.argv[3]))
-    loggerAddr_ = (sys.argv[4], int(sys.argv[5]))
+    args = parseArg()
 
-    userID_ = int(sys.argv[6])
-    userName_ = sys.argv[7]
-    taskName_ = sys.argv[8]
-    token_ = sys.argv[9]
-    if sys.argv[10] == 'None':
-        childTaskTokens_ = []
+    if args.childTaskTokens == 'None':
+        args.childTaskTokens = []
     else:
-        childTaskTokens_ = sys.argv[10].split(',')
-    workerID_ = int(sys.argv[11])
-
-    memory_ = None
-    coresCount_ = None
-    cpuFrequency_ = None
-    if len(sys.argv) > 12:
-        coresCount_ = sys.argv[12]
-        cpuFrequency_ = int(sys.argv[13])
-        memory_ = sys.argv[14]
+        args.childTaskTokens = args.childTaskTokens.split(',')
 
     taskHandler_ = TaskHandler(
-        myAddr=myAddr_,
-        masterAddr=masterAddr_,
-        loggerAddr=loggerAddr_,
-        userID=userID_,
-        userName=userName_,
-        taskName=taskName_,
-        token=token_,
-        childTaskTokens=childTaskTokens_,
-        workerID=workerID_,
-        coresCount=coresCount_,
-        cpuFrequency=cpuFrequency_,
-        memorySize=memory_)
+        containerName=args.containerName,
+        myAddr=(args.ip, 0),
+        masterAddr=(args.masterIP, args.masterPort),
+        loggerAddr=(args.loggerIP, args.loggerPort),
+        userID=args.userID,
+        userName=args.userName,
+        taskName=args.taskName,
+        token=args.token,
+        childTaskTokens=args.childTaskTokens,
+        workerID=args.workerID)
 
     taskHandler_.run()

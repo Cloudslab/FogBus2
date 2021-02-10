@@ -1,23 +1,57 @@
 import threading
 import logging
+import docker
 import os
 import signal
+from hashlib import sha256
 from queue import Queue
 from connection import Server, Message, Connection, Source, Median, Identity
 from abc import abstractmethod
-from typing import Dict, Tuple, List, Callable
+from typing import Dict, Tuple, List, Callable, Set
 from logging import Logger
 from time import time, sleep
-from resourcesInfo import Resources
 from logger import get_logger
+
 Address = Tuple[str, int]
 PeriodicTask = Tuple[Callable, float]
 
 
-class Node(Server, Resources):
+class Dictionary:
+
+    def _dict(self):
+        publicItems = {}
+
+        for key, value in self.__dict__.items():
+            if '_' == key[0]:
+                continue
+            publicItems[key] = value
+        return publicItems
+
+    def __repr__(self):
+        return self._dict().__repr__()
+
+    def __iter__(self):
+        for k, v in self._dict().items():
+            yield k, v
+
+
+class ImagesAndContainers(Dictionary):
 
     def __init__(
             self,
+            images: Set[str] = None,
+            containers: Set[str] = None,
+    ):
+        self.images: Set[str] = images
+        self.containers: Set[str] = containers
+
+
+class Node(Server):
+
+    def __init__(
+            self,
+            role,
+            containerName: str,
             myAddr: Address,
             masterAddr: Address,
             loggerAddr: Address,
@@ -28,6 +62,16 @@ class Node(Server, Resources):
             threadNumber: int = 32,
             ignoreSocketErr: bool = False,
             logLevel=logging.DEBUG):
+        self.role: str = role
+        self.dockerClient = docker.from_env()
+        self.containerName = containerName
+        self.machineID = self.getUniqueID()
+        if self.role != 'User':
+            try:
+                self.container = self.dockerClient.containers.get(self.containerName)
+            except docker.errors.NotFound:
+                print('[!] Please run in docker container.')
+                os._exit(-1)
         self.myAddr = myAddr
         self.masterAddr = masterAddr
         self.loggerAddr = loggerAddr
@@ -48,20 +92,11 @@ class Node(Server, Resources):
             addr=self.loggerAddr,
         )
 
-        Resources.__init__(
-            self,
-            addr=self.myAddr,
-            coresCount=self.coresCount,
-            cpuFrequency=self.cpuFrequency,
-            memory=self.memorySize
-        )
         self.name: str = None
         self.nameLogPrinting: str = None
         self.nameConsistent: str = None
         self.__gotName: threading.Event = threading.Event()
-        self.role: str = None
         self.id: int = None
-        self.machineID: str = self.uniqueID()
 
         self.receivedMessage: Queue[Tuple[Message, int]] = Queue()
         self.messageToSend: Queue[Tuple[Dict, Tuple[str, int]]] = Queue()
@@ -92,8 +127,10 @@ class Node(Server, Resources):
         self.delays: Dict[str, Median] = {}
         self.networkTimeDiff: Dict[Tuple[str, int], float] = {}
 
-        defaultPeriodicTasks: List[PeriodicTask] = [
-            (self.__uploadResources, 1)]
+        defaultPeriodicTasks: List[PeriodicTask] = []
+        if not self.role == 'User':
+            defaultPeriodicTasks += [
+                (self.__uploadResources, 1)]
         if not self.role == 'RemoteLogger':
             defaultPeriodicTasks += [
                 (self.__uploadMedianReceivedPackageSize, 1),
@@ -240,10 +277,23 @@ class Node(Server, Resources):
         signal.signal(signal.SIGINT, self.__signalHandler)
         signal.signal(signal.SIGTERM, self.__signalHandler)
 
+    def getUniqueID(self):
+        info = self.myAddr[0]
+        if self.role != 'User':
+            resources = self.container.stats(
+                stream=False)
+            info += str(resources['cpu_stats']['system_cpu_usage'])
+            info += str(resources['cpu_stats']['online_cpus'])
+            info += str(resources['memory_stats']['max_usage'])
+        return sha256(info.encode('utf-8')).hexdigest()
+
     def __handleResourcesQuery(self, message: Message):
         if not message.source.addr == self.masterAddr:
             return
-        msg = {'type': 'nodeResources', 'resources': self.allResources()}
+        msg = {
+            'type': 'nodeResources',
+            'resources': self.container.stats(
+                stream=False)}
         self.sendMessage(msg, message.source.addr)
 
     def __handleStop(self, message: Message):
@@ -271,7 +321,10 @@ class Node(Server, Resources):
             runner()
 
     def __uploadResources(self):
-        msg = {'type': 'nodeResources', 'resources': self.allResources()}
+        msg = {
+            'type': 'nodeResources',
+            'resources': self.container.stats(
+                stream=False)}
         self.sendMessage(msg, self.remoteLogger.addr)
 
     def __uploadMedianReceivedPackageSize(self):

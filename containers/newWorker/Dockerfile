@@ -13,7 +13,9 @@ RUN apk add --no-cache docker docker-compose
 
 ## Python libararies
 ADD sources/requirements.txt /workplace/requirements.txt
-RUN python -m pip install -r requirements.txt --no-cache-dir
+RUN python -m \
+    pip install --no-cache-dir \
+    numpy psutil GPUtil docker
 
 # Hostname
 RUN echo "Worker" > /etc/hostname

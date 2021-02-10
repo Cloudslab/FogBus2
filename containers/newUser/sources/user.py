@@ -2,6 +2,7 @@ import logging
 import sys
 import os
 import json
+import argparse
 from apps import *
 from node import Node
 from connection import Message
@@ -24,6 +25,7 @@ class User(Node):
 
     def __init__(
             self,
+            containerName,
             myAddr: Address,
             masterAddr: Address,
             loggerAddr: Address,
@@ -34,6 +36,8 @@ class User(Node):
             logLevel=logging.DEBUG):
         Node.__init__(
             self,
+            role='User',
+            containerName=containerName,
             myAddr=myAddr,
             masterAddr=masterAddr,
             loggerAddr=loggerAddr,
@@ -118,7 +122,7 @@ class User(Node):
         self.logger.info('Waiting for scheduling decision ...')
         message = {
             'type': 'register',
-            'role': 'user',
+            'role': 'User',
             'label': self.label,
             'appName': self.appName,
             'machineID': self.machineID}
@@ -138,7 +142,7 @@ class User(Node):
 
     def __handleRegistered(self, message: Message):
         role = message.content['role']
-        if not role == 'user':
+        if not role == 'User':
             raise RegisteredAsWrongRole
         self.id = message.content['id']
         self.role = role
@@ -194,28 +198,85 @@ class User(Node):
             f.close()
 
 
-if __name__ == "__main__":
-    import socket
+def parseArg():
+    parser = argparse.ArgumentParser(
+        description='User'
+    )
+    parser.add_argument(
+        'containerName',
+        metavar='ContainerName',
+        type=str,
+        help='Current container name, used for getting runtime usages.'
+    )
+    parser.add_argument(
+        'ip',
+        metavar='BindIP',
+        type=str,
+        help='User ip.'
+    )
+    parser.add_argument(
+        'masterIP',
+        metavar='MasterIP',
+        type=str,
+        help='Master ip.'
+    )
+    parser.add_argument(
+        'masterPort',
+        metavar='MasterPort',
+        type=int,
+        help='Master port'
+    )
+    parser.add_argument(
+        'loggerIP',
+        metavar='RemoteLoggerIP',
+        type=str,
+        help='Remote logger ip.'
+    )
+    parser.add_argument(
+        'loggerPort',
+        metavar='RemoteLoggerPort',
+        type=int,
+        help='Remote logger port'
+    )
+    parser.add_argument(
+        'appName',
+        metavar='AppName',
+        type=str,
+        help='Application Name'
+    )
+    parser.add_argument(
+        'label',
+        metavar='Label',
+        type=int,
+        help='e.g. 480 or 720'
+    )
+    parser.add_argument(
+        '--video',
+        metavar='VideoPath',
+        nargs='?',
+        default=0,
+        type=str,
+        help='/path/to/video.mp4'
+    )
+    parser.add_argument(
+        '--showWindow',
+        metavar='ShowWindow',
+        default=True,
+        action=argparse.BooleanOptionalAction,
+        help='Show window or not'
+    )
+    return parser.parse_args()
 
-    tmpSocket = socket.socket(
-        socket.AF_INET,
-        socket.SOCK_STREAM)
-    tmpSocket.bind(('', 0))
-    port = tmpSocket.getsockname()[1]
-    tmpSocket.close()
-    myAddr_ = (sys.argv[1], port)
-    masterAddr_ = (sys.argv[2], int(sys.argv[3]))
-    loggerAddr_ = (sys.argv[4], int(sys.argv[5]))
-    appName_ = sys.argv[6]
-    showWindow_ = sys.argv[7]
-    label_ = sys.argv[8]
-    videoPath_ = sys.argv[9] if len(sys.argv) > 9 else None
+
+if __name__ == "__main__":
+    args = parseArg()
     user_ = User(
-        myAddr=myAddr_,
-        masterAddr=masterAddr_,
-        loggerAddr=loggerAddr_,
-        appName=appName_,
-        label=label_,
-        showWindow=True if showWindow_ == 'show' else False,
-        videoPath=videoPath_)
+        containerName=args.containerName,
+        myAddr=(args.ip, 0),
+        masterAddr=(args.masterIP, args.masterPort),
+        loggerAddr=(args.loggerIP, args.loggerPort),
+        appName=args.appName,
+        label=args.label,
+        showWindow=args.showWindow,
+        videoPath=args.video)
     user_.run()

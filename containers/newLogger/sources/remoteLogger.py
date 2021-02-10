@@ -1,5 +1,5 @@
-import sys
 import logging
+import argparse
 from node import Node, Address
 from connection import Message
 from logger import get_logger
@@ -10,6 +10,7 @@ from connection import Median
 class RemoteLogger(Profiler, Node):
     def __init__(
             self,
+            containerName: str,
             myAddr: Address,
             masterAddr: Address,
             loggerAddr: Address,
@@ -17,6 +18,8 @@ class RemoteLogger(Profiler, Node):
         Profiler.__init__(self)
         Node.__init__(
             self,
+            role='RemoteLogger',
+            containerName=containerName,
             myAddr=myAddr,
             masterAddr=masterAddr,
             periodicTasks=[
@@ -126,13 +129,49 @@ class RemoteLogger(Profiler, Node):
         self.sendMessage(msg, message.source.addr)
 
 
+def parseArg():
+    parser = argparse.ArgumentParser(
+        description='Remote Logger'
+    )
+    parser.add_argument(
+        'containerName',
+        metavar='ContainerName',
+        type=str,
+        help='Current container name, used for getting runtime usages.'
+    )
+    parser.add_argument(
+        'ip',
+        metavar='BindIP',
+        type=str,
+        help='Remote logger ip.'
+    )
+    parser.add_argument(
+        'port',
+        metavar='ListenPort',
+        type=int,
+        help='Remote logger port.'
+    )
+    parser.add_argument(
+        'masterIP',
+        metavar='MasterIP',
+        type=str,
+        help='Master ip.'
+    )
+    parser.add_argument(
+        'masterPort',
+        metavar='MasterPort',
+        type=int,
+        help='Master port (used for verifying master.)'
+    )
+    return parser.parse_args()
+
+
 if __name__ == '__main__':
-    myAddr_ = (sys.argv[1], int(sys.argv[2]))
-    masterAddr_ = (sys.argv[3], int(sys.argv[4]))
-    loggerAddr_ = (sys.argv[5], int(sys.argv[6]))
+    args = parseArg()
     remoteLogger_ = RemoteLogger(
-        myAddr=myAddr_,
-        masterAddr=masterAddr_,
-        loggerAddr=loggerAddr_
+        containerName=args.containerName,
+        myAddr=(args.ip, args.port),
+        masterAddr=(args.masterIP, args.masterPort),
+        loggerAddr=(args.ip, args.port)
     )
     remoteLogger_.run()

@@ -1,5 +1,6 @@
 import logging
 import sys
+import argparse
 from logger import get_logger
 from registry import Registry
 from connection import Message, Identity
@@ -12,6 +13,7 @@ class Master(Registry):
 
     def __init__(
             self,
+            containerName,
             myAddr,
             masterAddr,
             loggerAddr,
@@ -20,6 +22,7 @@ class Master(Registry):
             logLevel=logging.DEBUG):
         Registry.__init__(
             self,
+            containerName=containerName,
             myAddr=myAddr,
             masterAddr=masterAddr,
             loggerAddr=loggerAddr,
@@ -137,7 +140,7 @@ class Master(Registry):
             message.source,
             'Your asked for. Reason: %s' % message.content['reason'])
 
-        if message.source.role == 'user':
+        if message.source.role == 'User':
             if message.source.id not in self.users:
                 return
             user = self.users[message.source.id]
@@ -154,7 +157,7 @@ class Master(Registry):
                 self.__stopClient(user, 'Your resources was released.')
             del self.taskHandlerByToken[taskHandler.token]
             del self.taskHandlers[message.source.id]
-        elif message.source.role == 'worker':
+        elif message.source.role == 'Worker':
             if message.source.id not in self.workers:
                 return
             del self.workers[message.source.id]
@@ -185,7 +188,52 @@ class Master(Registry):
         self.sendMessage(msg, identity.addr)
 
 
+def parseArg():
+    parser = argparse.ArgumentParser(
+        description='Master'
+    )
+    parser.add_argument(
+        'containerName',
+        metavar='ContainerName',
+        type=str,
+        help='Current container name, used for getting runtime usages.'
+    )
+    parser.add_argument(
+        'ip',
+        metavar='BindIP',
+        type=str,
+        help='Master ip.'
+    )
+    parser.add_argument(
+        'port',
+        metavar='ListenPort',
+        type=int,
+        help='Master port.'
+    )
+    parser.add_argument(
+        'loggerIP',
+        metavar='RemoteLoggerIP',
+        type=str,
+        help='Remote logger ip.'
+    )
+    parser.add_argument(
+        'loggerPort',
+        metavar='RemoteLoggerPort',
+        type=int,
+        help='Remote logger port'
+    )
+    parser.add_argument(
+        'schedulerName',
+        metavar='SchedulerName',
+        type=str,
+        help='Scheduler name.'
+    )
+    return parser.parse_args()
+
+
 if __name__ == '__main__':
+    args = parseArg()
+    containerName_ = args.containerName
     myAddr_ = (sys.argv[1], int(sys.argv[2]))
     masterAddr_ = (sys.argv[3], int(sys.argv[4]))
     loggerAddr_ = (sys.argv[5], int(sys.argv[6]))
@@ -193,8 +241,9 @@ if __name__ == '__main__':
     if len(sys.argv) > 7:
         schedulerName_ = sys.argv[7]
     master_ = Master(
-        myAddr=myAddr_,
-        masterAddr=masterAddr_,
-        loggerAddr=loggerAddr_,
-        schedulerName=schedulerName_)
+        containerName=containerName_,
+        myAddr=(args.ip, args.port),
+        masterAddr=(args.ip, args.port),
+        loggerAddr=(args.loggerIP, args.loggerPort),
+        schedulerName=args.schedulerName)
     master_.run()
