@@ -56,6 +56,8 @@ class Master(Registry):
             self.__handleProfiler(message=message)
         elif message.type == 'workersCount':
             self.__handleWorkersCount(message=message)
+        elif message.type == 'nodeResources':
+            self.__handleWorkerResources(message=message)
 
     def __handleRegister(self, message: Message):
         respond = self.registerClient(message=message)
@@ -183,7 +185,7 @@ class Master(Registry):
         msg = {'type': 'workersCount', 'workersCount': self.workersCount}
         self.sendMessage(msg, message.source.addr)
 
-    def __handleNodeResources(self, message: Message):
+    def __handleWorkerResources(self, message: Message):
         if message.source.nameConsistent not in self.workers:
             return
         worker = self.workers[message.source.nameConsistent]
