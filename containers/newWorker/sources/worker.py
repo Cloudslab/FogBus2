@@ -40,11 +40,21 @@ class Worker(Node):
 
     def __register(self):
         print('[*] Getting local available images ...')
+        stats = self.container.stats(
+            stream=False)
+        cpuUsage = stats['cpu_stats']['cpu_usage']['total_usage'] - stats['precpu_stats']['cpu_usage']['total_usage']
+        systemCPUUsage = stats['cpu_stats']['system_cpu_usage'] - stats['precpu_stats']['system_cpu_usage']
+        availableMemory = stats['memory_stats']['usage']
+        maxMemory = stats['memory_stats']['max_usage']
+        resources = {
+            'systemCPUUsage': systemCPUUsage,
+            'cpuUsage': cpuUsage,
+            'availableMemory': availableMemory,
+            'maxMemory': maxMemory}
         message = {'type': 'register',
                    'role': 'Worker',
                    'machineID': self.machineID,
-                   'resources': self.container.stats(
-                       stream=False),
+                   'resources': resources,
                    'images': self.__getImages()}
         self.sendMessage(message, self.master.addr)
         self.isRegistered.wait()

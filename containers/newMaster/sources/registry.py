@@ -141,11 +141,15 @@ class Registry(Profiler, Node, ABC):
             addr=message.source.addr,
             workerID=workerID,
             machineID=machineID,
-            resources=resources,
+            systemCPUUsage=resources['systemCPUUsage'],
+            cpuUsage=resources['cpuUsage'],
+            availableMemory=resources['availableMemory'],
+            maxMemory=resources['maxMemory'],
             images=images)
 
         self.workers[workerID] = worker
         self.workers[worker.machineID] = worker
+        self.workers[worker.nameConsistent] = worker
         self.workersCount += 1
         respond = {
             'type': 'registered',
@@ -344,7 +348,6 @@ class Registry(Profiler, Node, ABC):
                 continue
             worker = self.workers[key]
             allWorkers[key] = worker.images
-            workersResources[key] = worker.resources
         decision = self.scheduler.schedule(
             userName=user.name,
             userMachine=user.machineID,
@@ -352,8 +355,7 @@ class Registry(Profiler, Node, ABC):
             masterMachine=self.machineID,
             applicationName=user.appName,
             label=user.label,
-            availableWorkers=allWorkers,
-            workersResources=workersResources)
+            availableWorkers=allWorkers)
         messageForWorkers = self.__parseDecision(decision, user)
 
         del decision.__dict__['machines']

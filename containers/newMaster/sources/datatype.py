@@ -3,7 +3,6 @@ from queue import Queue
 from typing import List, Dict, Tuple, Set
 from secrets import token_urlsafe
 from node import Identity
-from resourcesInfo import ResourcesInfo
 from time import time
 
 Address = Tuple[str, int]
@@ -23,7 +22,10 @@ class Worker(Client):
             nameLogPrinting: str,
             nameConsistent: str,
             workerID: int,
-            resources: ResourcesInfo,
+            systemCPUUsage: int,
+            cpuUsage: int,
+            availableMemory: int,
+            maxMemory: int,
             images: Set[str]):
         # TODO Containers info
         if name is None:
@@ -35,7 +37,10 @@ class Worker(Client):
             nameConsistent=nameConsistent,
             addr=addr,
             machineID=machineID)
-        self.resources: ResourcesInfo = resources
+        self.systemCPUUsage = systemCPUUsage
+        self.cpuUsage = cpuUsage
+        self.availableMemory = availableMemory
+        self.maxMemory = maxMemory
         self.images: Set[str] = images
 
 

@@ -65,14 +65,12 @@ class Node(Server):
         self.role: str = role
         self.dockerClient = docker.from_env()
         self.containerName = containerName
-        self.machineID = self.getUniqueID()
         if self.role != 'User':
             try:
                 self.container = self.dockerClient.containers.get(self.containerName)
             except docker.errors.NotFound:
                 print('[!] Please run in docker container.')
                 os._exit(-1)
-        self.myAddr = myAddr
         self.masterAddr = masterAddr
         self.loggerAddr = loggerAddr
         self.coresCount = coresCount
@@ -81,7 +79,7 @@ class Node(Server):
         self.ignoreSocketErr = ignoreSocketErr
         self.me = Identity(
             nameLogPrinting='Me',
-            addr=self.myAddr,
+            addr=myAddr,
         )
         self.master = Identity(
             nameLogPrinting='Master',
@@ -103,10 +101,11 @@ class Node(Server):
         self.isRegistered: threading.Event = threading.Event()
         Server.__init__(
             self,
-            addr=self.myAddr,
+            addr=myAddr,
             messagesQueue=self.receivedMessage,
             threadNumber=threadNumber // 4)
         self.myAddr = self.addr
+        self.machineID = self.getUniqueID()
         for i in range(threadNumber):
             threading.Thread(
                 target=self.__messageHandler,
@@ -321,10 +320,20 @@ class Node(Server):
             runner()
 
     def __uploadResources(self):
+        stats = self.container.stats(
+            stream=False)
+        cpuUsage = stats['cpu_stats']['cpu_usage']['total_usage'] - stats['precpu_stats']['cpu_usage']['total_usage']
+        systemCPUUsage = stats['cpu_stats']['system_cpu_usage'] - stats['precpu_stats']['system_cpu_usage']
+        availableMemory = stats['memory_stats']['usage']
+        maxMemory = stats['memory_stats']['max_usage']
+        resources = {
+            'systemCPUUsage': systemCPUUsage,
+            'cpuUsage': cpuUsage,
+            'availableMemory': availableMemory,
+            'maxMemory': maxMemory}
         msg = {
             'type': 'nodeResources',
-            'resources': self.container.stats(
-                stream=False)}
+            'resources': resources}
         self.sendMessage(msg, self.remoteLogger.addr)
 
     def __uploadMedianReceivedPackageSize(self):

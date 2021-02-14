@@ -16,7 +16,6 @@ from copy import deepcopy
 from collections import defaultdict
 from pprint import pformat
 from pymoo.configuration import Configuration
-from resourcesInfo import ResourcesInfo
 from hashlib import sha256
 
 Configuration.show_compile_hint = False
@@ -62,11 +61,11 @@ class Scheduler:
             name: str,
             medianPackageSize: Dict[str, Dict[str, float]],
             medianDelay: Dict[str, Dict[str, float]],
-            medianProcessTime: Dict[str, Tuple[float, int, int, float]]):
+            medianProcessTime: Dict[str, Tuple[float, int, int, float, float]]):
         self.name: str = name
         self.medianPackageSize: Dict[str, Dict[str, float]] = medianPackageSize
         self.medianDelay: Dict[str, Dict[str, float]] = medianDelay
-        self.medianProcessTime: Dict[str, Tuple[float, int, int, float]] = medianProcessTime
+        self.medianProcessTime: Dict[str, Tuple[float, int, int, float, float]] = medianProcessTime
         tasksAndApps = loadDependencies()
         self.tasks: Dict[str, Task] = tasksAndApps[0]
         self.applications: Dict[str, Application] = tasksAndApps[1]
@@ -79,8 +78,7 @@ class Scheduler:
             masterMachine,
             applicationName: str,
             label: str,
-            availableWorkers: Dict[str, List[str]],
-            workersResources: Dict[str, ResourcesInfo]
+            availableWorkers: Dict[str, List[str]]
     ) -> Decision:
         edgesByName = self.__getExecutionMap(
             applicationName,
@@ -91,8 +89,7 @@ class Scheduler:
             masterName,
             masterMachine,
             edgesByName,
-            availableWorkers,
-            workersResources)
+            availableWorkers)
 
     @abstractmethod
     def _schedule(
@@ -102,8 +99,7 @@ class Scheduler:
             masterName,
             masterMachine,
             edgesByName: EdgesByName,
-            availableWorkers: Dict[str, List[str]],
-            workersResources: Dict[str, ResourcesInfo]) -> Decision:
+            availableWorkers: Dict[str, List[str]]) -> Decision:
         raise NotImplementedError
 
     def __getExecutionMap(
@@ -161,9 +157,8 @@ class Evaluator:
             masterMachine,
             medianPackageSize: Dict[str, Dict[str, float]],
             medianDelay: Dict[str, Dict[str, float]],
-            medianProcessTime: Dict[str, Tuple[float, int, int, float]],
-            edgesByName: EdgesByName,
-            workersResources: Dict[str, ResourcesInfo]):
+            medianProcessTime: Dict[str, Tuple[float, int, int, float, float]],
+            edgesByName: EdgesByName):
 
         self.userName = userName
         self.userMachineID = userMachine
@@ -171,9 +166,8 @@ class Evaluator:
         self.masterMachine = masterMachine
         self.medianPackageSize: Dict[str, Dict[str, float]] = medianPackageSize
         self.medianDelay: Dict[str, Dict[str, float]] = medianDelay
-        self.medianProcessTime: Dict[str, Tuple[float, int, int, float]] = medianProcessTime
+        self.medianProcessTime = medianProcessTime
         self.edgesByName = edgesByName
-        self.workersResources = workersResources
 
     def _edgePackageSize(self) -> float:
         packageSize = .0
@@ -231,31 +225,12 @@ class Evaluator:
         return sum(total)
 
     def evaluateComputingCost(self, workerMachineId):
-        resources = self.workersResources[workerMachineId]
-        memFactor = resources.availableMemory
-        cpuFactor = resources.currentCPUFrequency
-        cpuFactor *= resources.totalCPUCores
-        cpuFactor *= (1 - resources.currentTotalCPUUsage)
-        processTime = 1 / (memFactor + cpuFactor)
-        return processTime
+        return 1
 
     def considerRecentResources(self, index, workerMachineId):
-        resources = self.workersResources[workerMachineId]
         record = self.medianProcessTime[index]
 
         processTime = record[0]
-        availableMemory = record[1]
-        totalCores = record[2]
-        totalCPUUsage = record[3]
-        recordCPUFrequency = record[4]
-
-        memFactor = availableMemory / resources.availableMemory
-
-        cpuFactor = recordCPUFrequency / resources.currentCPUFrequency
-        cpuFactor *= totalCores / resources.totalCPUCores
-        cpuFactor *= (1 - totalCPUUsage) / (1 - resources.currentTotalCPUUsage)
-        processTime = processTime * (memFactor + cpuFactor)
-
         return processTime
 
 
@@ -269,10 +244,9 @@ class BaseProblem(Problem, Evaluator):
             masterMachine,
             medianPackageSize: Dict[str, Dict[str, float]],
             medianDelay: Dict[str, Dict[str, float]],
-            medianProcessTime: Dict[str, Tuple[float, int, int, float]],
+            medianProcessTime: Dict[str, Tuple[float, int, int, float, float]],
             edgesByName: EdgesByName,
-            availableWorkers: Dict[str, set[str]],
-            workersResources: Dict[str, ResourcesInfo]):
+            availableWorkers: Dict[str, set[str]]):
         self.medianPackageSize: Dict[str, Dict[str, float]] = medianPackageSize
         self.medianDelay: Dict[str, Dict[str, float]] = medianDelay
         Evaluator.__init__(
@@ -284,8 +258,7 @@ class BaseProblem(Problem, Evaluator):
             medianPackageSize=self.medianPackageSize,
             medianDelay=self.medianDelay,
             medianProcessTime=medianProcessTime,
-            edgesByName=edgesByName,
-            workersResources=workersResources)
+            edgesByName=edgesByName)
         self.variableNumber = len(edgesByName)
         self.availableWorkers = defaultdict(lambda: [])
         choicesEachVariable = [0 for _ in range(len(edgesByName.keys()))]
@@ -353,7 +326,7 @@ class NSGABase(Scheduler):
             algorithm: GeneticAlgorithm,
             medianPackageSize: Dict[str, Dict[str, float]],
             medianDelay: Dict[str, Dict[str, float]],
-            medianProcessTime: Dict[str, Tuple[float, int, int, float]],
+            medianProcessTime: Dict[str, Tuple[float, int, int, float, float]],
             generationNum: int,
     ):
         self.__generationNum: int = generationNum
@@ -371,8 +344,7 @@ class NSGABase(Scheduler):
             masterName,
             masterMachine,
             edgesByName: EdgesByName,
-            availableWorkers: Dict[str, set[str]],
-            workersResources: Dict[str, ResourcesInfo]) -> Decision:
+            availableWorkers: Dict[str, set[str]]) -> Decision:
         problem = BaseProblem(
             userName,
             userMachine,
@@ -382,8 +354,7 @@ class NSGABase(Scheduler):
             medianDelay=self.medianDelay,
             medianProcessTime=self.medianProcessTime,
             edgesByName=edgesByName,
-            availableWorkers=availableWorkers,
-            workersResources=workersResources)
+            availableWorkers=availableWorkers)
         res = minimize(problem,
                        self.__algorithm,
                        seed=randint(0, 100),
@@ -410,7 +381,7 @@ class NSGA2(NSGABase):
                  generationNum: int,
                  medianPackageSize: Dict[str, Dict[str, float]],
                  medianDelay: Dict[str, Dict[str, float]],
-                 medianProcessTime: Dict[str, Tuple[float, int, int, float]]):
+                 medianProcessTime: Dict[str, Tuple[float, int, int, float, float]]):
         super().__init__(
             'NSGA2',
             NSGA2_(
@@ -430,7 +401,7 @@ class NSGA3(NSGABase):
                  dasDennisP: int,
                  medianPackageSize: Dict[str, Dict[str, float]],
                  medianDelay: Dict[str, Dict[str, float]],
-                 medianProcessTime: Dict[str, Tuple[float, int, int, float]]):
+                 medianProcessTime: Dict[str, Tuple[float, int, int, float, float]]):
         refDirs = get_reference_directions(
             "das-dennis",
             3,
@@ -454,7 +425,7 @@ class CTAEA(NSGABase):
                  dasDennisP: int,
                  medianPackageSize: Dict[str, Dict[str, float]],
                  medianDelay: Dict[str, Dict[str, float]],
-                 medianProcessTime: Dict[str, Tuple[float, int, int, float]]):
+                 medianProcessTime: Dict[str, Tuple[float, int, int, float, float]]):
         refDirs = get_reference_directions(
             "das-dennis",
             3,

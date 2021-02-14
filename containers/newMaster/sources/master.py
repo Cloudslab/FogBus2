@@ -179,6 +179,14 @@ class Master(Registry):
         self.scheduler.medianDelay = self.medianDelay
         self.scheduler.medianProcessTime = self.medianProcessTime
 
+        for name, resources in self.nodeResources.items():
+            if name not in self.workers:
+                continue
+            self.workers[name].cpuUsage = resources['cpuUsage']
+            self.workers[name].systemCPUUsage = resources['systemCPUUsage']
+            self.workers[name].availableMemory = resources['availableMemory']
+            self.workers[name].maxMemory = resources['maxMemory']
+
     def __handleWorkersCount(self, message: Message):
         msg = {'type': 'workersCount', 'workersCount': self.workersCount}
         self.sendMessage(msg, message.source.addr)
@@ -234,12 +242,6 @@ def parseArg():
 if __name__ == '__main__':
     args = parseArg()
     containerName_ = args.containerName
-    myAddr_ = (sys.argv[1], int(sys.argv[2]))
-    masterAddr_ = (sys.argv[3], int(sys.argv[4]))
-    loggerAddr_ = (sys.argv[5], int(sys.argv[6]))
-    schedulerName_ = None
-    if len(sys.argv) > 7:
-        schedulerName_ = sys.argv[7]
     master_ = Master(
         containerName=containerName_,
         myAddr=(args.ip, args.port),
