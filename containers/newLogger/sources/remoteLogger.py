@@ -44,6 +44,8 @@ class RemoteLogger(Profiler, Node):
             self.__handleMedianProcessTime(message=message)
         elif message.type == 'nodeResources':
             self.__handleNodeResources(message=message)
+        elif message.type == 'taskHandlerResources':
+            self.__handleTaskHandlerResources(message=message)
         elif message.type == 'respondTime':
             self.__handleResponseTime(message=message)
         elif message.type == 'delays':
@@ -86,6 +88,11 @@ class RemoteLogger(Profiler, Node):
         nodeResources = message.content['resources']
         self.nodeResources[nodeName] = nodeResources
 
+    def __handleTaskHandlerResources(self, message: Message):
+        nodeName = message.content['nameConsistent']
+        nodeResources = message.content['resources']
+        self.nodeResources[nodeName] = nodeResources
+
     def __handleMedianProcessTime(self, message: Message):
         workerNameConsistent = message.source.nameConsistent
         workerMachineID = message.source.machineID
@@ -95,13 +102,7 @@ class RemoteLogger(Profiler, Node):
 
         if workerMachineID not in self._medianProcessTime:
             self._medianProcessTime[workerMachineID] = Median()
-        self._medianProcessTime[workerMachineID].update(medianProcessTime[0])
-        self.medianProcessTime[workerMachineID] = (
-            self._medianProcessTime[workerMachineID].median(),
-            medianProcessTime[1],
-            medianProcessTime[2],
-            medianProcessTime[3],
-            medianProcessTime[4])
+        self._medianProcessTime[workerMachineID].update(medianProcessTime)
 
     def __handleResponseTime(self, message: Message):
         userName = message.source.nameConsistent

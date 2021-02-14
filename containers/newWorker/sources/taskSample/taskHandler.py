@@ -195,11 +195,7 @@ class TaskHandler(Node):
             return
         msg = {
             'type': 'medianProcessTime',
-            'medianProcessTime': (self.processTime.median(),
-                                  self._res.availableMemory,
-                                  self._res.totalCPUCores,
-                                  self._res.currentTotalCPUUsage,
-                                  self._res.currentCPUFrequency)}
+            'medianProcessTime': self.processTime.median()}
         self.sendMessage(msg, self.remoteLogger.addr)
 
     def run(self):

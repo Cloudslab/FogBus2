@@ -1,6 +1,5 @@
 import threading
 import logging
-import docker
 import os
 import signal
 from hashlib import sha256
@@ -63,13 +62,14 @@ class Node(Server):
             ignoreSocketErr: bool = False,
             logLevel=logging.DEBUG):
         self.role: str = role
-        self.dockerClient = docker.from_env()
-        self.containerName = containerName
-        if self.role != 'User':
+        if self.role not in {'User', 'TaskHandler'}:
+            import docker
+            self.dockerClient = docker.from_env()
+            self.containerName = containerName
             try:
                 self.container = self.dockerClient.containers.get(self.containerName)
             except docker.errors.NotFound:
-                print('[!] Please run in docker container.')
+                self.logger.info('[!] Please run in docker container.')
                 os._exit(-1)
         self.masterAddr = masterAddr
         self.loggerAddr = loggerAddr
@@ -127,9 +127,6 @@ class Node(Server):
         self.networkTimeDiff: Dict[Tuple[str, int], float] = {}
 
         defaultPeriodicTasks: List[PeriodicTask] = []
-        if not self.role == 'User':
-            defaultPeriodicTasks += [
-                (self.__uploadResources, 1)]
         if not self.role == 'RemoteLogger':
             defaultPeriodicTasks += [
                 (self.__uploadMedianReceivedPackageSize, 1),
@@ -182,9 +179,6 @@ class Node(Server):
             message.content['_receivedAt'] = time() * 1000
             if message.type == 'respondTimeDiff':
                 self.__handleRespondTimeDiff(message)
-                continue
-            elif message.type == 'resourcesQuery':
-                self.__handleResourcesQuery(message)
                 continue
             elif message.type == 'stop':
                 self.__handleStop(message)
@@ -278,22 +272,7 @@ class Node(Server):
 
     def getUniqueID(self):
         info = self.myAddr[0]
-        if self.role != 'User':
-            resources = self.container.stats(
-                stream=False)
-            info += str(resources['cpu_stats']['system_cpu_usage'])
-            info += str(resources['cpu_stats']['online_cpus'])
-            info += str(resources['memory_stats']['max_usage'])
         return sha256(info.encode('utf-8')).hexdigest()
-
-    def __handleResourcesQuery(self, message: Message):
-        if not message.source.addr == self.masterAddr:
-            return
-        msg = {
-            'type': 'nodeResources',
-            'resources': self.container.stats(
-                stream=False)}
-        self.sendMessage(msg, message.source.addr)
 
     def __handleStop(self, message: Message):
         reasonFormatted = '%s asks me to stop. ' \
@@ -318,28 +297,6 @@ class Node(Server):
                 continue
             lastCollectTime = time()
             runner()
-
-    def _getResources(self):
-        stats = self.container.stats(
-            stream=False)
-        cpuUsage = stats['cpu_stats']['cpu_usage']['total_usage'] - stats['precpu_stats']['cpu_usage']['total_usage']
-        systemCPUUsage = stats['cpu_stats']['system_cpu_usage'] - stats['precpu_stats']['system_cpu_usage']
-        memoryUsage = stats['memory_stats']['usage']
-        peekMemoryUsage = stats['memory_stats']['max_usage']
-        maxMemory = stats['memory_stats']['limit']
-        resources = {
-            'systemCPUUsage': systemCPUUsage,
-            'cpuUsage': cpuUsage,
-            'memoryUsage': memoryUsage,
-            'peekMemoryUsage': peekMemoryUsage,
-            'maxMemory': maxMemory}
-        return resources
-
-    def __uploadResources(self):
-        msg = {
-            'type': 'nodeResources',
-            'resources': self._getResources()}
-        self.sendMessage(msg, self.remoteLogger.addr)
 
     def __uploadMedianReceivedPackageSize(self):
         self.lock.acquire()

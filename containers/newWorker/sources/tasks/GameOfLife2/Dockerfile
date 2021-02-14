@@ -38,8 +38,9 @@ RUN cd /workplace/opencv-4.5.1 \
 RUN cd /workplace/opencv-4.5.1/build && make -j $(nproc) && make install
 
 ## Python libararies
-ADD ./taskSample/requirements.txt /workplace/requirements.txt
-RUN python -m pip install -r requirements.txt --no-cache-dir
+RUN python -m \
+    pip install --no-cache-dir \
+    numpy pytesseract editdistance
 
 ## Copy files
 ADD ./taskSample/*.py /workplace/

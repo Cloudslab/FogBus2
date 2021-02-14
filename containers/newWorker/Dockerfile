@@ -12,7 +12,6 @@ RUN apk add --no-cache \
 RUN apk add --no-cache docker docker-compose
 
 ## Python libararies
-ADD sources/requirements.txt /workplace/requirements.txt
 RUN python -m \
     pip install --no-cache-dir \
     numpy psutil GPUtil docker

@@ -10,13 +10,23 @@ def camel_to_snake(name):
 
 
 def run():
-    for i in range(63):
+    for i in range(62):
         name = 'GameOfLife%d' % i
         shutil.rmtree(name)
         shutil.copytree('OCR', name, False, None)
         f = open('%s/Dockerfile' % name, 'r+')
         content = f.read()
         content = content.replace('OCR', name)
+        content = content.replace('## Python libararies\n', '')
+        content = content.replace('ADD ./taskSample/requirements.txt /workplace/requirements.txt\n', '')
+        content = content.replace(
+            'RUN python -m pip install -r requirements.txt --no-cache-dir\n',
+            '## Python libararies\n'
+            'RUN python -m \\\n'
+            '    pip install --no-cache-dir \\\n'
+            '    numpy pytesseract editdistance\n'
+        )
+
         f.seek(0)
         f.write(content)
         f.truncate()

@@ -1,4 +1,3 @@
-import sys
 import logging
 import threading
 import os
@@ -9,9 +8,11 @@ from exceptions import *
 from connection import Message
 from node import Node, ImagesAndContainers
 from logger import get_logger
+from gatherContainerStat import GatherContainerStat
+from queue import Queue
 
 
-class Worker(Node):
+class Worker(Node, GatherContainerStat):
 
     def __init__(
             self,
@@ -24,19 +25,28 @@ class Worker(Node):
         self.isRegistered: threading.Event = threading.Event()
         self.dockerClient = docker.from_env()
         self.currPath = os.path.abspath(os.path.curdir)
-        super().__init__(
+        Node.__init__(
+            self,
             role='Worker',
             containerName=containerName,
             myAddr=myAddr,
             masterAddr=masterAddr,
             loggerAddr=loggerAddr,
             periodicTasks=[
-                (self.__uploadImagesAndRunningContainersList, 10)],
+                (self.__uploadImagesAndRunningContainersList, 10),
+                (self.__uploadResources, 1),
+                (self.__uploadTaskHandlerResources, 1)],
             logLevel=logLevel
         )
+        self.containerStats = Queue()
+        GatherContainerStat.__init__(
+            self,
+            self.dockerClient)
+        self.taskHandlers = {}
 
     def run(self):
         self.__register()
+        self._runContainerStat()
 
     def __register(self):
         self.logger.info('Getting local available images ...')
@@ -54,6 +64,8 @@ class Worker(Node):
             self.__handleRegistered(message)
         elif self.isMessage(message, 'runTaskHandler'):
             self.__handleRunTaskHandler(message)
+        elif message.type == 'resourcesQuery':
+            self.__handleResourcesQuery(message)
 
     def __handleRegistered(self, message: Message):
         role = message.content['role']
@@ -64,6 +76,16 @@ class Worker(Node):
         self.setName(message)
         self.logger = get_logger(self.nameLogPrinting, self.logLevel)
         self.isRegistered.set()
+
+    def __handleResourcesQuery(self, message: Message):
+        if not self.role == 'Worker':
+            return
+        if not message.source.addr == self.masterAddr:
+            return
+        msg = {
+            'type': 'nodeResources',
+            'resources': self._getResources()}
+        self.sendMessage(msg, message.source.addr)
 
     def __handleRunTaskHandler(self, message: Message):
         userID = message.content['userID']
@@ -78,6 +100,22 @@ class Worker(Node):
                 if container.name != containerName:
                     continue
                 return
+            command = '%s %s %s %d %s %d ' \
+                      '%d %s %s %s %s %d ' % (
+                          containerName,
+                          self.myAddr[0],
+                          self.masterAddr[0],
+                          self.masterAddr[1],
+                          self.loggerAddr[0],
+                          self.loggerAddr[1],
+                          userID,
+                          userName,
+                          taskName,
+                          token,
+                          ','.join(childTaskTokens) if len(childTaskTokens) else 'None',
+                          workerID
+                      )
+            # self.logger.info(command)
             self.dockerClient.containers.run(
                 name=containerName,
                 detach=True,
@@ -85,23 +123,9 @@ class Worker(Node):
                 image=self.camel_to_snake(taskName),
                 network_mode='host',
                 working_dir='/workplace',
-                command='%s %s %s %d %s %d '
-                        '%d %s %s %s %s %d ' % (
-                            containerName,
-                            self.myAddr[0],
-                            self.masterAddr[0],
-                            self.masterAddr[1],
-                            self.loggerAddr[0],
-                            self.loggerAddr[1],
-                            userID,
-                            userName,
-                            taskName,
-                            token,
-                            ','.join(childTaskTokens) if len(childTaskTokens) else 'None',
-                            workerID,
-                        )
-            )
-            self.logger.info('Ran %s', taskName)
+                command=command)
+            self.taskHandlers[containerName] = '%s#%s' % (taskName, self.machineID)
+            # self.logger.info('Ran %s: %s', taskName, containerName)
         except docker.errors.APIError as e:
             self.logger.warning(str(e))
 
@@ -141,12 +165,42 @@ class Worker(Node):
             runningContainers.add(self.snake_to_camel(tags[0].split(':')[0]))
         return runningContainers
 
+    def _getResources(self):
+        stats = self.container.stats(
+            stream=False)
+        cpuUsage = stats['cpu_stats']['cpu_usage']['total_usage'] - stats['precpu_stats']['cpu_usage']['total_usage']
+        systemCPUUsage = stats['cpu_stats']['system_cpu_usage'] - stats['precpu_stats']['system_cpu_usage']
+        memoryUsage = stats['memory_stats']['usage']
+        peekMemoryUsage = stats['memory_stats']['max_usage']
+        maxMemory = stats['memory_stats']['limit']
+        resources = {
+            'systemCPUUsage': systemCPUUsage,
+            'cpuUsage': cpuUsage,
+            'memoryUsage': memoryUsage,
+            'peekMemoryUsage': peekMemoryUsage,
+            'maxMemory': maxMemory}
+        return resources
+
     def __uploadResources(self):
         msg = {
             'type': 'nodeResources',
             'resources': self._getResources()}
         self.sendMessage(msg, self.remoteLogger.addr)
         self.sendMessage(msg, self.master.addr)
+
+    def __uploadTaskHandlerResources(self):
+        while True:
+            if self._containerStats.qsize() == 0:
+                break
+            name, resources = self._containerStats.get()
+            if name not in self.taskHandlers:
+                continue
+            nameConsistent = self.taskHandlers[name]
+            msg = {
+                'type': 'taskHandlerResources',
+                'nameConsistent': nameConsistent,
+                'resources': resources}
+            self.sendMessage(msg, self.remoteLogger.addr)
 
     def __uploadImagesAndRunningContainersList(self):
 

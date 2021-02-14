@@ -3,3 +3,4 @@ editdistance
 numpy
 psutil
 GPUtil
+docker

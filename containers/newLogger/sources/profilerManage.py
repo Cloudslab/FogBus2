@@ -11,7 +11,7 @@ class Profiler:
         self.medianPackageSize: Dict[str, Dict[str, float]] = {}
         self.medianDelay: Dict[str, Dict[str, float]] = {}
         self.nodeResources: Dict = {}
-        self.medianProcessTime: Dict[str, Tuple[float, int, int, float, float]] = {}
+        self.medianProcessTime: Dict[str, Tuple[float, Dict]] = {}
         self.medianRespondTime: Dict[str, float] = {}
         self.imagesAndRunningContainers: Dict[str, ImagesAndContainers] = {}
 

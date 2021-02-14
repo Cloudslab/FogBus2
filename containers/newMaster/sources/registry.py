@@ -74,7 +74,7 @@ class Registry(Profiler, Node, ABC):
                 medianPackageSize=self.medianPackageSize,
                 medianDelay=self.medianDelay,
                 medianProcessTime=self.medianProcessTime,
-                populationSize=300,
+                populationSize=100,
                 generationNum=100,
                 dasDennisP=1)
         elif schedulerName == 'NSGA2':
@@ -82,7 +82,7 @@ class Registry(Profiler, Node, ABC):
                 medianPackageSize=self.medianPackageSize,
                 medianDelay=self.medianDelay,
                 medianProcessTime=self.medianProcessTime,
-                populationSize=300,
+                populationSize=100,
                 generationNum=100)
         elif schedulerName == 'CTAEA':
             return CTAEA(
@@ -204,7 +204,6 @@ class Registry(Profiler, Node, ABC):
         taskName = message.content['taskName']
         token = message.content['token']
         workerID = message.content['workerID']
-        pureMachineId = message.content['machineID']
 
         if userID not in self.users:
             return
@@ -237,13 +236,11 @@ class Registry(Profiler, Node, ABC):
 
         isTaskValid = user.verifyTaskHandler(
             taskName=taskName,
-            taskHandler=taskHandler
-        )
+            taskHandler=taskHandler)
         if not isTaskValid:
             respond = {
                 'type': 'disconnect',
-                'reason': 'token is not valid'
-            }
+                'reason': 'token is not valid'}
             return respond
 
         self.taskHandlers[taskHandler.id] = taskHandler
@@ -264,8 +261,7 @@ class Registry(Profiler, Node, ABC):
             'name': taskHandler.name,
             'nameLogPrinting': taskHandler.nameLogPrinting,
             'nameConsistent': taskHandler.nameConsistent,
-            'workerMachineID': worker.machineID
-        }
+            'workerMachineID': worker.machineID}
         return respond
 
     def _checkTaskHandlerForUser(self, user: User):

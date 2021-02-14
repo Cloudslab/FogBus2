@@ -19,7 +19,7 @@ class Experiment:
     def stopAllContainers(self):
         # os.system('docker stop $(docker ps -a -q) && docker rm $(docker ps -a -q)')
         try:
-            containerList = self.client.containers.list()
+            containerList = self.client._containers.list()
         except Exception:
             self.stopAllContainers()
             return
@@ -48,7 +48,7 @@ class Experiment:
         event.set()
 
     def _run(self, **kwargs):
-        return self.client.containers.run(
+        return self.client._containers._runContainerStat(
             detach=True,
             auto_remove=True,
             network_mode='host',
