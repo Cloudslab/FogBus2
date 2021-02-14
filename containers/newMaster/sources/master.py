@@ -179,17 +179,19 @@ class Master(Registry):
         self.scheduler.medianDelay = self.medianDelay
         self.scheduler.medianProcessTime = self.medianProcessTime
 
-        for name, resources in self.nodeResources.items():
-            if name not in self.workers:
-                continue
-            self.workers[name].cpuUsage = resources['cpuUsage']
-            self.workers[name].systemCPUUsage = resources['systemCPUUsage']
-            self.workers[name].availableMemory = resources['availableMemory']
-            self.workers[name].maxMemory = resources['maxMemory']
-
     def __handleWorkersCount(self, message: Message):
         msg = {'type': 'workersCount', 'workersCount': self.workersCount}
         self.sendMessage(msg, message.source.addr)
+
+    def __handleNodeResources(self, message: Message):
+        if message.source.nameConsistent not in self.workers:
+            return
+        worker = self.workers[message.source.nameConsistent]
+        resources = message.content['resources']
+        worker.cpuUsage = resources['cpuUsage']
+        worker.systemCPUUsage = resources['systemCPUUsage']
+        worker.availableMemory = resources['availableMemory']
+        worker.maxMemory = resources['maxMemory']
 
     def __stopClient(self, identity: Identity, reason: str = 'No reason'):
         msg = {'type': 'stop', 'reason': reason}

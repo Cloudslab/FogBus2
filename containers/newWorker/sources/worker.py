@@ -152,6 +152,24 @@ class Worker(Node):
             runningContainers.add(self.snake_to_camel(tags[0].split(':')[0]))
         return runningContainers
 
+    def __uploadResources(self):
+        stats = self.container.stats(
+            stream=False)
+        cpuUsage = stats['cpu_stats']['cpu_usage']['total_usage'] - stats['precpu_stats']['cpu_usage']['total_usage']
+        systemCPUUsage = stats['cpu_stats']['system_cpu_usage'] - stats['precpu_stats']['system_cpu_usage']
+        availableMemory = stats['memory_stats']['usage']
+        maxMemory = stats['memory_stats']['max_usage']
+        resources = {
+            'systemCPUUsage': systemCPUUsage,
+            'cpuUsage': cpuUsage,
+            'availableMemory': availableMemory,
+            'maxMemory': maxMemory}
+        msg = {
+            'type': 'nodeResources',
+            'resources': resources}
+        self.sendMessage(msg, self.remoteLogger.addr)
+        self.sendMessage(msg, self.master.addr)
+
     def __uploadImagesAndRunningContainersList(self):
 
         imagesAndContainers = ImagesAndContainers(
