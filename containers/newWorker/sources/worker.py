@@ -39,22 +39,11 @@ class Worker(Node):
         self.__register()
 
     def __register(self):
-        print('[*] Getting local available images ...')
-        stats = self.container.stats(
-            stream=False)
-        cpuUsage = stats['cpu_stats']['cpu_usage']['total_usage'] - stats['precpu_stats']['cpu_usage']['total_usage']
-        systemCPUUsage = stats['cpu_stats']['system_cpu_usage'] - stats['precpu_stats']['system_cpu_usage']
-        availableMemory = stats['memory_stats']['usage']
-        maxMemory = stats['memory_stats']['max_usage']
-        resources = {
-            'systemCPUUsage': systemCPUUsage,
-            'cpuUsage': cpuUsage,
-            'availableMemory': availableMemory,
-            'maxMemory': maxMemory}
+        self.logger.info('Getting local available images ...')
         message = {'type': 'register',
                    'role': 'Worker',
                    'machineID': self.machineID,
-                   'resources': resources,
+                   'resources': self._getResources(),
                    'images': self.__getImages()}
         self.sendMessage(message, self.master.addr)
         self.isRegistered.wait()
@@ -153,20 +142,9 @@ class Worker(Node):
         return runningContainers
 
     def __uploadResources(self):
-        stats = self.container.stats(
-            stream=False)
-        cpuUsage = stats['cpu_stats']['cpu_usage']['total_usage'] - stats['precpu_stats']['cpu_usage']['total_usage']
-        systemCPUUsage = stats['cpu_stats']['system_cpu_usage'] - stats['precpu_stats']['system_cpu_usage']
-        availableMemory = stats['memory_stats']['usage']
-        maxMemory = stats['memory_stats']['max_usage']
-        resources = {
-            'systemCPUUsage': systemCPUUsage,
-            'cpuUsage': cpuUsage,
-            'availableMemory': availableMemory,
-            'maxMemory': maxMemory}
         msg = {
             'type': 'nodeResources',
-            'resources': resources}
+            'resources': self._getResources()}
         self.sendMessage(msg, self.remoteLogger.addr)
         self.sendMessage(msg, self.master.addr)
 
@@ -228,7 +206,7 @@ if __name__ == '__main__':
     args = parseArg()
     worker_ = Worker(
         containerName=args.containerName,
-        myAddr=(args.ip, args.port),
+        myAddr=(args.ip, 0),
         masterAddr=(args.masterIP, args.masterPort),
         loggerAddr=(args.loggerIP, args.loggerPort), )
     worker_.run()

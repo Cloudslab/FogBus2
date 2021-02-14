@@ -24,7 +24,8 @@ class Worker(Client):
             workerID: int,
             systemCPUUsage: int,
             cpuUsage: int,
-            availableMemory: int,
+            memoryUsage: int,
+            peekMemoryUsage: int,
             maxMemory: int,
             images: Set[str]):
         # TODO Containers info
@@ -39,7 +40,8 @@ class Worker(Client):
             machineID=machineID)
         self.systemCPUUsage = systemCPUUsage
         self.cpuUsage = cpuUsage
-        self.availableMemory = availableMemory
+        self.memoryUsage = memoryUsage
+        self.peekMemoryUsage = peekMemoryUsage
         self.maxMemory = maxMemory
         self.images: Set[str] = images
 

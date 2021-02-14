@@ -117,7 +117,7 @@ class Node(Server):
             ).start()
         self.logLevel = logLevel
         self.logger: Logger = get_logger(
-            logger_name='NodeTemp',
+            logger_name='TempLogger',
             level_name=self.logLevel)
         self.handleSignal()
         # Node stats
@@ -319,21 +319,26 @@ class Node(Server):
             lastCollectTime = time()
             runner()
 
-    def __uploadResources(self):
+    def _getResources(self):
         stats = self.container.stats(
             stream=False)
         cpuUsage = stats['cpu_stats']['cpu_usage']['total_usage'] - stats['precpu_stats']['cpu_usage']['total_usage']
         systemCPUUsage = stats['cpu_stats']['system_cpu_usage'] - stats['precpu_stats']['system_cpu_usage']
-        availableMemory = stats['memory_stats']['usage']
-        maxMemory = stats['memory_stats']['max_usage']
+        memoryUsage = stats['memory_stats']['usage']
+        peekMemoryUsage = stats['memory_stats']['max_usage']
+        maxMemory = stats['memory_stats']['limit']
         resources = {
             'systemCPUUsage': systemCPUUsage,
             'cpuUsage': cpuUsage,
-            'availableMemory': availableMemory,
+            'memoryUsage': memoryUsage,
+            'peekMemoryUsage': peekMemoryUsage,
             'maxMemory': maxMemory}
+        return resources
+
+    def __uploadResources(self):
         msg = {
             'type': 'nodeResources',
-            'resources': resources}
+            'resources': self._getResources()}
         self.sendMessage(msg, self.remoteLogger.addr)
 
     def __uploadMedianReceivedPackageSize(self):

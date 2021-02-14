@@ -192,7 +192,8 @@ class Master(Registry):
         resources = message.content['resources']
         worker.cpuUsage = resources['cpuUsage']
         worker.systemCPUUsage = resources['systemCPUUsage']
-        worker.availableMemory = resources['availableMemory']
+        worker.memoryUsage = resources['memoryUsage']
+        worker.peekMemoryUsage = resources['peekMemoryUsage']
         worker.maxMemory = resources['maxMemory']
 
     def __stopClient(self, identity: Identity, reason: str = 'No reason'):

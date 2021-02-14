@@ -143,7 +143,8 @@ class Registry(Profiler, Node, ABC):
             machineID=machineID,
             systemCPUUsage=resources['systemCPUUsage'],
             cpuUsage=resources['cpuUsage'],
-            availableMemory=resources['availableMemory'],
+            memoryUsage=resources['memoryUsage'],
+            peekMemoryUsage=resources['peekMemoryUsage'],
             maxMemory=resources['maxMemory'],
             images=images)
 
