@@ -1,5 +1,6 @@
 import numpy as np
 import threading
+import json
 from queue import Queue
 from pprint import pprint
 from random import randint, shuffle
@@ -272,6 +273,7 @@ class BaseProblem(Problem, Evaluator):
         self.res = np.asarray(res)
         self.toProcess = Queue()
         self._runEvaluateThreadPool()
+        self.record = []
 
     def _runEvaluateThreadPool(self):
         for i in range(self.populationSize // 2):
@@ -294,6 +296,7 @@ class BaseProblem(Problem, Evaluator):
         for event in events:
             event.wait()
         out['F'] = self.res
+        self.record.append(min(out['F']))
 
     def indexesToMachines(self, indexes: List[int]):
         res = {}
@@ -356,11 +359,16 @@ class NSGABase(Scheduler):
                            self.__generationNum))
         machines = problem.indexesToMachines(list(res.X.astype(int)))
         cost = res.F[0]
-        print('exec_time: ', res.exec_time)
+        self.saveEvaluateProgress(problem.record)
         decision = Decision(
             machines=machines,
             cost=cost)
         return decision
+
+    @staticmethod
+    def saveEvaluateProgress(record):
+        with open('./record.json', 'w+') as f:
+            json.dump(record, f)
 
 
 class NSGA2(NSGABase):
