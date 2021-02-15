@@ -69,19 +69,21 @@ class Registry(Profiler, Node, ABC):
         return loadDependencies()
 
     def __getScheduler(self, schedulerName: str) -> Scheduler:
+        populationSize = 100
+        generationNum = 20
         if schedulerName in {None, 'NSGA3'}:
             return NSGA3(
                 medianDelay=self.medianDelay,
                 medianProcessTime=self.medianProcessTime,
-                populationSize=100,
-                generationNum=20,
+                populationSize=populationSize,
+                generationNum=generationNum,
                 dasDennisP=1)
         elif schedulerName == 'NSGA2':
             return NSGA2(
                 medianDelay=self.medianDelay,
                 medianProcessTime=self.medianProcessTime,
-                populationSize=100,
-                generationNum=20)
+                populationSize=populationSize,
+                generationNum=generationNum)
         self.logger.warning('Unknown scheduler: %s', schedulerName)
         os._exit(0)
 
@@ -208,12 +210,10 @@ class Registry(Profiler, Node, ABC):
             return respond
         user = self.users[userID]
         worker = self.workers[workerID]
-        if taskName not in user.notReadyTasks:
+        if (taskName, worker.machineID) not in user.notReadyTasks:
             respond = {
                 'type': 'stop',
                 'reason': '%s already started' % taskName}
-            self.logger.info(user.notReadyTasks)
-            self.logger.info((taskName, worker.machineID))
             return respond
 
         # To differentiate where this taskHandler is running on
@@ -248,7 +248,7 @@ class Registry(Profiler, Node, ABC):
         self.taskHandlerByToken[taskHandler.token] = taskHandler
 
         user.lock.acquire()
-        user.notReadyTasks.remove(taskName)
+        user.notReadyTasks.remove((taskName, worker.machineID))
         user.lastTaskReadyTime = time()
         user.lock.release()
 
@@ -372,7 +372,7 @@ class Registry(Profiler, Node, ABC):
             machineRole = nameSplit[-1]
             taskName = nameSplit[0]
             if machineRole == 'TaskHandler':
-                user.notReadyTasks.add(taskName)
+                user.notReadyTasks.add((taskName, machineID))
                 userTask = user.taskNameTokenMap[taskName]
                 message = {
                     'type': 'runTaskHandler',

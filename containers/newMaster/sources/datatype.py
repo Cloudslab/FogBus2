@@ -94,7 +94,7 @@ class User(Client):
             name: str,
             nameLogPrinting: str,
             nameConsistent: str,
-            taskHandlerByTaskName: dict[int, Worker] = None,
+            taskHandlerByTaskName: dict[str, TaskHandler] = None,
     ):
         if name is None:
             name = 'User-%d' % userID

@@ -1,4 +1,6 @@
 import numpy as np
+import threading
+from queue import Queue
 from pprint import pprint
 from random import randint, shuffle
 from pymoo.algorithms.genetic_algorithm import GeneticAlgorithm
@@ -227,6 +229,7 @@ class BaseProblem(Problem, Evaluator):
             entrance: str,
             availableWorkers: Dict[str, Worker],
             populationSize: int):
+        self.populationSize = populationSize
         self.medianDelay: Dict[str, Dict[str, float]] = medianDelay
         Evaluator.__init__(
             self,
@@ -264,14 +267,32 @@ class BaseProblem(Problem, Evaluator):
             n_obj=1,
             n_var=self.variableNumber,
             type_var=np.int)
-        res = [.0 for _ in range(populationSize)]
+
+        res = [.0 for _ in range(self.populationSize)]
         self.res = np.asarray(res)
+        self.toProcess = Queue()
+        self._runEvaluateThreadPool()
+
+    def _runEvaluateThreadPool(self):
+        for i in range(self.populationSize // 2):
+            threading.Thread(
+                target=self._evaluateThread
+            ).start()
+
+    def _evaluateThread(self):
+        while True:
+            i, individual, event = self.toProcess.get()
+            self.res[i] = self._cost(individual)
+            event.set()
 
     def _evaluate(self, xs, out, *args, **kwargs):
+        events = [threading.Event() for _ in range(len(xs))]
         for i, x in enumerate(xs):
             x = x.astype(int)
             individual = self.indexesToMachines(x)
-            self.res[i] = self._cost(individual)
+            self.toProcess.put((i, individual, events[i]))
+        for event in events:
+            event.wait()
         out['F'] = self.res
 
     def indexesToMachines(self, indexes: List[int]):
@@ -335,6 +356,7 @@ class NSGABase(Scheduler):
                            self.__generationNum))
         machines = problem.indexesToMachines(list(res.X.astype(int)))
         cost = res.F[0]
+        print('exec_time: ', res.exec_time)
         decision = Decision(
             machines=machines,
             cost=cost)
