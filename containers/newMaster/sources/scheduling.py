@@ -263,13 +263,16 @@ class BaseProblem(Problem, Evaluator):
             xu=upperBound,
             n_obj=1,
             n_var=self.variableNumber,
-            type_var=np.int,
-            elementwise_evaluation=True)
+            type_var=np.int)
 
-    def _evaluate(self, x, out, *args, **kwargs):
-        x = x.astype(int)
-        individual = self.indexesToMachines(x)
-        out['F'] = self._cost(individual)
+    def _evaluate(self, xs, out, *args, **kwargs):
+        res = [.0 for _ in range(len(xs))]
+        res = np.asarray(res)
+        for i, x in enumerate(xs):
+            x = x.astype(int)
+            individual = self.indexesToMachines(x)
+            res[i] = self._cost(individual)
+        out['F'] = res
 
     def indexesToMachines(self, indexes: List[int]):
         res = {}
