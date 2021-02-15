@@ -9,7 +9,7 @@ from datatype import Worker, User, TaskHandler
 from connection import Message
 from typing import Dict, Union, List, Tuple
 from dependencies import loadDependencies, Application
-from scheduling import Scheduler, Decision, NSGA3, NSGA2, CTAEA
+from scheduling import Scheduler, Decision, NSGA3, NSGA2
 from time import time, sleep
 
 Address = Tuple[str, int]
@@ -82,12 +82,6 @@ class Registry(Profiler, Node, ABC):
                 medianProcessTime=self.medianProcessTime,
                 populationSize=100,
                 generationNum=20)
-        elif schedulerName == 'CTAEA':
-            return CTAEA(
-                medianDelay=self.medianDelay,
-                medianProcessTime=self.medianProcessTime,
-                generationNum=20,
-                dasDennisP=1)
         self.logger.warning('Unknown scheduler: %s', schedulerName)
         os._exit(0)
 

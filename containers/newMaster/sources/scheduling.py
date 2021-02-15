@@ -2,7 +2,6 @@ import numpy as np
 from pprint import pprint
 from random import randint, shuffle
 from pymoo.algorithms.genetic_algorithm import GeneticAlgorithm
-from pymoo.algorithms.ctaea import CTAEA as CTAEA_
 from pymoo.algorithms.nsga3 import NSGA3 as NSGA3_
 from pymoo.algorithms.nsga2 import NSGA2 as NSGA2_
 from pymoo.factory import get_reference_directions
@@ -226,7 +225,8 @@ class BaseProblem(Problem, Evaluator):
             medianProcessTime: Dict[str, float],
             edgesByName: EdgesByName,
             entrance: str,
-            availableWorkers: Dict[str, Worker]):
+            availableWorkers: Dict[str, Worker],
+            populationSize: int):
         self.medianDelay: Dict[str, Dict[str, float]] = medianDelay
         Evaluator.__init__(
             self,
@@ -264,15 +264,15 @@ class BaseProblem(Problem, Evaluator):
             n_obj=1,
             n_var=self.variableNumber,
             type_var=np.int)
+        res = [.0 for _ in range(populationSize)]
+        self.res = np.asarray(res)
 
     def _evaluate(self, xs, out, *args, **kwargs):
-        res = [.0 for _ in range(len(xs))]
-        res = np.asarray(res)
         for i, x in enumerate(xs):
             x = x.astype(int)
             individual = self.indexesToMachines(x)
-            res[i] = self._cost(individual)
-        out['F'] = res
+            self.res[i] = self._cost(individual)
+        out['F'] = self.res
 
     def indexesToMachines(self, indexes: List[int]):
         res = {}
@@ -297,8 +297,10 @@ class NSGABase(Scheduler):
             medianDelay: Dict[str, Dict[str, float]],
             medianProcessTime: Dict[str, float],
             generationNum: int,
+            populationSize: int
     ):
         self.__generationNum: int = generationNum
+        self.__populationSize: int = populationSize
         super().__init__(
             name=name,
             medianDelay=medianDelay,
@@ -323,7 +325,8 @@ class NSGABase(Scheduler):
             medianProcessTime=self.medianProcessTime,
             edgesByName=edgesByName,
             entrance=entrance,
-            availableWorkers=availableWorkers)
+            availableWorkers=availableWorkers,
+            populationSize=self.__populationSize)
         res = minimize(problem,
                        self.__algorithm,
                        seed=randint(0, 100),
@@ -352,7 +355,8 @@ class NSGA2(NSGABase):
                 eliminate_duplicates=True),
             medianDelay=medianDelay,
             medianProcessTime=medianProcessTime,
-            generationNum=generationNum)
+            generationNum=generationNum,
+            populationSize=populationSize)
 
 
 class NSGA3(NSGABase):
@@ -375,28 +379,8 @@ class NSGA3(NSGABase):
                 eliminate_duplicates=True),
             medianDelay=medianDelay,
             medianProcessTime=medianProcessTime,
-            generationNum=generationNum)
-
-
-class CTAEA(NSGABase):
-
-    def __init__(self,
-                 generationNum: int,
-                 dasDennisP: int,
-                 medianDelay: Dict[str, Dict[str, float]],
-                 medianProcessTime: Dict[str, float]):
-        refDirs = get_reference_directions(
-            "das-dennis",
-            1,
-            n_partitions=dasDennisP)
-        super().__init__(
-            'CTAEA',
-            CTAEA_(
-                ref_dirs=refDirs,
-                seed=randint(0, 100)),
-            medianDelay=medianDelay,
-            medianProcessTime=medianProcessTime,
-            generationNum=generationNum)
+            generationNum=generationNum,
+            populationSize=populationSize)
 
 
 if __name__ == '__main__':
