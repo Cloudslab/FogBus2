@@ -9,7 +9,7 @@ from datatype import Worker, User, TaskHandler
 from connection import Message
 from typing import Dict, Union, List, Tuple
 from dependencies import loadDependencies, Application
-from scheduling import genMachineIDForTaskHandler, Scheduler, Decision, NSGA3, NSGA2, CTAEA
+from scheduling import Scheduler, Decision, NSGA3, NSGA2, CTAEA
 from time import time, sleep
 
 Address = Tuple[str, int]
@@ -71,25 +71,22 @@ class Registry(Profiler, Node, ABC):
     def __getScheduler(self, schedulerName: str) -> Scheduler:
         if schedulerName in {None, 'NSGA3'}:
             return NSGA3(
-                medianPackageSize=self.medianPackageSize,
                 medianDelay=self.medianDelay,
                 medianProcessTime=self.medianProcessTime,
                 populationSize=100,
-                generationNum=100,
+                generationNum=20,
                 dasDennisP=1)
         elif schedulerName == 'NSGA2':
             return NSGA2(
-                medianPackageSize=self.medianPackageSize,
                 medianDelay=self.medianDelay,
                 medianProcessTime=self.medianProcessTime,
                 populationSize=100,
-                generationNum=100)
+                generationNum=20)
         elif schedulerName == 'CTAEA':
             return CTAEA(
-                medianPackageSize=self.medianPackageSize,
                 medianDelay=self.medianDelay,
                 medianProcessTime=self.medianProcessTime,
-                generationNum=100,
+                generationNum=20,
                 dasDennisP=1)
         self.logger.warning('Unknown scheduler: %s', schedulerName)
         os._exit(0)
@@ -347,18 +344,19 @@ class Registry(Profiler, Node, ABC):
 
     def __schedule(self, user):
         allWorkers = {}
-        workersResources = {}
         if len(self.workers) == 0:
             return False
         for key in self.workers.keys():
             if not isinstance(key, str):
                 continue
+            if not len(key) == 64:
+                continue
             worker = self.workers[key]
-            allWorkers[key] = worker.images
+            allWorkers[key] = worker
         decision = self.scheduler.schedule(
             userName=user.name,
             userMachine=user.machineID,
-            masterName=self.nameLogPrinting,
+            masterName=self.name,
             masterMachine=self.machineID,
             applicationName=user.appName,
             label=user.label,

@@ -16,6 +16,7 @@ from collections import defaultdict
 from pprint import pformat
 from pymoo.configuration import Configuration
 from hashlib import sha256
+from datatype import Worker
 
 Configuration.show_compile_hint = False
 EdgesByName = Dict[str, List[str]]
@@ -54,13 +55,11 @@ class Scheduler:
     def __init__(
             self,
             name: str,
-            medianPackageSize: Dict[str, Dict[str, float]],
             medianDelay: Dict[str, Dict[str, float]],
-            medianProcessTime: Dict[str, Tuple[float, int, int, float, float]]):
+            medianProcessTime: Dict[str, float]):
         self.name: str = name
-        self.medianPackageSize: Dict[str, Dict[str, float]] = medianPackageSize
         self.medianDelay: Dict[str, Dict[str, float]] = medianDelay
-        self.medianProcessTime: Dict[str, Tuple[float, int, int, float, float]] = medianProcessTime
+        self.medianProcessTime: Dict[str, float] = medianProcessTime
         tasksAndApps = loadDependencies()
         self.tasks: Dict[str, Task] = tasksAndApps[0]
         self.applications: Dict[str, Application] = tasksAndApps[1]
@@ -73,7 +72,7 @@ class Scheduler:
             masterMachine,
             applicationName: str,
             label: str,
-            availableWorkers: Dict[str, List[str]]
+            availableWorkers: Dict[str, Worker]
     ) -> Decision:
         edgesByName, entrance = self.__getExecutionMap(
             applicationName,
@@ -96,7 +95,7 @@ class Scheduler:
             masterMachine,
             edgesByName: EdgesByName,
             entrance: str,
-            availableWorkers: Dict[str, List[str]]) -> Decision:
+            availableWorkers: Dict[str, Worker]) -> Decision:
         raise NotImplementedError
 
     def __getExecutionMap(
@@ -112,28 +111,28 @@ class Scheduler:
             if taskName in skipRoles:
                 continue
             if taskName in replaceRoles:
-                taskName = 'Master-0'
+                taskName = 'Master'
             else:
                 taskName = '%s@%s@TaskHandler' % (taskName, label)
 
             childTaskList = deepcopy(dependency.childTaskList)
             if 'Sensor' in childTaskList and 'Master' not in childTaskList:
                 childTaskList.remove('Sensor')
-                childTaskList.append('Master-0')
+                childTaskList.append('Master')
             if 'Actor' in childTaskList and 'Master' not in childTaskList:
                 childTaskList.remove('Actor')
-                childTaskList.append('Master-0')
+                childTaskList.append('Master')
             if 'RemoteLogger' in childTaskList:
                 childTaskList.remove('RemoteLogger')
             for i, name in enumerate(childTaskList):
-                if not name == 'Master-0':
+                if not name == 'Master':
                     childTaskList[i] = '%s@%s@TaskHandler' % (childTaskList[i], label)
                 elif name == 'User':
                     childTaskList[i] = '%s@%s' % (applicationName, name)
             edgesByName[taskName].update(set(childTaskList))
         userAppName = '%s@%s@User' % (applicationName, label)
-        edgesByName['Master-0'].update({userAppName})
-        edgesByName[userAppName] = {'Master-0'}
+        edgesByName['Master'].update({userAppName})
+        edgesByName[userAppName] = {'Master'}
 
         res = defaultdict(lambda: set([]))
         result = {}
@@ -152,27 +151,27 @@ class Evaluator:
             userMachine,
             masterName,
             masterMachine,
-            medianPackageSize: Dict[str, Dict[str, float]],
             medianDelay: Dict[str, Dict[str, float]],
-            medianProcessTime: Dict[str, Tuple[float, int, int, float, float]],
+            medianProcessTime: Dict[str, float],
             edgesByName: EdgesByName,
-            entrance: str):
+            entrance: str,
+            workers: Dict[str, Worker]):
 
         self.userName = userName
         self.userMachineID = userMachine
         self.masterName = masterName
         self.masterMachine = masterMachine
-        self.medianPackageSize: Dict[str, Dict[str, float]] = medianPackageSize
         self.medianDelay: Dict[str, Dict[str, float]] = medianDelay
         self.medianProcessTime = medianProcessTime
         self.edgesByName = edgesByName
         self.entrance = entrance
         self.individual = None
+        self.workers = workers
 
     def _cost(self, individual):
         self.individual = individual
         res = set([])
-        master = 'Master-0'
+        master = 'Master'
         cost = self._edgeCost(self.entrance, master)
         cost += self._edgeCost(master, self.entrance)
         for dest in self.edgesByName[master]:
@@ -183,7 +182,7 @@ class Evaluator:
         return max(res)
 
     def _dfs(self, source: str, cost: float, res: set):
-        if source == 'Master-0':
+        if source == 'Master':
             res.add(cost)
             return
         if source[-11:] == 'TaskHandler':
@@ -205,18 +204,14 @@ class Evaluator:
         workerMachineId = self.individual[machineName]
         taskHandlerName = '%s#%s' % (machineName, workerMachineId)
         if taskHandlerName in self.medianProcessTime:
-            return self.considerRecentResources(taskHandlerName, workerMachineId)
+            return self.medianProcessTime[taskHandlerName]
         if workerMachineId in self.medianProcessTime:
-            return self.considerRecentResources(workerMachineId, workerMachineId)
-        return self.evaluateComputingCost()
+            return self.medianProcessTime[workerMachineId]
+        return self.evaluateComputingCost(workerMachineId)
 
-    def evaluateComputingCost(self):
-        return 1
-
-    def considerRecentResources(self, index, workerMachineId):
-        record = self.medianProcessTime[index]
-        processTime = record
-        return 1
+    def evaluateComputingCost(self, workerMachineId):
+        worker = self.workers[workerMachineId]
+        return 1 / worker.systemCPUUsage
 
 
 class BaseProblem(Problem, Evaluator):
@@ -227,13 +222,11 @@ class BaseProblem(Problem, Evaluator):
             userMachine,
             masterName,
             masterMachine,
-            medianPackageSize: Dict[str, Dict[str, float]],
             medianDelay: Dict[str, Dict[str, float]],
-            medianProcessTime: Dict[str, Tuple[float, int, int, float, float]],
+            medianProcessTime: Dict[str, float],
             edgesByName: EdgesByName,
             entrance: str,
-            availableWorkers: Dict[str, set[str]]):
-        self.medianPackageSize: Dict[str, Dict[str, float]] = medianPackageSize
+            availableWorkers: Dict[str, Worker]):
         self.medianDelay: Dict[str, Dict[str, float]] = medianDelay
         Evaluator.__init__(
             self,
@@ -241,12 +234,11 @@ class BaseProblem(Problem, Evaluator):
             userMachine,
             masterName,
             masterMachine,
-            medianPackageSize=self.medianPackageSize,
             medianDelay=self.medianDelay,
             medianProcessTime=medianProcessTime,
             edgesByName=edgesByName,
-            entrance=entrance)
-        pprint(edgesByName)
+            entrance=entrance,
+            workers=availableWorkers)
         self.variableNumber = len(edgesByName)
         self.availableWorkers = defaultdict(lambda: [])
         choicesEachVariable = [0 for _ in range(len(edgesByName.keys()))]
@@ -255,9 +247,9 @@ class BaseProblem(Problem, Evaluator):
                     and name[-11:] == 'TaskHandler':
                 # TODO: Change when support multiple masters
                 taskName = name[:name.find('@')]
-                for workerMachine, images in availableWorkers.items():
-                    if taskName in images:
-                        self.availableWorkers[name].append(workerMachine)
+                for machineID, worker in availableWorkers.items():
+                    if taskName in worker.images:
+                        self.availableWorkers[name].append(worker.machineID)
                         choicesEachVariable[i] += 1
                 shuffle(self.availableWorkers[name])
                 continue
@@ -299,15 +291,13 @@ class NSGABase(Scheduler):
             self,
             name: str,
             algorithm: GeneticAlgorithm,
-            medianPackageSize: Dict[str, Dict[str, float]],
             medianDelay: Dict[str, Dict[str, float]],
-            medianProcessTime: Dict[str, Tuple[float, int, int, float, float]],
+            medianProcessTime: Dict[str, float],
             generationNum: int,
     ):
         self.__generationNum: int = generationNum
         super().__init__(
             name=name,
-            medianPackageSize=medianPackageSize,
             medianDelay=medianDelay,
             medianProcessTime=medianProcessTime)
         self.__algorithm = algorithm
@@ -320,13 +310,12 @@ class NSGABase(Scheduler):
             masterMachine,
             edgesByName: EdgesByName,
             entrance: str,
-            availableWorkers: Dict[str, set[str]]) -> Decision:
+            availableWorkers: Dict[str, Worker]) -> Decision:
         problem = BaseProblem(
             userName,
             userMachine,
             masterName,
             masterMachine,
-            medianPackageSize=self.medianPackageSize,
             medianDelay=self.medianDelay,
             medianProcessTime=self.medianProcessTime,
             edgesByName=edgesByName,
@@ -351,15 +340,13 @@ class NSGA2(NSGABase):
     def __init__(self,
                  populationSize: int,
                  generationNum: int,
-                 medianPackageSize: Dict[str, Dict[str, float]],
                  medianDelay: Dict[str, Dict[str, float]],
-                 medianProcessTime: Dict[str, Tuple[float, int, int, float, float]]):
+                 medianProcessTime: Dict[str, float]):
         super().__init__(
             'NSGA2',
             NSGA2_(
                 pop_size=populationSize,
                 eliminate_duplicates=True),
-            medianPackageSize=medianPackageSize,
             medianDelay=medianDelay,
             medianProcessTime=medianProcessTime,
             generationNum=generationNum)
@@ -371,9 +358,8 @@ class NSGA3(NSGABase):
                  populationSize: int,
                  generationNum: int,
                  dasDennisP: int,
-                 medianPackageSize: Dict[str, Dict[str, float]],
                  medianDelay: Dict[str, Dict[str, float]],
-                 medianProcessTime: Dict[str, Tuple[float, int, int, float, float]]):
+                 medianProcessTime: Dict[str, float]):
         refDirs = get_reference_directions(
             "das-dennis",
             1,
@@ -384,7 +370,6 @@ class NSGA3(NSGABase):
                 pop_size=populationSize,
                 ref_dirs=refDirs,
                 eliminate_duplicates=True),
-            medianPackageSize=medianPackageSize,
             medianDelay=medianDelay,
             medianProcessTime=medianProcessTime,
             generationNum=generationNum)
@@ -395,9 +380,8 @@ class CTAEA(NSGABase):
     def __init__(self,
                  generationNum: int,
                  dasDennisP: int,
-                 medianPackageSize: Dict[str, Dict[str, float]],
                  medianDelay: Dict[str, Dict[str, float]],
-                 medianProcessTime: Dict[str, Tuple[float, int, int, float, float]]):
+                 medianProcessTime: Dict[str, float]):
         refDirs = get_reference_directions(
             "das-dennis",
             1,
@@ -407,7 +391,6 @@ class CTAEA(NSGABase):
             CTAEA_(
                 ref_dirs=refDirs,
                 seed=randint(0, 100)),
-            medianPackageSize=medianPackageSize,
             medianDelay=medianDelay,
             medianProcessTime=medianProcessTime,
             generationNum=generationNum)
