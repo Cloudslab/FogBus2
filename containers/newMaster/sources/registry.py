@@ -206,16 +206,26 @@ class Registry(Profiler, Node, ABC):
         workerID = message.content['workerID']
 
         if userID not in self.users:
-            return
+            respond = {
+                'type': 'stop',
+                'reason': 'Invalid userID'}
+            return respond
         if workerID not in self.workers:
-            return
+            respond = {
+                'type': 'stop',
+                'reason': 'Invalid workerID'}
+            return respond
         user = self.users[userID]
         worker = self.workers[workerID]
+        if taskName not in user.notReadyTasks:
+            respond = {
+                'type': 'stop',
+                'reason': '%s already started' % taskName}
+            self.logger.info(user.notReadyTasks)
+            self.logger.info((taskName, worker.machineID))
+            return respond
 
-        if (taskName, worker.machineID) not in user.notReadyTasks:
-            return None
-
-            # To differentiate where this taskHandler is running on
+        # To differentiate where this taskHandler is running on
         # Thus use worker machineID as the taskHandler machineID
 
         name = '%s@%s@TaskHandler' % (taskName, user.label)
@@ -247,7 +257,7 @@ class Registry(Profiler, Node, ABC):
         self.taskHandlerByToken[taskHandler.token] = taskHandler
 
         user.lock.acquire()
-        user.notReadyTasks.remove((taskName, worker.machineID))
+        user.notReadyTasks.remove(taskName)
         user.lastTaskReadyTime = time()
         user.lock.release()
 
@@ -370,7 +380,7 @@ class Registry(Profiler, Node, ABC):
             machineRole = nameSplit[-1]
             taskName = nameSplit[0]
             if machineRole == 'TaskHandler':
-                user.notReadyTasks.add((taskName, machineID))
+                user.notReadyTasks.add(taskName)
                 userTask = user.taskNameTokenMap[taskName]
                 message = {
                     'type': 'runTaskHandler',

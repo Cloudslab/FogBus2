@@ -125,7 +125,7 @@ class Worker(Node, GatherContainerStat):
                 working_dir='/workplace',
                 command=command)
             self.taskHandlers[containerName] = '%s#%s' % (taskName, self.machineID)
-            # self.logger.info('Ran %s: %s', taskName, containerName)
+            self.logger.info('Ran %s: %s', taskName, containerName)
         except docker.errors.APIError as e:
             self.logger.warning(str(e))
 

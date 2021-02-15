@@ -230,7 +230,7 @@ class Evaluator:
     def considerRecentResources(self, index, workerMachineId):
         record = self.medianProcessTime[index]
 
-        processTime = record[0]
+        processTime = record
         return processTime
 
 

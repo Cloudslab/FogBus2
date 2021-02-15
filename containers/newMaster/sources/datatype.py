@@ -1,7 +1,7 @@
 import threading
 from queue import Queue
 from typing import List, Dict, Tuple, Set
-from secrets import token_urlsafe
+from secrets import token_hex
 from node import Identity
 from time import time
 
@@ -119,7 +119,7 @@ class User(Client):
         self.lockCheckResource = threading.Lock()
 
     def generateToken(self, taskName: str):
-        token = token_urlsafe(16)
+        token = token_hex(32)
         self.taskNameTokenMap[taskName] = UserTask(
             token=token)
         return token

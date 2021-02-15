@@ -62,8 +62,9 @@ class Master(Registry):
     def __handleRegister(self, message: Message):
         respond = self.registerClient(message=message)
         if respond is None:
-            return self.__stopClient(
-                message.source, 'Invalid')
+            self.__stopClient(
+                message.source, 'Unknown Err')
+            return
         self.sendMessage(respond, message.source.addr)
         if respond['type'] == 'registered' \
                 and respond['role'] != 'TaskHandler':

@@ -259,7 +259,7 @@ class Node(Server):
 
     def __signalHandler(self, sig, frame):
         # https://stackoverflow.com/questions/1112343
-        print('[*] Exiting ...')
+        self.logger.info('[*] Exiting ...')
         if self.role not in {'Master', 'RemoteLogger'}:
             message = {'type': 'exit', 'reason': 'Manually interrupted.'}
             self.sendMessage(message, self.master.addr)
