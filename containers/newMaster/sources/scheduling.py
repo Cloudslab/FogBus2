@@ -1,6 +1,5 @@
 import numpy as np
-import autograd.numpy as anp
-
+from pprint import pprint
 from random import randint, shuffle
 from pymoo.algorithms.genetic_algorithm import GeneticAlgorithm
 from pymoo.algorithms.ctaea import CTAEA as CTAEA_
@@ -76,7 +75,7 @@ class Scheduler:
             label: str,
             availableWorkers: Dict[str, List[str]]
     ) -> Decision:
-        edgesByName = self.__getExecutionMap(
+        edgesByName, entrance = self.__getExecutionMap(
             applicationName,
             label=label)
         return self._schedule(
@@ -85,6 +84,7 @@ class Scheduler:
             masterName,
             masterMachine,
             edgesByName,
+            entrance,
             availableWorkers)
 
     @abstractmethod
@@ -95,13 +95,14 @@ class Scheduler:
             masterName,
             masterMachine,
             edgesByName: EdgesByName,
+            entrance: str,
             availableWorkers: Dict[str, List[str]]) -> Decision:
         raise NotImplementedError
 
     def __getExecutionMap(
             self,
             applicationName: str,
-            label: str) -> EdgesByName:
+            label: str) -> Tuple[EdgesByName, str]:
         app = self.applications[applicationName]
 
         skipRoles = {'RemoteLogger'}
@@ -140,7 +141,7 @@ class Scheduler:
             for name in v:
                 res[k].update([name])
             result[k] = list(res[k])
-        return result
+        return result, userAppName
 
 
 class Evaluator:
@@ -154,7 +155,8 @@ class Evaluator:
             medianPackageSize: Dict[str, Dict[str, float]],
             medianDelay: Dict[str, Dict[str, float]],
             medianProcessTime: Dict[str, Tuple[float, int, int, float, float]],
-            edgesByName: EdgesByName):
+            edgesByName: EdgesByName,
+            entrance: str):
 
         self.userName = userName
         self.userMachineID = userMachine
@@ -164,54 +166,57 @@ class Evaluator:
         self.medianDelay: Dict[str, Dict[str, float]] = medianDelay
         self.medianProcessTime = medianProcessTime
         self.edgesByName = edgesByName
+        self.entrance = entrance
+        self.individual = None
 
-    def _edgeDelay(self, individual: Dict[str, str]) -> float:
-        delay = .0
-        for source, destinations in self.edgesByName.items():
-            sourceName = '%s#%s' % (source, individual[source])
-            if sourceName not in self.medianDelay:
-                delay += 1
-                continue
-            for dest in destinations:
-                destName = '%s#%s' % (dest, individual[dest])
-                if destName in self.medianDelay[sourceName]:
-                    delay += self.medianDelay[sourceName][destName]
-                    continue
-                if individual[dest] in self.medianDelay[sourceName]:
-                    delay += self.medianDelay[sourceName][individual[dest]]
-                    continue
-                delay += 1
-        return delay
+    def _cost(self, individual):
+        self.individual = individual
+        res = set([])
+        master = 'Master-0'
+        cost = self._edgeCost(self.entrance, master)
+        cost += self._edgeCost(master, self.entrance)
+        for dest in self.edgesByName[master]:
+            self._dfs(
+                dest,
+                cost + self._edgeCost(master, dest),
+                res)
+        return max(res)
 
-    def _computingCost(self, individual: Dict[str, str]) -> float:
-        total = [0 for _ in self.edgesByName]
-        for i, machineName in enumerate(self.edgesByName.keys()):
-            if not machineName[-11:] == 'TaskHandler':
-                continue
-            workerMachineId = individual[machineName]
-            taskHandlerName = '%s#%s' % (machineName, workerMachineId)
-            if taskHandlerName in self.medianProcessTime:
-                total[i] = self.considerRecentResources(taskHandlerName, workerMachineId)
-                continue
-            if workerMachineId in self.medianProcessTime:
-                total[i] = self.considerRecentResources(workerMachineId, workerMachineId)
-                continue
-            previousCost = total[:i]
-            medianProcessTime = previousCost[len(previousCost) // 2]
-            if medianProcessTime < 0.01:
-                total[i] = self.evaluateComputingCost(workerMachineId)
-                continue
-            total[i] = medianProcessTime
-        return sum(total)
+    def _dfs(self, source: str, cost: float, res: set):
+        if source == 'Master-0':
+            res.add(cost)
+            return
+        if source[-11:] == 'TaskHandler':
+            cost += self._computingCost(source)
+        for dest in self.edgesByName[source]:
+            cost += self._edgeCost(source, dest)
+            self._dfs(dest, cost, res)
 
-    def evaluateComputingCost(self, workerMachineId):
+    def _edgeCost(self, source, dest) -> float:
+        sourceName = '%s#%s' % (source, self.individual[source])
+        if sourceName not in self.medianDelay:
+            return 1
+        destName = '%s#%s' % (dest, self.individual[dest])
+        if destName not in self.medianDelay[sourceName]:
+            return 1
+        return self.medianDelay[sourceName][destName]
+
+    def _computingCost(self, machineName) -> float:
+        workerMachineId = self.individual[machineName]
+        taskHandlerName = '%s#%s' % (machineName, workerMachineId)
+        if taskHandlerName in self.medianProcessTime:
+            return self.considerRecentResources(taskHandlerName, workerMachineId)
+        if workerMachineId in self.medianProcessTime:
+            return self.considerRecentResources(workerMachineId, workerMachineId)
+        return self.evaluateComputingCost()
+
+    def evaluateComputingCost(self):
         return 1
 
     def considerRecentResources(self, index, workerMachineId):
         record = self.medianProcessTime[index]
-
         processTime = record
-        return processTime
+        return 1
 
 
 class BaseProblem(Problem, Evaluator):
@@ -226,6 +231,7 @@ class BaseProblem(Problem, Evaluator):
             medianDelay: Dict[str, Dict[str, float]],
             medianProcessTime: Dict[str, Tuple[float, int, int, float, float]],
             edgesByName: EdgesByName,
+            entrance: str,
             availableWorkers: Dict[str, set[str]]):
         self.medianPackageSize: Dict[str, Dict[str, float]] = medianPackageSize
         self.medianDelay: Dict[str, Dict[str, float]] = medianDelay
@@ -238,7 +244,9 @@ class BaseProblem(Problem, Evaluator):
             medianPackageSize=self.medianPackageSize,
             medianDelay=self.medianDelay,
             medianProcessTime=medianProcessTime,
-            edgesByName=edgesByName)
+            edgesByName=edgesByName,
+            entrance=entrance)
+        pprint(edgesByName)
         self.variableNumber = len(edgesByName)
         self.availableWorkers = defaultdict(lambda: [])
         choicesEachVariable = [0 for _ in range(len(edgesByName.keys()))]
@@ -269,9 +277,7 @@ class BaseProblem(Problem, Evaluator):
     def _evaluate(self, x, out, *args, **kwargs):
         x = x.astype(int)
         individual = self.indexesToMachines(x)
-        edgeDelay = self._edgeDelay(individual)
-        computingCost = self._computingCost(individual)
-        out['F'] = edgeDelay + computingCost
+        out['F'] = self._cost(individual)
 
     def indexesToMachines(self, indexes: List[int]):
         res = {}
@@ -313,6 +319,7 @@ class NSGABase(Scheduler):
             masterName,
             masterMachine,
             edgesByName: EdgesByName,
+            entrance: str,
             availableWorkers: Dict[str, set[str]]) -> Decision:
         problem = BaseProblem(
             userName,
@@ -323,6 +330,7 @@ class NSGABase(Scheduler):
             medianDelay=self.medianDelay,
             medianProcessTime=self.medianProcessTime,
             edgesByName=edgesByName,
+            entrance=entrance,
             availableWorkers=availableWorkers)
         res = minimize(problem,
                        self.__algorithm,
@@ -332,7 +340,6 @@ class NSGABase(Scheduler):
                            self.__generationNum))
         machines = problem.indexesToMachines(list(res.X.astype(int)))
         cost = res.F[0]
-        # logVar = res.F[0][3]
         decision = Decision(
             machines=machines,
             cost=cost)
