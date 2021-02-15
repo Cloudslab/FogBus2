@@ -19,7 +19,7 @@ class Experiment:
     def stopAllContainers(self):
         # os.system('docker stop $(docker ps -a -q) && docker rm $(docker ps -a -q)')
         try:
-            containerList = self.client._containers.list()
+            containerList = self.client.containers.list()
         except Exception:
             self.stopAllContainers()
             return
@@ -64,9 +64,9 @@ class Experiment:
                     'bind': '/workplace',
                     'mode': 'rw'}
             },
-            command='192.168.3.20 5001 '
-                    '192.168.3.20 5000 '
-                    '192.168.3.20 5001')
+            command='RemoteLogger '
+                    '192.168.3.20 5001 '
+                    '192.168.3.20 5000')
 
     def runMaster(self, schedulerName):
         return self._run(
@@ -77,7 +77,7 @@ class Experiment:
                     'bind': '/workplace',
                     'mode': 'rw'}
             },
-            command='192.168.3.20 5000 '
+            command='Master '
                     '192.168.3.20 5000 '
                     '192.168.3.20 5001 '
                     '%s' % schedulerName)
@@ -91,9 +91,6 @@ class Experiment:
         return self._run(
             name=name,
             image='worker',
-            # cpuset_cpus=core,
-            # cpu_period=cpuFreq,
-            # mem_limit=mem,
             volumes={
                 '%s/newWorker/sources' % self.currPath: {
                     'bind': '/workplace',
@@ -102,25 +99,10 @@ class Experiment:
                     'bind': '/var/run/docker.sock',
                     'mode': 'rw'}
             },
-            command='192.168.3.20 0 '
+            command='Worker '
+                    '192.168.3.20 '
                     '192.168.3.20 5000 '
-                    '192.168.3.20 5001 '
-                    '%s %s %s' % (
-                        core if core is not None else '',
-                        cpuFreq if cpuFreq is not None else '',
-                        mem if mem is not None else '',))
-
-    def runWorkers(self, config):
-        cores = config['cores']
-        cpuFrequencies = config['cpuFrequencies']
-        memories = config['memories']
-        workers = [None for _ in range(len(cores))]
-        for i in range(len(cores)):
-            core = cores[i]
-            freq = cpuFrequencies[i]
-            mem = memories[i]
-            workers[i] = self.runWorker(core, freq, mem, 'Worker-%d' % (i + 1))
-        return workers
+                    '192.168.3.20 5001')
 
     def runUser(self, name):
         return self._run(
@@ -131,12 +113,13 @@ class Experiment:
                     'bind': '/workplace',
                     'mode': 'rw'}
             },
-            command='192.168.3.20 '
+            command='User '
+                    '192.168.3.20 '
                     '192.168.3.20 5000 '
                     '192.168.3.20 5001 '
                     'GameOfLifePyramid '
-                    'noshow '
-                    '256')
+                    '256 '
+                    '--no-show')
 
     @staticmethod
     def readRespondTime(filename):
@@ -155,23 +138,27 @@ class Experiment:
     @staticmethod
     def runRemoteWorkers():
         os.system('ssh 4GB-rpi-4B-alpha \'cd new/containers/newWorker '
-                  '&& docker-compose run --rm worker '
-                  '192.168.3.49 5002 '
+                  '&& docker-compose run --rm --name Worker worker '
+                  'Worker '
+                  '192.168.3.49 '
                   '192.168.3.20 5000 '
                   '192.168.3.20 5001 > /dev/null 2>&1 &\'')
         os.system('ssh 2GB-rpi-4B-alpha \'cd new/containers/newWorker '
-                  '&& docker-compose run --rm worker '
-                  '192.168.3.14 5002 '
+                  '&& docker-compose run --rm --name Worker worker '
+                  'Worker '
+                  '192.168.3.14 '
                   '192.168.3.20 5000 '
                   '192.168.3.20 5001 > /dev/null 2>&1 &\'')
         os.system('ssh 4GB-rpi-4B-beta \'cd new/containers/newWorker '
-                  '&& docker-compose run --rm worker '
-                  '192.168.3.73 5002 '
+                  '&& docker-compose run --rm --name Worker worker '
+                  'Worker '
+                  '192.168.3.73 '
                   '192.168.3.20 5000 '
                   '192.168.3.20 5001 > /dev/null 2>&1 &\'')
         os.system('ssh 2GB-rpi-4B-beta \'cd new/containers/newWorker '
-                  '&& docker-compose run --rm worker '
-                  '192.168.3.72 5002 '
+                  '&& docker-compose run --rm --name Worker worker '
+                  'Worker '
+                  '192.168.3.72 '
                   '192.168.3.20 5000 '
                   '192.168.3.20 5001 > /dev/null 2>&1 &\'')
 
@@ -223,18 +210,6 @@ class Experiment:
 
     def run(self, schedulerName, roundNum=None, targetRound=None):
 
-        # config_ = {
-        #     'cores': ['0', '1', '2', '3', '4-5', '6-7'],
-        #     'cpuFrequencies': [10000, 15000, 20000, 25000, 10000, 20000],
-        #     'memories': ['2gb', '2gb', '2gb', '4gb', '4gb', '4gb', '4gb']
-        # }
-
-        # config_ = {
-        #     'cores': ['0-7'],
-        #     'cpuFrequencies': [25000],
-        #     'memories': ['32gb']
-        # }
-
         repeatTimes = 100
         userMaxWaitTime = 300
         respondTimeFilePath = '%s/newUser/sources/log/respondTime.json' % self.currPath
@@ -272,9 +247,16 @@ class Experiment:
             respondTimes[i] = self.readRespondTime(respondTimeFilePath)
             i += 1
             processBar.update(1)
+            self.saveEvaluateRecord(schedulerName, roundNum, i)
             self.logger.debug('[*] Result-[%d/%d]: %s', (i + 1), repeatTimes, str(respondTimes))
         self.saveRes(schedulerName, respondTimes, roundNum)
         self.logger.info(respondTimes)
+
+    @staticmethod
+    def saveEvaluateRecord(algorithmName, roundNum, iterationNum):
+        os.system('mv '
+                  './newMaster/source/record.json '
+                  './%s-%d-%d.json' % (algorithmName, roundNum, iterationNum))
 
     @staticmethod
     def saveRes(schedulerName, respondTimes, roundNum):
@@ -293,4 +275,3 @@ if __name__ == '__main__':
     for num in range(targetRound_):
         experiment.run('NSGA3', num, targetRound_)
         experiment.run('NSGA2', num, targetRound_)
-    os.system('systemctl suspend')
