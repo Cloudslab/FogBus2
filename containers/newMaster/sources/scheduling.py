@@ -37,13 +37,9 @@ class Decision:
     def __init__(
             self,
             machines: Dict[str, str],
-            edgePackageSize: float,
-            edgeDelay: float,
-            computingCost: float):
+            cost: float):
         self.machines: Dict[str, str] = machines
-        self.edgePackageSize: float = edgePackageSize
-        self.edgeDelay: float = edgeDelay
-        self.computingCost: float = computingCost
+        self.cost: float = cost
 
     def __repr__(self):
         return self.__str__()
@@ -169,22 +165,6 @@ class Evaluator:
         self.medianProcessTime = medianProcessTime
         self.edgesByName = edgesByName
 
-    def _edgePackageSize(self) -> float:
-        packageSize = .0
-        for source, destinations in self.edgesByName.items():
-            if source not in self.medianPackageSize:
-                packageSize += 4096 * len(destinations)
-                continue
-            for dest in destinations:
-                if dest not in self.medianPackageSize[source]:
-                    packageSize += 4096
-                    continue
-                packageSize += self.medianPackageSize[source][dest]
-        # suppose bandwidth for all nodes are the same
-        # and is 10 mb/ s
-        # packageSize /= 10485
-        return packageSize
-
     def _edgeDelay(self, individual: Dict[str, str]) -> float:
         delay = .0
         for source, destinations in self.edgesByName.items():
@@ -281,7 +261,7 @@ class BaseProblem(Problem, Evaluator):
             self,
             xl=lowerBound,
             xu=upperBound,
-            n_obj=3,
+            n_obj=1,
             n_var=self.variableNumber,
             type_var=np.int,
             elementwise_evaluation=True)
@@ -289,20 +269,9 @@ class BaseProblem(Problem, Evaluator):
     def _evaluate(self, x, out, *args, **kwargs):
         x = x.astype(int)
         individual = self.indexesToMachines(x)
-
-        # TODO: bandwidth
-        # edgePackageSize = self._edgePackageSize()
         edgeDelay = self._edgeDelay(individual)
         computingCost = self._computingCost(individual)
-        # logVar = self.considerVariance(x)
-        # print(x, 0, edgeDelay, computingCost)
-        out['F'] = anp.column_stack([0, edgeDelay, computingCost])
-
-    @staticmethod
-    def considerVariance(indexes: List[int]):
-        # prevent all task going to the same worker
-        # although even the worker died it can be reran
-        return -np.log(np.var(indexes))
+        out['F'] = edgeDelay + computingCost
 
     def indexesToMachines(self, indexes: List[int]):
         res = {}
@@ -361,16 +330,12 @@ class NSGABase(Scheduler):
                        termination=(
                            'n_gen',
                            self.__generationNum))
-        machines = problem.indexesToMachines(list(res.X[0].astype(int)))
-        edgePackageSize = res.F[0][0]
-        edgeDelay = res.F[0][1]
-        computingCost = res.F[0][2]
+        machines = problem.indexesToMachines(list(res.X.astype(int)))
+        cost = res.F[0]
         # logVar = res.F[0][3]
         decision = Decision(
             machines=machines,
-            edgePackageSize=edgePackageSize,
-            edgeDelay=edgeDelay,
-            computingCost=computingCost)
+            cost=cost)
         return decision
 
 
@@ -404,7 +369,7 @@ class NSGA3(NSGABase):
                  medianProcessTime: Dict[str, Tuple[float, int, int, float, float]]):
         refDirs = get_reference_directions(
             "das-dennis",
-            3,
+            1,
             n_partitions=dasDennisP)
         super().__init__(
             'NSGA3',
@@ -428,7 +393,7 @@ class CTAEA(NSGABase):
                  medianProcessTime: Dict[str, Tuple[float, int, int, float, float]]):
         refDirs = get_reference_directions(
             "das-dennis",
-            3,
+            1,
             n_partitions=dasDennisP)
         super().__init__(
             'CTAEA',
