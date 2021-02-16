@@ -1,11 +1,8 @@
 import logging
-import threading
-import docker
 import os
 import json
 from logger import get_logger
 from tqdm import tqdm
-from typing import List
 from time import sleep
 
 
@@ -13,113 +10,76 @@ class Experiment:
 
     def __init__(self):
         self.currPath = os.path.abspath(os.path.curdir)
-        self.client = docker.from_env()
         self.logger = get_logger('Experiment', level_name=logging.DEBUG)
 
-    def stopAllContainers(self):
-        # os.system('docker stop $(docker ps -a -q) && docker rm $(docker ps -a -q)')
-        try:
-            containerList = self.client.containers.list()
-        except Exception:
-            self.stopAllContainers()
-            return
-        events: List[threading.Event] = [threading.Event() for _ in range(len(containerList))]
-        for i, container in enumerate(containerList):
-            self.stopContainer(container, events[i])
-        # for event in tqdm(
-        #         events,
-        #         desc='Stopping Running Containers',
-        #         unit='container'):
-        #     event.wait()
-
-    def stopContainer(self, container, event):
-        threading.Thread(
-            target=self.__stopContainer,
-            args=(container, event)).start()
+    @staticmethod
+    def stopAllContainers():
+        os.system('docker stop $(docker ps -a -q) > /dev/null 2>&1 & ')
+        os.system('docker rm $(docker ps -a -q) > /dev/null 2>&1 & ')
 
     @staticmethod
-    def __stopContainer(container, event):
-        # self.logger.info('[*] Stopping %s ...', container.name)
-        try:
-            container.stop()
-        except Exception:
-            pass
-        # self.logger.info('[*] Stopped %s ...', container.name)
-        event.set()
+    def runRemoteLogger():
+        os.system(
+            'cd ./newLogger && '
+            'docker-compose run '
+            '--rm '
+            '--name RemoteLogger '
+            'remote-logger '
+            'RemoteLogger '
+            '192.168.3.20 5001 '
+            '192.168.3.20 5000 '
+            '> /dev/null 2>&1 &')
 
-    def _run(self, **kwargs):
-        return self.client._containers._runContainerStat(
-            detach=True,
-            auto_remove=True,
-            network_mode='host',
-            working_dir='/workplace',
-            **kwargs)
+    @staticmethod
+    def runMaster(schedulerName):
+        os.system(
+            'cd ./newMaster && '
+            'docker-compose run '
+            '--rm '
+            '--name Master '
+            'master '
+            'Master '
+            '192.168.3.20 5000 '
+            '192.168.3.20 5001 '
+            '%s '
+            '> /dev/null 2>&1 &' % schedulerName)
 
-    def runRemoteLogger(self):
-        return self._run(
-            name='RemoteLogger',
-            image='remote-logger',
-            volumes={
-                '%s/newLogger/sources' % self.currPath: {
-                    'bind': '/workplace',
-                    'mode': 'rw'}
-            },
-            command='RemoteLogger '
-                    '192.168.3.20 5001 '
-                    '192.168.3.20 5000')
+    @staticmethod
+    def runWorker():
+        os.system(
+            'cd ./newWorker && '
+            'docker-compose run '
+            '--rm '
+            '--name Worker '
+            'worker '
+            'Worker '
+            '192.168.3.20 '
+            '192.168.3.20 5000 '
+            '192.168.3.20 5001 '
+            '> /dev/null 2>&1 &')
 
-    def runMaster(self, schedulerName):
-        return self._run(
-            name='Master',
-            image='master',
-            volumes={
-                '%s/newMaster/sources' % self.currPath: {
-                    'bind': '/workplace',
-                    'mode': 'rw'}
-            },
-            command='Master '
-                    '192.168.3.20 5000 '
-                    '192.168.3.20 5001 '
-                    '%s' % schedulerName)
+    @staticmethod
+    def runUser():
+        os.system(
+            'cd ./newUser && '
+            'docker-compose run '
+            '--rm '
+            '--name User '
+            'user '
+            'User '
+            '192.168.3.20 '
+            '192.168.3.20 5000 '
+            '192.168.3.20 5001 '
+            'GameOfLifePyramid '
+            '256 '
+            '--no-show '
+            '> /dev/null 2>&1 &')
 
-    def runWorker(
-            self,
-            name: str,
-            core: str = None,
-            cpuFreq: int = None,
-            mem: str = None):
-        return self._run(
-            name=name,
-            image='worker',
-            volumes={
-                '%s/newWorker/sources' % self.currPath: {
-                    'bind': '/workplace',
-                    'mode': 'rw'},
-                '/var/run/docker.sock': {
-                    'bind': '/var/run/docker.sock',
-                    'mode': 'rw'}
-            },
-            command='Worker '
-                    '192.168.3.20 '
-                    '192.168.3.20 5000 '
-                    '192.168.3.20 5001')
-
-    def runUser(self, name):
-        return self._run(
-            name=name,
-            image='user',
-            volumes={
-                '%s/newUser/sources' % self.currPath: {
-                    'bind': '/workplace',
-                    'mode': 'rw'}
-            },
-            command='User '
-                    '192.168.3.20 '
-                    '192.168.3.20 5000 '
-                    '192.168.3.20 5001 '
-                    'GameOfLifePyramid '
-                    '256 '
-                    '--no-show')
+    @staticmethod
+    def stopUser():
+        os.system('docker stop '
+                  '$(docker ps -a -q --filter="name=User") '
+                  '> /dev/null 2>&1')
 
     @staticmethod
     def readRespondTime(filename):
@@ -165,21 +125,22 @@ class Experiment:
     @staticmethod
     def stopRemoteWorkers():
         os.system('ssh 4GB-rpi-4B-alpha \''
-                  'sudo service docker restart '
-                  '&& docker rm $(docker ps -a -q)\' > /dev/null 2>&1')
+                  'docker stop $(docker ps -a -q) > /dev/null 2>&1 & '
+                  '\' > /dev/null 2>&1 &')
         os.system('ssh 2GB-rpi-4B-alpha \''
-                  'sudo service docker restart '
-                  '&& docker rm $(docker ps -a -q)\' > /dev/null 2>&1')
+                  'docker stop $(docker ps -a -q) > /dev/null 2>&1 & '
+                  '\' > /dev/null 2>&1 &')
         os.system('ssh 4GB-rpi-4B-beta \''
-                  'sudo service docker restart '
-                  '&& docker rm $(docker ps -a -q)\' > /dev/null 2>&1')
+                  'docker stop $(docker ps -a -q) > /dev/null 2>&1 & '
+                  '\' > /dev/null 2>&1 &')
         os.system('ssh 2GB-rpi-4B-beta \''
-                  'sudo service docker restart '
-                  '&& docker rm $(docker ps -a -q)\' > /dev/null 2>&1')
+                  'docker stop $(docker ps -a -q) > /dev/null 2>&1 & '
+                  '\' > /dev/null 2>&1 &')
 
     @staticmethod
     def stopLocalTaskHandler():
-        os.system('docker stop $(docker ps -a -q --filter="name=TaskHandler") > /dev/null 2>&1')
+        os.system('docker stop $(docker ps -a -q --filter="name=TaskHandler") '
+                  '> /dev/null 2>&1')
 
     @staticmethod
     def stopRemoteTaskHandler():
@@ -205,7 +166,7 @@ class Experiment:
         self.stopRemoteWorkers()
         self.runRemoteLogger()
         self.runMaster(schedulerName)
-        self.runWorker('Worker')
+        self.runWorker()
         self.runRemoteWorkers()
 
     def run(self, schedulerName, roundNum=None, targetRound=None):
@@ -227,7 +188,7 @@ class Experiment:
             total=repeatTimes,
             desc=desc)
         while i < repeatTimes:
-            user = self.runUser('User')
+            self.runUser()
             # self.logger.debug('Waiting for respondTime log file to be created ...')
             sleepCount = 0
             while not os.path.exists(respondTimeFilePath):
@@ -235,10 +196,7 @@ class Experiment:
                 sleep(1)
                 if sleepCount > userMaxWaitTime:
                     break
-            try:
-                user.stop()
-            except docker.errors.NotFound:
-                pass
+            self.stopUser()
             self.stopLocalTaskHandler()
             self.stopRemoteTaskHandler()
             if sleepCount > userMaxWaitTime:

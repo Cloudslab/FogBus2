@@ -70,7 +70,7 @@ class Registry(Profiler, Node, ABC):
 
     def __getScheduler(self, schedulerName: str) -> Scheduler:
         populationSize = 100
-        generationNum = 20
+        generationNum = 100
         if schedulerName in {None, 'NSGA3'}:
             return NSGA3(
                 medianDelay=self.medianDelay,

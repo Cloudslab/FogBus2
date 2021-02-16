@@ -1,6 +1,7 @@
 import numpy as np
 import threading
 import json
+import os
 from queue import Queue
 from pprint import pprint
 from random import randint, shuffle
@@ -367,8 +368,14 @@ class NSGABase(Scheduler):
 
     @staticmethod
     def saveEvaluateProgress(record):
-        with open('./record.json', 'w+') as f:
+        filename = './record.json'
+        with open(filename, 'w+') as f:
             json.dump(record, f)
+            f.close()
+            try:
+                os.chmod(filename, 0o666)
+            except PermissionError:
+                pass
 
 
 class NSGA2(NSGABase):
