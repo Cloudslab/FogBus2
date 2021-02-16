@@ -177,6 +177,8 @@ class Worker(Node, GatherContainerStat):
     def _getResources(self):
         stats = self.container.stats(
             stream=False)
+        from pprint import pprint
+        pprint(stats)
         cpuUsage = stats['cpu_stats']['cpu_usage']['total_usage'] - stats['precpu_stats']['cpu_usage']['total_usage']
         systemCPUUsage = stats['cpu_stats']['system_cpu_usage'] - stats['precpu_stats']['system_cpu_usage']
         memoryUsage = stats['memory_stats']['usage']
