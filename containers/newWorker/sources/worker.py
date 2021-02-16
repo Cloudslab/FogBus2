@@ -50,10 +50,15 @@ class Worker(Node, GatherContainerStat):
 
     def __register(self):
         self.logger.info('Getting local available images ...')
+        try:
+            resources = self._getResources()
+        except KeyError:
+            self.__register()
+            return
         message = {'type': 'register',
                    'role': 'Worker',
                    'machineID': self.machineID,
-                   'resources': self._getResources(),
+                   'resources': resources,
                    'images': self.__getImages()}
         self.sendMessage(message, self.master.addr)
         self.isRegistered.wait()
@@ -82,9 +87,13 @@ class Worker(Node, GatherContainerStat):
             return
         if not message.source.addr == self.masterAddr:
             return
+        try:
+            resources=self._getResources()
+        except KeyError:
+            return
         msg = {
             'type': 'nodeResources',
-            'resources': self._getResources()}
+            'resources': resources}
         self.sendMessage(msg, message.source.addr)
 
     def __handleRunTaskHandler(self, message: Message):
@@ -182,9 +191,13 @@ class Worker(Node, GatherContainerStat):
         return resources
 
     def __uploadResources(self):
+        try:
+            resources = self._getResources()
+        except KeyError:
+            return
         msg = {
             'type': 'nodeResources',
-            'resources': self._getResources()}
+            'resources': resources}
         self.sendMessage(msg, self.remoteLogger.addr)
         self.sendMessage(msg, self.master.addr)
 
