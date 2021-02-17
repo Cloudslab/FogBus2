@@ -205,15 +205,18 @@ class Evaluator:
     def _computingCost(self, machineName) -> float:
         workerMachineId = self.individual[machineName]
         taskHandlerNameConsistent = '%s#%s' % (machineName, workerMachineId)
-        if taskHandlerNameConsistent in self.medianProcessTime:
+        if taskHandlerNameConsistent in self.medianProcessTime \
+                and self.medianProcessTime[taskHandlerNameConsistent][0] != 0:
             return self.medianProcessTime[taskHandlerNameConsistent][0]
-        if workerMachineId in self.medianProcessTime:
+        if workerMachineId in self.medianProcessTime \
+                and self.medianProcessTime[workerMachineId][0] != 0:
             return self.medianProcessTime[workerMachineId][0]
         return self.evaluateComputingCost(machineName, workerMachineId)
 
     def evaluateComputingCost(self, machineName, workerMachineId):
         worker = self.workers[workerMachineId]
-        if machineName in self.medianProcessTime:
+        if machineName in self.medianProcessTime \
+                and self.medianProcessTime[machineName][0] != 0:
             processTime = self.medianProcessTime[machineName][0]
             totalCPUCores = self.medianProcessTime[machineName][1]
             cpuFreq = self.medianProcessTime[machineName][2]
