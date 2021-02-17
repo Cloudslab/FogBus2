@@ -194,13 +194,18 @@ class Evaluator:
             self._dfs(dest, cost, res)
 
     def _edgeCost(self, source, dest) -> float:
-        sourceName = '%s#%s' % (source, self.individual[source])
-        if sourceName not in self.medianDelay:
+        sourceMachine = self.individual[source]
+        sourceName = '%s#%s' % (source, sourceMachine)
+        destMachine = self.individual[dest]
+        destName = '%s#%s' % (dest, destMachine)
+        if sourceName in self.medianDelay \
+                and destName in self.medianDelay[sourceName]:
+            return self.medianDelay[sourceName][destName]
+        if sourceMachine not in self.medianDelay:
             return 1
-        destName = '%s#%s' % (dest, self.individual[dest])
-        if destName not in self.medianDelay[sourceName]:
+        if destMachine not in self.medianDelay[sourceMachine]:
             return 1
-        return self.medianDelay[sourceName][destName]
+        return self.medianDelay[sourceMachine][destMachine]
 
     def _computingCost(self, machineName) -> float:
         workerMachineId = self.individual[machineName]

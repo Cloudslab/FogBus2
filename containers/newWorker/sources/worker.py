@@ -88,10 +88,7 @@ class Worker(Node, GatherContainerStat):
             return
         if not message.source.addr == self.masterAddr:
             return
-        try:
-            resources = self._getResources()
-        except KeyError:
-            return
+        resources = self._getResources()
         msg = {
             'type': 'nodeResources',
             'resources': resources}
@@ -214,10 +211,7 @@ class Worker(Node, GatherContainerStat):
         return resources
 
     def __uploadResources(self):
-        try:
-            resources = self._getResources()
-        except KeyError:
-            return
+        resources = self._getResources()
         msg = {
             'type': 'nodeResources',
             'resources': resources}
@@ -239,14 +233,16 @@ class Worker(Node, GatherContainerStat):
             self.sendMessage(msg, self.remoteLogger.addr)
 
     def __uploadImagesAndRunningContainersList(self):
-
-        imagesAndContainers = ImagesAndContainers(
-            images=self.__getImages(),
-            containers=self.__getContainers())
-        msg = {
-            'type': 'imagesAndRunningContainers',
-            'imagesAndRunningContainers': imagesAndContainers}
-        self.sendMessage(msg, self.remoteLogger.addr)
+        try:
+            imagesAndContainers = ImagesAndContainers(
+                images=self.__getImages(),
+                containers=self.__getContainers())
+            msg = {
+                'type': 'imagesAndRunningContainers',
+                'imagesAndRunningContainers': imagesAndContainers}
+            self.sendMessage(msg, self.remoteLogger.addr)
+        except Exception as e:
+            self.logger.warning(str(e))
 
 
 def parseArg():

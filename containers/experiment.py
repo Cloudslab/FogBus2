@@ -140,7 +140,7 @@ class Experiment:
     def run(self, schedulerName, roundNum=None, targetRound=None):
 
         repeatTimes = 100
-        userMaxWaitTime = 300
+        userMaxWaitTime = 200
         respondTimeFilePath = '%s/newUser/sources/log/respondTime.json' % self.currPath
         os.system('rm -f %s > /dev/null 2>&1' % respondTimeFilePath)
         respondTimes = [0 for _ in range(repeatTimes)]
