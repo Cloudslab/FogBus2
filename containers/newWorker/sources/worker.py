@@ -34,8 +34,8 @@ class Worker(Node, GatherContainerStat):
             loggerAddr=loggerAddr,
             periodicTasks=[
                 (self.__uploadImagesAndRunningContainersList, 10),
-                (self.__uploadResources, 1),
-                (self.__uploadTaskHandlerResources, 1)],
+                (self.__uploadResources, 20),
+                (self.__uploadTaskHandlerResources, 20)],
             logLevel=logLevel
         )
         self.containerStats = Queue()

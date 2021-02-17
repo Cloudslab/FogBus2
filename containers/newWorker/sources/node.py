@@ -129,8 +129,8 @@ class Node(Server):
         defaultPeriodicTasks: List[PeriodicTask] = []
         if not self.role == 'RemoteLogger':
             defaultPeriodicTasks += [
-                (self.__uploadMedianReceivedPackageSize, 1),
-                (self.__uploadDelays, 1)]
+                (self.__uploadMedianReceivedPackageSize, 20),
+                (self.__uploadDelays, 20)]
         if periodicTasks is None:
             periodicTasks = []
         self.periodicTasks: List[PeriodicTask] = defaultPeriodicTasks + periodicTasks

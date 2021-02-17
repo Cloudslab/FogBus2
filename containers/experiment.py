@@ -172,7 +172,7 @@ class Experiment:
         processBar = tqdm(
             total=repeatTimes,
             desc=desc)
-        sleep(1)
+        sleep(2)
         while i < repeatTimes:
             self.runUser()
             # self.logger.debug('Waiting for respondTime log file to be created ...')
