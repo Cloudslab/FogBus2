@@ -14,7 +14,7 @@ class Experiment:
 
     @staticmethod
     def stopAllContainers():
-        os.system('docker stop $(docker ps -a -q) > /dev/null 2>&1 & ')
+        os.system('docker stop $(docker ps -a -q)')
         os.system('docker rm $(docker ps -a -q) > /dev/null 2>&1 & ')
 
     @staticmethod
@@ -97,69 +97,54 @@ class Experiment:
 
     @staticmethod
     def runRemoteWorkers():
-        os.system('ssh 4GB-rpi-4B-alpha \'cd new/containers/newWorker '
-                  '&& docker-compose run --rm --name Worker worker '
-                  'Worker '
-                  '192.168.3.49 '
-                  '192.168.3.20 5000 '
-                  '192.168.3.20 5001 > /dev/null 2>&1 &\'')
-        os.system('ssh 2GB-rpi-4B-alpha \'cd new/containers/newWorker '
-                  '&& docker-compose run --rm --name Worker worker '
-                  'Worker '
-                  '192.168.3.14 '
-                  '192.168.3.20 5000 '
-                  '192.168.3.20 5001 > /dev/null 2>&1 &\'')
-        os.system('ssh 4GB-rpi-4B-beta \'cd new/containers/newWorker '
-                  '&& docker-compose run --rm --name Worker worker '
-                  'Worker '
-                  '192.168.3.73 '
-                  '192.168.3.20 5000 '
-                  '192.168.3.20 5001 > /dev/null 2>&1 &\'')
-        os.system('ssh 2GB-rpi-4B-beta \'cd new/containers/newWorker '
-                  '&& docker-compose run --rm --name Worker worker '
-                  'Worker '
-                  '192.168.3.72 '
-                  '192.168.3.20 5000 '
-                  '192.168.3.20 5001 > /dev/null 2>&1 &\'')
+        os.system('ssh 4GB-rpi-4B-alpha \''
+                  './runWorker.sh\' '
+                  '> /dev/null 2>&1 &')
+        os.system('ssh 2GB-rpi-4B-alpha \''
+                  './runWorker.sh\' '
+                  '> /dev/null 2>&1 &')
+        os.system('ssh 4GB-rpi-4B-beta \''
+                  './runWorker.sh\' '
+                  '> /dev/null 2>&1 &')
+        os.system('ssh 2GB-rpi-4B-beta \''
+                  './runWorker.sh\' '
+                  '> /dev/null 2>&1 &')
 
     @staticmethod
     def stopRemoteWorkers():
         os.system('ssh 4GB-rpi-4B-alpha \''
-                  'docker stop $(docker ps -a -q) > /dev/null 2>&1 & '
-                  '\' > /dev/null 2>&1 &')
+                  './stopWorker.sh\' '
+                  '> /dev/null 2>&1 &')
         os.system('ssh 2GB-rpi-4B-alpha \''
-                  'docker stop $(docker ps -a -q) > /dev/null 2>&1 & '
-                  '\' > /dev/null 2>&1 &')
+                  './stopWorker.sh\' '
+                  '> /dev/null 2>&1 &')
         os.system('ssh 4GB-rpi-4B-beta \''
-                  'docker stop $(docker ps -a -q) > /dev/null 2>&1 & '
-                  '\' > /dev/null 2>&1 &')
+                  './stopWorker.sh\' '
+                  '> /dev/null 2>&1 &')
         os.system('ssh 2GB-rpi-4B-beta \''
-                  'docker stop $(docker ps -a -q) > /dev/null 2>&1 & '
-                  '\' > /dev/null 2>&1 &')
+                  './stopWorker.sh\' '
+                  '> /dev/null 2>&1 &')
 
     @staticmethod
     def stopLocalTaskHandler():
         os.system('docker stop $(docker ps -a -q --filter="name=TaskHandler") '
+                  '&& docker rm $(docker ps -a -q --filter="name=TaskHandler") '
                   '> /dev/null 2>&1')
 
     @staticmethod
     def stopRemoteTaskHandler():
         os.system('ssh 4GB-rpi-4B-alpha \''
-                  'docker stop '
-                  '$(docker ps -a -q '
-                  '--filter="name=TaskHandler")\' > /dev/null 2>&1')
+                  './stopTaskHandlers.sh\' '
+                  '> /dev/null 2>&1 &')
         os.system('ssh 2GB-rpi-4B-alpha \''
-                  'docker stop '
-                  '$(docker ps -a -q '
-                  '--filter="name=TaskHandler")\' > /dev/null 2>&1')
+                  './stopTaskHandlers.sh\' '
+                  '> /dev/null 2>&1 &')
         os.system('ssh 4GB-rpi-4B-beta \''
-                  'docker stop '
-                  '$(docker ps -a -q '
-                  '--filter="name=TaskHandler")\' > /dev/null 2>&1')
+                  './stopTaskHandlers.sh\' '
+                  '> /dev/null 2>&1 &')
         os.system('ssh 2GB-rpi-4B-beta \''
-                  'docker stop '
-                  '$(docker ps -a -q '
-                  '--filter="name=TaskHandler")\' > /dev/null 2>&1')
+                  './stopTaskHandlers.sh\' '
+                  '> /dev/null 2>&1 &')
 
     def rerunNecessaryContainers(self, schedulerName):
         self.stopAllContainers()
@@ -187,6 +172,7 @@ class Experiment:
         processBar = tqdm(
             total=repeatTimes,
             desc=desc)
+        sleep(1)
         while i < repeatTimes:
             self.runUser()
             # self.logger.debug('Waiting for respondTime log file to be created ...')
@@ -213,8 +199,8 @@ class Experiment:
     @staticmethod
     def saveEvaluateRecord(algorithmName, roundNum, iterationNum):
         os.system('mv '
-                  './newMaster/source/record.json '
-                  './%s-%d-%d.json' % (algorithmName, roundNum, iterationNum))
+                  './newMaster/sources/record.json '
+                  './Evaluation-%s-%d-%d.json' % (algorithmName, roundNum, iterationNum))
 
     @staticmethod
     def saveRes(schedulerName, respondTimes, roundNum):

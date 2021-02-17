@@ -153,6 +153,7 @@ class Worker(Node, GatherContainerStat):
         return re.sub('([a-z0-9])([A-Z])', r'\1_\2', name).lower()
 
     def __getImages(self):
+        return set([])
         imagesList = self.dockerClient.images.list()
 
         imageNames = set()

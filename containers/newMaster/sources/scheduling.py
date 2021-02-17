@@ -253,7 +253,8 @@ class BaseProblem(Problem, Evaluator):
                 # TODO: Change when support multiple masters
                 taskName = name[:name.find('@')]
                 for machineID, worker in availableWorkers.items():
-                    if taskName in worker.images:
+                    # Tru for saving experiment time
+                    if taskName in worker.images or True:
                         self.availableWorkers[name].append(worker.machineID)
                         choicesEachVariable[i] += 1
                 shuffle(self.availableWorkers[name])

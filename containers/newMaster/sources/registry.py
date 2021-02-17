@@ -69,7 +69,7 @@ class Registry(Profiler, Node, ABC):
         return loadDependencies()
 
     def __getScheduler(self, schedulerName: str) -> Scheduler:
-        populationSize = 100
+        populationSize = 200
         generationNum = 100
         if schedulerName in {None, 'NSGA3'}:
             return NSGA3(
