@@ -4,6 +4,7 @@ import os
 import re
 import docker
 import argparse
+import psutil
 from exceptions import *
 from connection import Message
 from node import Node, ImagesAndContainers
@@ -43,6 +44,8 @@ class Worker(Node, GatherContainerStat):
             self,
             self.dockerClient)
         self.taskHandlers = {}
+        self.totalCPUCores = 0
+        self.cpuFreq = .0
 
     def run(self):
         self.__register()
@@ -50,11 +53,9 @@ class Worker(Node, GatherContainerStat):
 
     def __register(self):
         self.logger.info('Getting local available images ...')
-        try:
-            resources = self._getResources()
-        except KeyError:
-            self.__register()
-            return
+        resources = self._getResources()
+        self.totalCPUCores = resources['totalCPUCores']
+        self.cpuFreq = resources['cpuFreq']
         message = {'type': 'register',
                    'role': 'Worker',
                    'machineID': self.machineID,
@@ -88,7 +89,7 @@ class Worker(Node, GatherContainerStat):
         if not message.source.addr == self.masterAddr:
             return
         try:
-            resources=self._getResources()
+            resources = self._getResources()
         except KeyError:
             return
         msg = {
@@ -103,6 +104,8 @@ class Worker(Node, GatherContainerStat):
         token = message.content['token']
         childTaskTokens = message.content['childTaskTokens']
         workerID = self.id
+        totalCPUCores = self.totalCPUCores
+        cpuFreq = self.cpuFreq
         try:
             containerName = '%s_%s_%s' % (taskName, userName.replace('@', ''), self.nameLogPrinting)
             for container in self.dockerClient.containers.list():
@@ -110,7 +113,8 @@ class Worker(Node, GatherContainerStat):
                     continue
                 return
             command = '%s %s %s %d %s %d ' \
-                      '%d %s %s %s %s %d ' % (
+                      '%d %s %s %s %s %d ' \
+                      '%d %s' % (
                           containerName,
                           self.myAddr[0],
                           self.masterAddr[0],
@@ -122,7 +126,9 @@ class Worker(Node, GatherContainerStat):
                           taskName,
                           token,
                           ','.join(childTaskTokens) if len(childTaskTokens) else 'None',
-                          workerID
+                          workerID,
+                          totalCPUCores,
+                          cpuFreq
                       )
             # self.logger.info(command)
             self.dockerClient.containers.run(
@@ -175,6 +181,14 @@ class Worker(Node, GatherContainerStat):
             runningContainers.add(self.snake_to_camel(tags[0].split(':')[0]))
         return runningContainers
 
+    @staticmethod
+    def _getCPUFreq():
+        totalCoresCount = psutil.cpu_count(logical=True)
+        cpuFreq = psutil.cpu_freq()
+        currFreq = cpuFreq.current
+        resCPU = totalCoresCount, currFreq
+        return resCPU
+
     def _getResources(self):
         stats = self.container.stats(
             stream=False)
@@ -188,12 +202,15 @@ class Worker(Node, GatherContainerStat):
             memoryUsage = 1
             peekMemoryUsage = 1
             maxMemory = 1
+        totalCPUCores, cpuFreq = self._getCPUFreq()
         resources = {
             'systemCPUUsage': systemCPUUsage,
             'cpuUsage': cpuUsage,
             'memoryUsage': memoryUsage,
             'peekMemoryUsage': peekMemoryUsage,
-            'maxMemory': maxMemory}
+            'maxMemory': maxMemory,
+            'totalCPUCores': totalCPUCores,
+            'cpuFreq': cpuFreq}
         return resources
 
     def __uploadResources(self):

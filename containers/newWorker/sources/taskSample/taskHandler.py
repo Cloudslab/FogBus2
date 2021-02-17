@@ -24,6 +24,8 @@ class TaskHandler(Node):
             token: str,
             childTaskTokens: List[str],
             workerID: int,
+            totalCPUCores: int,
+            cpuFreq: float,
             logLevel=logging.DEBUG):
 
         self.userID: int = userID
@@ -35,6 +37,8 @@ class TaskHandler(Node):
         self.isRegistered: threading.Event = threading.Event()
         self.childrenAddr: Dict[str, tuple] = {}
         self.processTime: Median = Median()
+        self.totalCPUCores = totalCPUCores
+        self.cpuFreq = cpuFreq
 
         super().__init__(
             role='TaskHandler',
@@ -195,7 +199,10 @@ class TaskHandler(Node):
             return
         msg = {
             'type': 'medianProcessTime',
-            'medianProcessTime': self.processTime.median()}
+            'medianProcessTime': (
+                self.processTime.median(),
+                self.totalCPUCores,
+                self.cpuFreq)}
         self.sendMessage(msg, self.remoteLogger.addr)
 
     def run(self):
@@ -361,6 +368,18 @@ def parseArg():
         type=int,
         help='Worker id.'
     )
+    parser.add_argument(
+        'totalCPUCores',
+        metavar='TotalCPUCores',
+        type=int,
+        help='cpu cores count'
+    )
+    parser.add_argument(
+        'cpuFreq',
+        metavar='CPUFreq',
+        type=float,
+        help='cpu frequency'
+    )
     return parser.parse_args()
 
 
@@ -382,6 +401,8 @@ if __name__ == '__main__':
         taskName=args.taskName,
         token=args.token,
         childTaskTokens=args.childTaskTokens,
-        workerID=args.workerID)
+        workerID=args.workerID,
+        totalCPUCores=args.totalCPUCores,
+        cpuFreq=args.cpuFreq)
 
     taskHandler_.run()

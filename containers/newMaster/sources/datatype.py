@@ -27,6 +27,8 @@ class Worker(Client):
             memoryUsage: int,
             peekMemoryUsage: int,
             maxMemory: int,
+            totalCPUCores: int,
+            cpuFreq: float,
             images: Set[str]):
         # TODO Containers info
         if name is None:
@@ -43,6 +45,8 @@ class Worker(Client):
         self.memoryUsage = memoryUsage
         self.peekMemoryUsage = peekMemoryUsage
         self.maxMemory = maxMemory
+        self.totalCPUCores = totalCPUCores
+        self.cpuFreq = cpuFreq
         self.images: Set[str] = images
 
 

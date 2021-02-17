@@ -1,5 +1,5 @@
 import threading
-from typing import Dict
+from typing import Dict, Tuple
 from node import ImagesAndContainers
 from persistentStorage import PersistentStorage
 from connection import Median
@@ -11,7 +11,7 @@ class Profiler:
         self.medianPackageSize: Dict[str, Dict[str, float]] = {}
         self.medianDelay: Dict[str, Dict[str, float]] = {}
         self.nodeResources: Dict = {}
-        self.medianProcessTime: Dict[str, float] = {}
+        self.medianProcessTime: Dict[str, Tuple[float, int, float]] = {}
         self.medianRespondTime: Dict[str, float] = {}
         self.imagesAndRunningContainers: Dict[str, ImagesAndContainers] = {}
 

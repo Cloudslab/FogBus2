@@ -3,7 +3,6 @@ import threading
 import json
 import os
 from queue import Queue
-from pprint import pprint
 from random import randint, shuffle
 from pymoo.algorithms.genetic_algorithm import GeneticAlgorithm
 from pymoo.algorithms.nsga3 import NSGA3 as NSGA3_
@@ -59,10 +58,10 @@ class Scheduler:
             self,
             name: str,
             medianDelay: Dict[str, Dict[str, float]],
-            medianProcessTime: Dict[str, float]):
+            medianProcessTime: Dict[str, Tuple[float, int, float]]):
         self.name: str = name
         self.medianDelay: Dict[str, Dict[str, float]] = medianDelay
-        self.medianProcessTime: Dict[str, float] = medianProcessTime
+        self.medianProcessTime: Dict[str, Tuple[float, int, float]] = medianProcessTime
         tasksAndApps = loadDependencies()
         self.tasks: Dict[str, Task] = tasksAndApps[0]
         self.applications: Dict[str, Application] = tasksAndApps[1]
@@ -155,7 +154,7 @@ class Evaluator:
             masterName,
             masterMachine,
             medianDelay: Dict[str, Dict[str, float]],
-            medianProcessTime: Dict[str, float],
+            medianProcessTime: Dict[str, Tuple[float, int, float]],
             edgesByName: EdgesByName,
             entrance: str,
             workers: Dict[str, Worker]):
@@ -205,16 +204,23 @@ class Evaluator:
 
     def _computingCost(self, machineName) -> float:
         workerMachineId = self.individual[machineName]
-        taskHandlerName = '%s#%s' % (machineName, workerMachineId)
-        if taskHandlerName in self.medianProcessTime:
-            return self.medianProcessTime[taskHandlerName]
+        taskHandlerNameConsistent = '%s#%s' % (machineName, workerMachineId)
+        if taskHandlerNameConsistent in self.medianProcessTime:
+            return self.medianProcessTime[taskHandlerNameConsistent][0]
         if workerMachineId in self.medianProcessTime:
-            return self.medianProcessTime[workerMachineId]
-        return self.evaluateComputingCost(workerMachineId)
+            return self.medianProcessTime[workerMachineId][0]
+        return self.evaluateComputingCost(machineName, workerMachineId)
 
-    def evaluateComputingCost(self, workerMachineId):
+    def evaluateComputingCost(self, machineName, workerMachineId):
         worker = self.workers[workerMachineId]
-        return 1 / worker.systemCPUUsage
+        if machineName in self.medianProcessTime:
+            processTime = self.medianProcessTime[machineName][0]
+            totalCPUCores = self.medianProcessTime[machineName][1]
+            cpuFreq = self.medianProcessTime[machineName][2]
+            processTime *= totalCPUCores * cpuFreq
+            processTime /= worker.totalCPUCores * worker.cpuFreq
+            return processTime
+        return 1 / (worker.cpuFreq * worker.totalCPUCores)
 
 
 class BaseProblem(Problem, Evaluator):
@@ -226,7 +232,7 @@ class BaseProblem(Problem, Evaluator):
             masterName,
             masterMachine,
             medianDelay: Dict[str, Dict[str, float]],
-            medianProcessTime: Dict[str, float],
+            medianProcessTime: Dict[str, Tuple[float, int, float]],
             edgesByName: EdgesByName,
             entrance: str,
             availableWorkers: Dict[str, Worker],
@@ -321,7 +327,7 @@ class NSGABase(Scheduler):
             name: str,
             algorithm: GeneticAlgorithm,
             medianDelay: Dict[str, Dict[str, float]],
-            medianProcessTime: Dict[str, float],
+            medianProcessTime: Dict[str, Tuple[float, int, float]],
             generationNum: int,
             populationSize: int
     ):
@@ -385,7 +391,7 @@ class NSGA2(NSGABase):
                  populationSize: int,
                  generationNum: int,
                  medianDelay: Dict[str, Dict[str, float]],
-                 medianProcessTime: Dict[str, float]):
+                 medianProcessTime: Dict[str, Tuple[float, int, float]]):
         super().__init__(
             'NSGA2',
             NSGA2_(
@@ -404,7 +410,7 @@ class NSGA3(NSGABase):
                  generationNum: int,
                  dasDennisP: int,
                  medianDelay: Dict[str, Dict[str, float]],
-                 medianProcessTime: Dict[str, float]):
+                 medianProcessTime: Dict[str, Tuple[float, int, float]]):
         refDirs = get_reference_directions(
             "das-dennis",
             1,

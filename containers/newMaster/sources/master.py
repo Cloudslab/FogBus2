@@ -1,5 +1,4 @@
 import logging
-import sys
 import argparse
 from logger import get_logger
 from registry import Registry

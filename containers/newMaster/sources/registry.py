@@ -139,6 +139,8 @@ class Registry(Profiler, Node, ABC):
             memoryUsage=resources['memoryUsage'],
             peekMemoryUsage=resources['peekMemoryUsage'],
             maxMemory=resources['maxMemory'],
+            totalCPUCores=resources['totalCPUCores'],
+            cpuFreq=resources['cpuFreq'],
             images=images)
 
         self.workers[workerID] = worker
