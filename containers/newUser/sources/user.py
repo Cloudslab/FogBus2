@@ -196,6 +196,7 @@ class User(Node):
             content = {self.nameLogPrinting: self.app.respondTime.median()}
             json.dump(content, f)
             f.close()
+            self.logger.info(content)
 
 
 def parseArg():

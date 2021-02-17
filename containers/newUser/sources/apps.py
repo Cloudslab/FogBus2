@@ -1,11 +1,13 @@
 import cv2
 import threading
 import numpy as np
+import logging
 from abc import abstractmethod
 from queue import Queue
 from random import randint
 from connection import Median
 from time import time
+from logger import get_logger
 
 
 class ApplicationUserSide:
@@ -34,6 +36,7 @@ class ApplicationUserSide:
         self.videoPath: str = videoPath
         self.respondTime: Median = Median(maxRecordNumber=32)
         self.respondTimeCount = 0
+        self.logger = get_logger('AppLogger', logging.DEBUG)
 
     def resizeFrame(self, frame):
         width = frame.shape[1]
@@ -250,7 +253,7 @@ class VideoOCR(ApplicationUserSide):
         q.put(None)
 
     def _run(self):
-        print("[*] Sending frames ...")
+        self.logger.info("[*] Sending frames ...")
         while True:
             ret, frame = self.capture.read()
             if not ret:
@@ -260,14 +263,14 @@ class VideoOCR(ApplicationUserSide):
             self.dataToSubmit.put(inputData)
         inputData = (None, True)
         self.dataToSubmit.put(inputData)
-        print("[*] Sent all the frames and waiting for result ...")
+        self.logger.info("[*] Sent all the frames and waiting for result ...")
 
         lastDataSentTime = time()
         result = self.result.get()
         respondTime = (time() - lastDataSentTime) * 1000
         self.respondTime.update(respondTime)
         self.respondTimeCount += 1
-        print(result, '\r\n [*] The text is at above.')
+        self.logger.info(result, '\r\n [*] The text is at above.')
 
 
 class GameOfLifeSerialised(ApplicationUserSide):
@@ -315,7 +318,7 @@ class GameOfLifeSerialised(ApplicationUserSide):
                 # cv2.waitKey(0)
                 if cv2.waitKey(1) == ord('q'):
                     break
-            print('\r[*] Generation %d' % gen, end='')
+            self.logger.info('\r[*] Generation %d' % gen)
             inputData = (
                 self.world,
                 self.height,
@@ -333,7 +336,7 @@ class GameOfLifeSerialised(ApplicationUserSide):
             self.mayChange.update(result[5])
             self.changeStates()
 
-        print('[*] Bye')
+        self.logger.info('[*] Bye')
 
     def startWithText(self):
         text = 'Qifan Deng'
@@ -360,7 +363,7 @@ class GameOfLifeSerialised(ApplicationUserSide):
                     (self.width * self._resizeFactor,
                      self.height * self._resizeFactor),
                     interpolation=cv2.INTER_AREA))
-            print('[*] This is your initial world. Press \'Space\' to start.')
+            self.logger.info('[*] This is your initial world. Press \'Space\' to start.')
             cv2.waitKey(0)
 
     def initMayChange(self, theWholeWorld=False):
@@ -443,7 +446,7 @@ class GameOfLifeParallelized(GameOfLifeSerialised):
                 # cv2.waitKey(0)
                 if cv2.waitKey(1) == ord('q'):
                     break
-            print('\r[*] Generation %d' % gen, end='')
+            self.logger.info('\r[*] Generation %d' % gen)
             inputData = (
                 self.world,
                 self.height,
@@ -466,7 +469,7 @@ class GameOfLifeParallelized(GameOfLifeSerialised):
             self.respondTimeCount += 1
             self.changeStates()
 
-        print('[*] Bye')
+        self.logger.info('[*] Bye')
 
 
 class GameOfLifePyramid(GameOfLifeSerialised):
@@ -493,7 +496,7 @@ class GameOfLifePyramid(GameOfLifeSerialised):
                 # cv2.waitKey(0)
                 if cv2.waitKey(1) == ord('q'):
                     break
-            print('\r[*] Generation %d' % gen, end='')
+            self.logger.info('\r[*] Generation %d' % gen)
             inputData = (
                 self.world,
                 self.height,
@@ -516,4 +519,4 @@ class GameOfLifePyramid(GameOfLifeSerialised):
             self.respondTimeCount += 1
             self.changeStates()
 
-        print('[*] Bye')
+        self.logger.info('[*] Bye')

@@ -1,6 +1,7 @@
 import logging
 import os
 import json
+import threading
 from logger import get_logger
 from tqdm import tqdm
 from time import sleep
@@ -12,13 +13,11 @@ class Experiment:
         self.currPath = os.path.abspath(os.path.curdir)
         self.logger = get_logger('Experiment', level_name=logging.DEBUG)
 
-    @staticmethod
-    def stopAllContainers():
-        os.system('docker stop $(docker ps -a -q)')
-        os.system('docker rm $(docker ps -a -q) > /dev/null 2>&1 & ')
+    def stopAllContainers(self):
+        os.system('./stopContainer.sh > /dev/null 2>&1')
+        self.logger.info('Stopped all containers on where this script is running')
 
-    @staticmethod
-    def runRemoteLogger():
+    def runRemoteLogger(self):
         os.system(
             'cd ./newLogger && '
             'docker-compose run '
@@ -29,9 +28,9 @@ class Experiment:
             '192.168.3.20 5001 '
             '192.168.3.20 5000 '
             '> /dev/null 2>&1 &')
+        self.logger.info('Ran RemoteLogger')
 
-    @staticmethod
-    def runMaster(schedulerName):
+    def runMaster(self, schedulerName):
         os.system(
             'cd ./newMaster && '
             'docker-compose run '
@@ -43,9 +42,9 @@ class Experiment:
             '192.168.3.20 5001 '
             '%s '
             '> /dev/null 2>&1 &' % schedulerName)
+        self.logger.info('Ran Master')
 
-    @staticmethod
-    def runWorker():
+    def runWorker(self):
         os.system(
             'cd ./newWorker && '
             'docker-compose run '
@@ -57,9 +56,9 @@ class Experiment:
             '192.168.3.20 5000 '
             '192.168.3.20 5001 '
             '> /dev/null 2>&1 &')
+        self.logger.info('Ran Worker')
 
-    @staticmethod
-    def runUser():
+    def runUser(self):
         os.system(
             'cd ./newUser && '
             'docker-compose run '
@@ -74,16 +73,15 @@ class Experiment:
             '256 '
             '--no-show '
             '> /dev/null 2>&1 &')
+        self.logger.info('Ran User')
 
-    @staticmethod
-    def stopUser():
-        os.system('docker stop '
-                  '$(docker ps -a -q --filter="name=User") '
-                  '> /dev/null 2>&1')
+    def stopUser(self):
+        os.system('./stopContainer.sh User > /dev/null 2>&1')
+        self.logger.info('Stopped User')
 
     @staticmethod
     def readRespondTime(filename):
-        with open(filename) as f:
+        with open(filename, 'r') as f:
             respondTime = json.loads(f.read())
             f.close()
             os.system('rm -f %s' % filename)
@@ -94,57 +92,42 @@ class Experiment:
     def removeLogs(self):
         os.system('rm -rf %s/newLogger/sources/profiler/*.json' % self.currPath)
         os.system('rm -rf %s/newMaster/sources/profiler/*.json' % self.currPath)
+        self.logger.info('Removed logs')
+
+    def stopLocalTaskHandler(self):
+        os.system('./stopContainer.sh TaskHandler > /dev/null 2>&1')
+        self.logger.info('Stopped local TaskHandlers')
 
     @staticmethod
-    def runRemoteWorkers():
-        os.system('ssh 4GB-rpi-4B-alpha \''
-                  './runWorker.sh\' '
-                  '> /dev/null 2>&1 &')
-        os.system('ssh 2GB-rpi-4B-alpha \''
-                  './runWorker.sh\' '
-                  '> /dev/null 2>&1 &')
-        os.system('ssh 4GB-rpi-4B-beta \''
-                  './runWorker.sh\' '
-                  '> /dev/null 2>&1 &')
-        os.system('ssh 2GB-rpi-4B-beta \''
-                  './runWorker.sh\' '
-                  '> /dev/null 2>&1 &')
+    def _sshRunScript(machine, script, event):
+        os.system('ssh %s \'%s\' > /dev/null 2>&1' % (machine, script))
+        event.set()
 
     @staticmethod
-    def stopRemoteWorkers():
-        os.system('ssh 4GB-rpi-4B-alpha \''
-                  './stopWorker.sh\' '
-                  '> /dev/null 2>&1 &')
-        os.system('ssh 2GB-rpi-4B-alpha \''
-                  './stopWorker.sh\' '
-                  '> /dev/null 2>&1 &')
-        os.system('ssh 4GB-rpi-4B-beta \''
-                  './stopWorker.sh\' '
-                  '> /dev/null 2>&1 &')
-        os.system('ssh 2GB-rpi-4B-beta \''
-                  './stopWorker.sh\' '
-                  '> /dev/null 2>&1 &')
+    def manageRpi(runnable, script):
+        machines = [
+            '4GB-rpi-4B-alpha',
+            '2GB-rpi-4B-alpha',
+            '4GB-rpi-4B-beta',
+            '2GB-rpi-4B-beta']
+        events = [threading.Event() for _ in machines]
+        for i, machine in enumerate(machines):
+            runnable(machine, script, events[i])
 
-    @staticmethod
-    def stopLocalTaskHandler():
-        os.system('docker stop $(docker ps -a -q --filter="name=TaskHandler") '
-                  '&& docker rm $(docker ps -a -q --filter="name=TaskHandler") '
-                  '> /dev/null 2>&1')
+        for event in events:
+            event.wait()
 
-    @staticmethod
-    def stopRemoteTaskHandler():
-        os.system('ssh 4GB-rpi-4B-alpha \''
-                  './stopTaskHandlers.sh\' '
-                  '> /dev/null 2>&1 &')
-        os.system('ssh 2GB-rpi-4B-alpha \''
-                  './stopTaskHandlers.sh\' '
-                  '> /dev/null 2>&1 &')
-        os.system('ssh 4GB-rpi-4B-beta \''
-                  './stopTaskHandlers.sh\' '
-                  '> /dev/null 2>&1 &')
-        os.system('ssh 2GB-rpi-4B-beta \''
-                  './stopTaskHandlers.sh\' '
-                  '> /dev/null 2>&1 &')
+    def stopRemoteTaskHandler(self):
+        self.manageRpi(self._sshRunScript, './stopTaskHandlers.sh')
+        self.logger.info('Stopped remote TaskHandlers')
+
+    def stopRemoteWorkers(self):
+        self.manageRpi(self._sshRunScript, './stopWorker.sh')
+        self.logger.info('Stopped remote Workers')
+
+    def runRemoteWorkers(self):
+        self.manageRpi(self._sshRunScript, './runWorker.sh')
+        self.logger.info('Ran remote Workers')
 
     def rerunNecessaryContainers(self, schedulerName):
         self.stopAllContainers()
@@ -159,6 +142,7 @@ class Experiment:
         repeatTimes = 100
         userMaxWaitTime = 300
         respondTimeFilePath = '%s/newUser/sources/log/respondTime.json' % self.currPath
+        os.system('rm -f %s > /dev/null 2>&1' % respondTimeFilePath)
         respondTimes = [0 for _ in range(repeatTimes)]
 
         self.removeLogs()
@@ -182,17 +166,17 @@ class Experiment:
                 sleep(1)
                 if sleepCount > userMaxWaitTime:
                     break
-            self.stopUser()
-            self.stopLocalTaskHandler()
-            self.stopRemoteTaskHandler()
             if sleepCount > userMaxWaitTime:
                 self.rerunNecessaryContainers(schedulerName)
                 continue
+            self.stopUser()
             respondTimes[i] = self.readRespondTime(respondTimeFilePath)
+            self.saveEvaluateRecord(schedulerName, roundNum, i)
             i += 1
             processBar.update(1)
-            self.saveEvaluateRecord(schedulerName, roundNum, i)
-            self.logger.debug('[*] Result-[%d/%d]: %s', (i + 1), repeatTimes, str(respondTimes))
+            self.logger.info('[*] Result-[%d/%d]: %s', i, repeatTimes, str(respondTimes))
+            self.stopLocalTaskHandler()
+            self.stopRemoteTaskHandler()
         self.saveRes(schedulerName, respondTimes, roundNum)
         self.logger.info(respondTimes)
 
