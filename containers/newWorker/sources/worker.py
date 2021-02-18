@@ -108,7 +108,8 @@ class Worker(Node, GatherContainerStat):
             for container in self.dockerClient.containers.list():
                 if container.name != containerName:
                     continue
-                return
+                container.stop()
+                break
             command = '%s %s %s %d %s %d ' \
                       '%d %s %s %s %s %d ' \
                       '%d %s' % (
