@@ -105,7 +105,7 @@ class User(Node):
         self.__register()
 
     def __waitForWorkers(self):
-        targetCount = 5
+        targetCount = 4
         msg = {'type': 'workersCount'}
         while True:
             self.sendMessage(msg, self.master.addr)

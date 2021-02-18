@@ -182,7 +182,10 @@ class Worker(Node, GatherContainerStat):
     def _getCPUFreq():
         totalCoresCount = psutil.cpu_count(logical=True)
         cpuFreq = psutil.cpu_freq()
-        currFreq = cpuFreq.current
+        # psutil.cpu_freq().current is dynamic
+        # use max to run the experiment
+        # for better scheduling
+        currFreq = cpuFreq.max
         resCPU = totalCoresCount, currFreq
         return resCPU
 
