@@ -212,11 +212,6 @@ class Registry(Profiler, Node, ABC):
             return respond
         user = self.users[userID]
         worker = self.workers[workerID]
-        if (taskName, worker.machineID) not in user.notReadyTasks:
-            respond = {
-                'type': 'stop',
-                'reason': '%s already started' % taskName}
-            return respond
 
         # To differentiate where this taskHandler is running on
         # Thus use worker machineID as the taskHandler machineID
@@ -249,11 +244,12 @@ class Registry(Profiler, Node, ABC):
         self.taskHandlers[taskHandler.id] = taskHandler
         self.taskHandlerByToken[taskHandler.token] = taskHandler
 
-        user.lock.acquire()
-        user.notReadyTasks.remove((taskName, worker.machineID))
-        user.lastTaskReadyTime = time()
-        user.lock.release()
+        if (taskName, worker.machineID) in user.notReadyTasks:
+            user.lock.acquire()
+            user.notReadyTasks.remove((taskName, worker.machineID))
+            user.lock.release()
 
+        user.lastTaskReadyTime = time()
         if user.lockCheckResource.acquire(blocking=False):
             self._checkTaskHandlerForUser(user)
 
