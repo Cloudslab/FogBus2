@@ -132,11 +132,12 @@ class Master(Registry):
         user.lock.release()
 
     def __handleExit(self, message: Message):
-        self.logger.info(
-            '%s at %s exit with reason: %s',
-            message.source.nameLogPrinting,
-            str(message.source.addr),
-            message.content['reason'])
+        if message.content['reason'] != 'Manually interrupted.':
+            self.logger.info(
+                '%s at %s exit with reason: %s',
+                message.source.nameLogPrinting,
+                str(message.source.addr),
+                message.content['reason'])
 
         self.__stopClient(
             message.source,
