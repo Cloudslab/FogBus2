@@ -11,6 +11,7 @@ from node import Node, ImagesAndContainers
 from logger import get_logger
 from gatherContainerStat import GatherContainerStat
 from queue import Queue
+from time import time
 
 
 class Worker(Node, GatherContainerStat):
@@ -104,12 +105,16 @@ class Worker(Node, GatherContainerStat):
         totalCPUCores = self.totalCPUCores
         cpuFreq = self.cpuFreq
         try:
-            containerName = '%s_%s_%s' % (taskName, userName.replace('@', ''), self.nameLogPrinting)
-            for container in self.dockerClient.containers.list():
-                if container.name != containerName:
-                    continue
-                container.stop()
-                break
+            containerName = '%s_%s_%s_%s' % (
+                taskName,
+                userName.replace('@', ''),
+                self.nameLogPrinting,
+                time())
+            # for container in self.dockerClient.containers.list():
+            #     if container.name != containerName:
+            #         continue
+            #     container.stop()
+            #     break
             command = '%s %s %s %d %s %d ' \
                       '%d %s %s %s %s %d ' \
                       '%d %s' % (

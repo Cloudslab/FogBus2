@@ -65,6 +65,7 @@ class Scheduler:
         tasksAndApps = loadDependencies()
         self.tasks: Dict[str, Task] = tasksAndApps[0]
         self.applications: Dict[str, Application] = tasksAndApps[1]
+        self.edgesByName = {}
 
     def schedule(
             self,
@@ -76,7 +77,7 @@ class Scheduler:
             label: str,
             availableWorkers: Dict[str, Worker]
     ) -> Decision:
-        edgesByName, entrance = self.__getExecutionMap(
+        edgesByName, entrance = self._getExecutionMap(
             applicationName,
             label=label)
         return self._schedule(
@@ -100,10 +101,12 @@ class Scheduler:
             availableWorkers: Dict[str, Worker]) -> Decision:
         raise NotImplementedError
 
-    def __getExecutionMap(
+    def _getExecutionMap(
             self,
             applicationName: str,
             label: str) -> Tuple[EdgesByName, str]:
+        if applicationName in self.edgesByName:
+            return self.edgesByName[applicationName]
         app = self.applications[applicationName]
 
         skipRoles = {'RemoteLogger'}
@@ -142,6 +145,7 @@ class Scheduler:
             for name in v:
                 res[k].update([name])
             result[k] = list(res[k])
+        self.edgesByName[applicationName] = result, userAppName
         return result, userAppName
 
 
@@ -323,7 +327,11 @@ class BaseProblem(Problem, Evaluator):
                 continue
             if key[-11:] != 'TaskHandler':
                 continue
-            res[key] = self.availableWorkers[key][index]
+            try:
+                res[key] = self.availableWorkers[key][index]
+            except TypeError:
+                print(key, index, res, self.availableWorkers[key])
+                # print(self.availableWorkers[key][index])
         res[self.masterName] = self.masterMachine
         res[self.userName] = self.userMachineID
         return res
