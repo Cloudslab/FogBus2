@@ -162,14 +162,13 @@ class Evaluator:
             edgesByName: EdgesByName,
             entrance: str,
             workers: Dict[str, Worker]):
-
         self.userName = userName
-        self.userMachineID = userMachine
+        self._userMachineID = userMachine
         self.masterName = masterName
-        self.masterMachine = masterMachine
+        self._masterMachine = masterMachine
         self.medianDelay: Dict[str, Dict[str, float]] = medianDelay
         self.medianProcessTime = medianProcessTime
-        self.edgesByName = edgesByName
+        self._edgesByName = edgesByName
         self.entrance = entrance
         self.individual = None
         self.workers = workers
@@ -180,7 +179,7 @@ class Evaluator:
         master = 'Master'
         cost = self._edgeCost(self.entrance, master)
         cost += self._edgeCost(master, self.entrance)
-        for dest in self.edgesByName[master]:
+        for dest in self._edgesByName[master]:
             self._dfs(
                 dest,
                 cost + self._edgeCost(master, dest),
@@ -193,7 +192,7 @@ class Evaluator:
             return
         if source[-11:] == 'TaskHandler':
             cost += self._computingCost(source)
-        for dest in self.edgesByName[source]:
+        for dest in self._edgesByName[source]:
             cost += self._edgeCost(source, dest)
             self._dfs(dest, cost, res)
 
@@ -235,7 +234,7 @@ class Evaluator:
         return 1 / (worker.cpuFreq * worker.totalCPUCores)
 
 
-class BaseProblem(Problem, Evaluator):
+class GeneticProblem(Problem, Evaluator):
 
     def __init__(
             self,
@@ -262,8 +261,8 @@ class BaseProblem(Problem, Evaluator):
             edgesByName=edgesByName,
             entrance=entrance,
             workers=availableWorkers)
-        self.variableNumber = len(edgesByName)
-        self.availableWorkers = defaultdict(lambda: [])
+        self._variableNumber = len(edgesByName)
+        self._availableWorkers = defaultdict(lambda: [])
         choicesEachVariable = [0 for _ in range(len(edgesByName.keys()))]
         for i, name in enumerate(edgesByName.keys()):
             if len(name) > len('TaskHandler') \
@@ -273,38 +272,38 @@ class BaseProblem(Problem, Evaluator):
                 for machineID, worker in availableWorkers.items():
                     # Tru for saving experiment time
                     if taskName in worker.images or True:
-                        self.availableWorkers[name].append(worker.machineID)
+                        self._availableWorkers[name].append(worker.machineID)
                         choicesEachVariable[i] += 1
-                shuffle(self.availableWorkers[name])
+                shuffle(self._availableWorkers[name])
                 continue
             choicesEachVariable[i] = 1
 
-        lowerBound = [0 for _ in range(self.variableNumber)]
+        lowerBound = [0 for _ in range(self._variableNumber)]
         upperBound = choicesEachVariable
         Problem.__init__(
             self,
             xl=lowerBound,
             xu=upperBound,
             n_obj=1,
-            n_var=self.variableNumber,
+            n_var=self._variableNumber,
             type_var=np.int)
 
         res = [.0 for _ in range(self.populationSize)]
-        self.res = np.asarray(res)
-        self.toProcess = Queue()
-        self._runEvaluateThreadPool()
-        self.record = []
+        self._res = np.asarray(res)
+        self._individualToProcess = Queue()
+        self._runEvaluationThreadPool()
+        self.myRecords = []
 
-    def _runEvaluateThreadPool(self):
+    def _runEvaluationThreadPool(self):
         for i in range(self.populationSize // 2):
             threading.Thread(
-                target=self._evaluateThread
+                target=self._evaluationThread
             ).start()
 
-    def _evaluateThread(self):
+    def _evaluationThread(self):
         while True:
-            i, individual, event = self.toProcess.get()
-            self.res[i] = self._cost(individual)
+            i, individual, event = self._individualToProcess.get()
+            self._res[i] = self._cost(individual)
             event.set()
 
     def _evaluate(self, xs, out, *args, **kwargs):
@@ -312,28 +311,24 @@ class BaseProblem(Problem, Evaluator):
         for i, x in enumerate(xs):
             x = x.astype(int)
             individual = self.indexesToMachines(x)
-            self.toProcess.put((i, individual, events[i]))
+            self._individualToProcess.put((i, individual, events[i]))
         for event in events:
             event.wait()
-        out['F'] = self.res
-        self.record.append(min(out['F']))
+        out['F'] = self._res
+        self.myRecords.append(min(out['F']))
 
     def indexesToMachines(self, indexes: List[int]):
         res = {}
-        keys = list(self.edgesByName.keys())
+        keys = list(self._edgesByName.keys())
         for keysIndex, index in enumerate(indexes):
             key = keys[keysIndex]
             if len(key) <= len('TaskHandler'):
                 continue
             if key[-11:] != 'TaskHandler':
                 continue
-            try:
-                res[key] = self.availableWorkers[key][index]
-            except TypeError:
-                print(key, index, res, self.availableWorkers[key])
-                # print(self.availableWorkers[key][index])
-        res[self.masterName] = self.masterMachine
-        res[self.userName] = self.userMachineID
+            res[key] = self._availableWorkers[key][index]
+        res[self.masterName] = self._masterMachine
+        res[self.userName] = self._userMachineID
         return res
 
 
@@ -341,19 +336,19 @@ class NSGABase(Scheduler):
     def __init__(
             self,
             name: str,
-            algorithm: GeneticAlgorithm,
+            geneticAlgorithm: GeneticAlgorithm,
             medianDelay: Dict[str, Dict[str, float]],
             medianProcessTime: Dict[str, Tuple[float, int, float]],
             generationNum: int,
             populationSize: int
     ):
-        self.__generationNum: int = generationNum
-        self.__populationSize: int = populationSize
+        self._generationNum: int = generationNum
+        self._populationSize: int = populationSize
+        self._geneticAlgorithm = geneticAlgorithm
         super().__init__(
             name=name,
             medianDelay=medianDelay,
             medianProcessTime=medianProcessTime)
-        self.__algorithm = algorithm
 
     def _schedule(
             self,
@@ -364,7 +359,7 @@ class NSGABase(Scheduler):
             edgesByName: EdgesByName,
             entrance: str,
             availableWorkers: Dict[str, Worker]) -> Decision:
-        problem = BaseProblem(
+        geneticProblem = GeneticProblem(
             userName,
             userMachine,
             masterName,
@@ -374,16 +369,23 @@ class NSGABase(Scheduler):
             edgesByName=edgesByName,
             entrance=entrance,
             availableWorkers=availableWorkers,
-            populationSize=self.__populationSize)
-        res = minimize(problem,
-                       self.__algorithm,
+            populationSize=self._populationSize)
+        res = minimize(geneticProblem,
+                       self._geneticAlgorithm,
                        seed=randint(0, 100),
                        termination=(
                            'n_gen',
-                           self.__generationNum))
-        machines = problem.indexesToMachines(list(res.X.astype(int)))
-        cost = res.F[0]
-        self.saveEvaluateProgress(problem.record)
+                           self._generationNum))
+        if len(res.X.shape) > 1:
+            minIndex = np.argmin(res.F)
+            cost = res.F[minIndex][0]
+            indexes = res.X[minIndex]
+            indexes = list(indexes.astype(int))
+        else:
+            cost = res.F[0]
+            indexes = list(res.X.astype(int))
+        machines = geneticProblem.indexesToMachines(indexes)
+        self.saveEvaluateProgress(geneticProblem.myRecords)
         decision = Decision(
             machines=machines,
             cost=cost)

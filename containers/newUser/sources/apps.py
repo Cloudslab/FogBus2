@@ -318,7 +318,7 @@ class GameOfLifeSerialised(ApplicationUserSide):
                 # cv2.waitKey(0)
                 if cv2.waitKey(1) == ord('q'):
                     break
-            self.logger.info('\r[*] Generation %d' % gen)
+            self.logger.info('[*] Generation %d' % gen)
             inputData = (
                 self.world,
                 self.height,
@@ -446,7 +446,7 @@ class GameOfLifeParallelized(GameOfLifeSerialised):
                 # cv2.waitKey(0)
                 if cv2.waitKey(1) == ord('q'):
                     break
-            self.logger.info('\r[*] Generation %d' % gen)
+            self.logger.info('[*] Generation %d' % gen)
             inputData = (
                 self.world,
                 self.height,
@@ -496,7 +496,7 @@ class GameOfLifePyramid(GameOfLifeSerialised):
                 # cv2.waitKey(0)
                 if cv2.waitKey(1) == ord('q'):
                     break
-            self.logger.info('\r[*] Generation %d' % gen)
+            self.logger.info('[*] Generation %d' % gen)
             inputData = (
                 self.world,
                 self.height,

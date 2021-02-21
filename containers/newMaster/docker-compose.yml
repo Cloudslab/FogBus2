@@ -15,6 +15,7 @@ services:
       PUID: 1000
       PGID: 1000
       TZ: Australia/Melbourne
+      PYTHONUNBUFFERED: 0
     ports:
       - 5000:5000
     network_mode: "host"

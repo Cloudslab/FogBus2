@@ -152,6 +152,7 @@ class Experiment:
         self.runMaster(schedulerName)
         self.runWorker()
         self.runRemoteWorkers()
+        sleep(1)
 
     def run(
             self,
@@ -219,18 +220,18 @@ class Experiment:
 if __name__ == '__main__':
     experiment = Experiment()
     targetRound_ = 10
-    repeatTimes_ = 2
-    waitTime = 200
+    repeatTimes_ = 200
+    waitTime = 300
     for num in range(targetRound_):
         experiment.run(
             'NSGA3',
-            num,
+            num + 1,
             targetRound_,
             repeatTimes=repeatTimes_,
             userMaxWaitTime=waitTime)
         experiment.run(
             'NSGA2',
-            num,
+            num + 1,
             targetRound_,
             repeatTimes=repeatTimes_,
             userMaxWaitTime=waitTime)

@@ -24,4 +24,4 @@ RUN echo "Master" > /etc/hostname
 EXPOSE 5000
 
 # Run Master
-ENTRYPOINT ["python", "master.py"]
+ENTRYPOINT ["python", "-u", "master.py"]

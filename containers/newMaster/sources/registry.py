@@ -55,7 +55,7 @@ class Registry(Profiler, Node, ABC):
 
         self.profiler = self.__loadProfilers()
         self.tasks, self.applications = self.profiler
-        self.scheduler: Scheduler = self.__getScheduler(
+        self.scheduler: Scheduler = self._getScheduler(
             schedulerName=schedulerName)
         self.logger = None
 
@@ -68,7 +68,7 @@ class Registry(Profiler, Node, ABC):
     def __loadDependencies():
         return loadDependencies()
 
-    def __getScheduler(self, schedulerName: str) -> Scheduler:
+    def _getScheduler(self, schedulerName: str) -> Scheduler:
         populationSize = 200
         generationNum = 200
         if schedulerName in {None, 'NSGA3'}:
