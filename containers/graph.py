@@ -15,7 +15,7 @@ class Graph:
             algorithms: List[str]):
         self.logPath = logPath
         self.algorithms = algorithms
-        self.realData = {}
+        self.realRespondTime = {}
         self.evaluation = {}
 
     def run(self):
@@ -31,6 +31,9 @@ class Graph:
 
     def _readEvaluatedRespondTime(self):
         allFiles = os.listdir(self.logPath)
+        evaluation = {}
+        for algorithmName in self.algorithms:
+            evaluation[algorithmName] = np.empty((10, 100, 200))
         for file in allFiles:
             if os.path.isdir(file):
                 continue
@@ -43,13 +46,16 @@ class Graph:
             if algorithmName not in self.algorithms:
                 continue
             data = self.readFromJson(file)
-            if algorithmName not in self.evaluation:
-                self.evaluation[algorithmName] = np.asarray(data)
-                continue
-            self.evaluation[algorithmName] = np.vstack((self.evaluation[algorithmName], np.asarray(data)))
+            roundNum = int(parts[2]) - 1
+            iterationNum = int(parts[3].split('.')[0])
+            evaluation[algorithmName][roundNum][iterationNum] = np.asarray(data)
+        self.evaluation = evaluation
 
     def _readRealRespondTime(self):
         allFiles = os.listdir(self.logPath)
+        realRespondTime = {}
+        for algorithmName in self.algorithms:
+            realRespondTime[algorithmName] = np.empty((10, 100))
         for file in allFiles:
             if os.path.isdir(file):
                 continue
@@ -60,21 +66,21 @@ class Graph:
             if algorithmName not in self.algorithms:
                 continue
             data = self.readFromJson(file)
-            if algorithmName not in self.realData:
-                self.realData[algorithmName] = np.asarray(data)
-                continue
-            self.realData[algorithmName] = np.vstack((self.realData[algorithmName], np.asarray(data)))
+            roundNum = int(parts[1].split('.')[0]) - 1
+            realRespondTime[algorithmName][roundNum] = np.asarray(data)
+
+        self.realRespondTime = realRespondTime
 
     def draw(
             self,
-            visulData,
+            visualData,
             statMethod: str,
             label=''):
-        if not len(self.realData):
+        if not len(visualData):
             return
         roundNum = 0
         rangeNum = 0
-        for data in visulData.values():
+        for data in visualData.values():
             if len(data.shape) == 1:
                 roundNum = 1
                 rangeNum = data.shape[0]
@@ -89,14 +95,14 @@ class Graph:
         # fig.ylabel('Respond Time (ms)')
         x = [i for i in range(1, rangeNum + 1)]
         algorithms = []
-        for algorithmName, data in visulData.items():
-            if len(visulData[algorithmName].shape) == 1:
-                data = visulData[algorithmName]
+        for algorithmName, data in visualData.items():
+            if len(visualData[algorithmName].shape) == 1:
+                data = visualData[algorithmName]
             else:
                 if statMethod == 'mean':
-                    data = np.mean(visulData[algorithmName], axis=0)
+                    data = np.mean(visualData[algorithmName], axis=0)
                 else:
-                    data = np.median(visulData[algorithmName], axis=0)
+                    data = np.median(visualData[algorithmName], axis=0)
             ax.plot(x, data)
             algorithms.append(algorithmName)
         ax.legend(algorithms)
@@ -115,6 +121,22 @@ class Graph:
         )
         plt.show()
 
+    def drawDiff(self):
+
+        for algorithm in self.algorithms:
+            fig, ax = plt.subplots()
+            evaluationData = np.mean(self.evaluation[algorithm][:, :, -1], axis=0)
+            realData = np.mean(self.realRespondTime[algorithm], axis=0)
+            x = [i + 1 for i in range(evaluationData.shape[0])]
+            ax.plot(x, evaluationData)
+            ax.plot(x, realData)
+            ax.legend(['Evaluated', 'Real'])
+            ax.set_ylabel('Respond Time (ms)')
+            ax.set_xlabel('Iteration Number')
+            ax.set_title('Average Evaluated and Real Respond Time \nAgainst Iteration Number for %s' % algorithm)
+            plt.show()
+        exit()
+
 
 if __name__ == '__main__':
     resultPath = 'results/10rounds/'
@@ -125,7 +147,8 @@ if __name__ == '__main__':
         ['NSGA2', 'NSGA3']
     )
     graph_.run()
-    graph_.draw(graph_.realData, 'mean')
-    graph_.draw(graph_.realData, 'median')
+    graph_.drawDiff()
+    graph_.draw(graph_.realRespondTime, 'mean')
+    graph_.draw(graph_.realRespondTime, 'median')
     graph_.draw(graph_.evaluation, 'median', 'Evaluated')
     graph_.draw(graph_.evaluation, 'mean', 'Evaluated')
