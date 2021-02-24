@@ -135,7 +135,21 @@ class Graph:
             ax.set_xlabel('Iteration Number')
             ax.set_title('Average Evaluated and Real Respond Time \nAgainst Iteration Number for %s' % algorithm)
             plt.show()
-        exit()
+
+    def drawConvergence(self):
+        fig, ax = plt.subplots()
+        for algorithm, evaluationData in self.evaluation.items():
+            shape = evaluationData.shape
+            reshapedData = evaluationData.reshape((shape[0]*shape[1], shape[2]))
+            meanData = np.mean(reshapedData, axis=0)
+            x = [i+1 for i in range(meanData.shape[0])]
+            ax.plot(x, meanData)
+
+        ax.legend(self.evaluation.keys())
+        ax.set_ylabel('Respond Time (ms)')
+        ax.set_xlabel('Iteration Number')
+        ax.set_title('Evaluated Respond Time ')
+        plt.show()
 
 
 if __name__ == '__main__':
@@ -147,8 +161,6 @@ if __name__ == '__main__':
         ['NSGA2', 'NSGA3']
     )
     graph_.run()
+    graph_.drawConvergence()
     graph_.drawDiff()
     graph_.draw(graph_.realRespondTime, 'mean')
-    graph_.draw(graph_.realRespondTime, 'median')
-    graph_.draw(graph_.evaluation, 'median', 'Evaluated')
-    graph_.draw(graph_.evaluation, 'mean', 'Evaluated')
