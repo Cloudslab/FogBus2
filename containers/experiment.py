@@ -220,8 +220,8 @@ class Experiment:
 if __name__ == '__main__':
     experiment = Experiment()
     targetRound_ = 10
-    repeatTimes_ = 200
-    waitTime = 300
+    repeatTimes_ = 100
+    waitTime = 180
     for num in range(targetRound_):
         experiment.run(
             'NSGA3',
