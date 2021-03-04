@@ -7,12 +7,39 @@ from node import Node
 from profilerManage import Profiler
 from datatype import Worker, User, TaskHandler
 from connection import Message
-from typing import Dict, Union, List, Tuple
+from typing import Dict, Union, List, Tuple, DefaultDict
 from dependencies import loadDependencies, Application
 from scheduling import Scheduler, Decision, NSGA3, NSGA2
+from collections import defaultdict
 from time import time, sleep
 
 Address = Tuple[str, int]
+
+
+class Decisions:
+
+    def __init__(self, keptDecisionsCount: int = 100):
+        self._keptDecisionCount = keptDecisionsCount
+        self._requestedAppCount: DefaultDict[str, int] = defaultdict(lambda: 0)
+        self.__decisions: DefaultDict[str, List[Decision]] = defaultdict(lambda: [])
+
+    def update(self, appName, decision: Decision):
+        self._requestedAppCount[appName] += 1
+        self.__decisions[appName].append(decision)
+        self._clean()
+
+    def _clean(self):
+        totalRequest = sum(self._requestedAppCount.values())
+        if totalRequest < self._keptDecisionCount:
+            return
+        factor = totalRequest / self._keptDecisionCount
+        for appName, decisions in self.__decisions.items():
+            count = round(factor * self._requestedAppCount[appName])
+            if count < len(self.__decisions[appName]):
+                self.__decisions[appName] = self.__decisions[appName][:count]
+
+    def good(self, appName):
+        return self.__decisions[appName]
 
 
 class Registry(Profiler, Node, ABC):
@@ -59,6 +86,7 @@ class Registry(Profiler, Node, ABC):
         self.scheduler: Scheduler = self._getScheduler(
             schedulerName=schedulerName,
             initWithLog=initWithLog)
+        self.decisions = Decisions()
         self.logger = None
 
     @staticmethod
@@ -360,6 +388,10 @@ class Registry(Profiler, Node, ABC):
             applicationName=user.appName,
             label=user.label,
             availableWorkers=allWorkers)
+        self.decisions.update(
+            appName=user.appName,
+            decision=decision)
+        self.decisions.update(user.appName, decision)
         messageForWorkers = self.__parseDecision(decision, user)
 
         del decision.__dict__['machines']

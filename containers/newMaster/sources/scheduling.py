@@ -407,7 +407,7 @@ class NSGABase(Scheduler):
 def _initialize(self):
     # create the initial population
     pop = self.initialization.do(self.problem, self.pop_size, algorithm=self)
-    print(pop[0].X, pop[0].F)
+
     pop.set("n_gen", self.n_gen)
     # then evaluate using the objective function
     self.evaluator.eval(self.problem, pop, algorithm=self)
