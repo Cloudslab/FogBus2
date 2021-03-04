@@ -18,6 +18,7 @@ class Master(Registry):
             loggerAddr,
             schedulerName: str,
             masterID: int = 0,
+            initWithLog: bool = False,
             logLevel=logging.DEBUG):
         Registry.__init__(
             self,
@@ -27,6 +28,7 @@ class Master(Registry):
             loggerAddr=loggerAddr,
             ignoreSocketErr=True,
             schedulerName=schedulerName,
+            initWithLog=initWithLog,
             logLevel=logLevel)
         self.id = masterID
 
@@ -244,16 +246,27 @@ def parseArg():
         type=str,
         help='Scheduler name.'
     )
+
+    parser.add_argument(
+        '--initWithLog',
+        metavar='InitWithLog',
+        nargs='?',
+        default=False,
+        type=bool,
+        help='True or False'
+    )
     return parser.parse_args()
 
 
 if __name__ == '__main__':
     args = parseArg()
     containerName_ = args.containerName
+    print(args.initWithLog)
     master_ = Master(
         containerName=containerName_,
         myAddr=(args.ip, args.port),
         masterAddr=(args.ip, args.port),
         loggerAddr=(args.loggerIP, args.loggerPort),
-        schedulerName=args.schedulerName)
+        schedulerName=args.schedulerName,
+        initWithLog=True if args.initWithLog else False)
     master_.run()

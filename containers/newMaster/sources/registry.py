@@ -25,6 +25,7 @@ class Registry(Profiler, Node, ABC):
             loggerAddr,
             ignoreSocketErr: bool,
             schedulerName: str,
+            initWithLog: bool,
             logLevel=logging.DEBUG):
         Profiler.__init__(self)
         Node.__init__(
@@ -56,7 +57,8 @@ class Registry(Profiler, Node, ABC):
         self.profiler = self.__loadProfilers()
         self.tasks, self.applications = self.profiler
         self.scheduler: Scheduler = self._getScheduler(
-            schedulerName=schedulerName)
+            schedulerName=schedulerName,
+            initWithLog=initWithLog)
         self.logger = None
 
     @staticmethod
@@ -68,7 +70,10 @@ class Registry(Profiler, Node, ABC):
     def __loadDependencies():
         return loadDependencies()
 
-    def _getScheduler(self, schedulerName: str) -> Scheduler:
+    def _getScheduler(
+            self,
+            schedulerName: str,
+            initWithLog: bool) -> Scheduler:
         populationSize = 200
         generationNum = 150
         if schedulerName in {None, 'NSGA3'}:
@@ -77,13 +82,15 @@ class Registry(Profiler, Node, ABC):
                 medianProcessTime=self.medianProcessTime,
                 populationSize=populationSize,
                 generationNum=generationNum,
-                dasDennisP=1)
+                dasDennisP=1,
+                initWithLog=initWithLog)
         elif schedulerName == 'NSGA2':
             return NSGA2(
                 medianDelay=self.medianDelay,
                 medianProcessTime=self.medianProcessTime,
                 populationSize=populationSize,
-                generationNum=generationNum)
+                generationNum=generationNum,
+                initWithLog=initWithLog)
         self.logger.warning('Unknown scheduler: %s', schedulerName)
         os._exit(0)
 

@@ -307,6 +307,7 @@ class GeneticProblem(Problem, Evaluator):
             event.set()
 
     def _evaluate(self, xs, out, *args, **kwargs):
+
         events = [threading.Event() for _ in range(len(xs))]
         for i, x in enumerate(xs):
             x = x.astype(int)
@@ -403,22 +404,58 @@ class NSGABase(Scheduler):
                 pass
 
 
+def _initialize(self):
+    # create the initial population
+    pop = self.initialization.do(self.problem, self.pop_size, algorithm=self)
+    print(pop[0].X, pop[0].F)
+    pop.set("n_gen", self.n_gen)
+    # then evaluate using the objective function
+    self.evaluator.eval(self.problem, pop, algorithm=self)
+
+    # that call is a dummy survival to set attributes that are necessary for the mating selection
+    if self.survival:
+        pop = self.survival.do(self.problem, pop, len(pop), algorithm=self,
+                               n_min_infeas_survive=self.min_infeas_pop_size)
+
+    self.pop, self.off = pop, pop
+
+
+class NSGA2InitialWithLog(NSGA2_):
+
+    def _initialize(self):
+        return _initialize(self)
+
+
 class NSGA2(NSGABase):
 
     def __init__(self,
                  populationSize: int,
                  generationNum: int,
                  medianDelay: Dict[str, Dict[str, float]],
-                 medianProcessTime: Dict[str, Tuple[float, int, float]]):
+                 medianProcessTime: Dict[str, Tuple[float, int, float]],
+                 initWithLog: bool = False):
+
+        if not initWithLog:
+            algorithm = NSGA2_(
+                pop_size=populationSize,
+                eliminate_duplicates=True)
+        else:
+            algorithm = NSGA2InitialWithLog(
+                pop_size=populationSize,
+                eliminate_duplicates=True)
         super().__init__(
             'NSGA2',
-            NSGA2_(
-                pop_size=populationSize,
-                eliminate_duplicates=True),
+            algorithm,
             medianDelay=medianDelay,
             medianProcessTime=medianProcessTime,
             generationNum=generationNum,
             populationSize=populationSize)
+
+
+class NSGA3InitialWithLog(NSGA3_):
+
+    def _initialize(self):
+        return _initialize(self)
 
 
 class NSGA3(NSGABase):
@@ -428,17 +465,25 @@ class NSGA3(NSGABase):
                  generationNum: int,
                  dasDennisP: int,
                  medianDelay: Dict[str, Dict[str, float]],
-                 medianProcessTime: Dict[str, Tuple[float, int, float]]):
+                 medianProcessTime: Dict[str, Tuple[float, int, float]],
+                 initWithLog: bool = False):
         refDirs = get_reference_directions(
             "das-dennis",
             1,
             n_partitions=dasDennisP)
-        super().__init__(
-            'NSGA3',
-            NSGA3_(
+        if not initWithLog:
+            algorithm = NSGA3_(
                 pop_size=populationSize,
                 ref_dirs=refDirs,
-                eliminate_duplicates=True),
+                eliminate_duplicates=True)
+        else:
+            algorithm = NSGA3InitialWithLog(
+                pop_size=populationSize,
+                ref_dirs=refDirs,
+                eliminate_duplicates=True)
+        super().__init__(
+            'NSGA3',
+            algorithm,
             medianDelay=medianDelay,
             medianProcessTime=medianProcessTime,
             generationNum=generationNum,
