@@ -219,9 +219,9 @@ class Evaluator:
         if workerMachineId in self.medianProcessTime \
                 and self.medianProcessTime[workerMachineId][0] != 0:
             return self.medianProcessTime[workerMachineId][0]
-        return self.evaluateComputingCost(machineName, workerMachineId)
+        return self.estimateComputingCost(machineName, workerMachineId)
 
-    def evaluateComputingCost(self, machineName, workerMachineId):
+    def estimateComputingCost(self, machineName, workerMachineId):
         worker = self.workers[workerMachineId]
         if machineName in self.medianProcessTime \
                 and self.medianProcessTime[machineName][0] != 0:
@@ -385,14 +385,14 @@ class NSGABase(Scheduler):
             cost = res.F[0]
             indexes = list(res.X.astype(int))
         machines = geneticProblem.indexesToMachines(indexes)
-        self.saveEvaluateProgress(geneticProblem.myRecords)
+        self.saveEstimatingProgress(geneticProblem.myRecords)
         decision = Decision(
             machines=machines,
             cost=cost)
         return decision
 
     @staticmethod
-    def saveEvaluateProgress(record):
+    def saveEstimatingProgress(record):
         filename = './record.json'
         with open(filename, 'w+') as f:
             json.dump(record, f)

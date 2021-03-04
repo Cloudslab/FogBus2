@@ -191,7 +191,7 @@ class Experiment:
                 continue
             self.stopUser()
             respondTimes[i] = self.readRespondTime(respondTimeFilePath)
-            self.saveEvaluateRecord(schedulerName, roundNum, i)
+            self.saveEstimatedRecord(schedulerName, roundNum, i)
             i += 1
             processBar.update(1)
             self.logger.info('[*] Result-[%d/%d]: %s', i, repeatTimes, str(respondTimes))
@@ -201,7 +201,7 @@ class Experiment:
         self.logger.info(respondTimes)
 
     @staticmethod
-    def saveEvaluateRecord(algorithmName, roundNum, iterationNum):
+    def saveEstimatedRecord(algorithmName, roundNum, iterationNum):
         os.system('mv '
                   './newMaster/sources/record.json '
                   './Evaluation-%s-%d-%d.json' % (algorithmName, roundNum, iterationNum))

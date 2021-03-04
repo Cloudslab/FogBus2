@@ -19,7 +19,7 @@ class Graph:
         self.evaluation = {}
 
     def run(self):
-        self._readEvaluatedRespondTime()
+        self._readEstimatedRespondTime()
         self._readRealRespondTime()
 
     def readFromJson(self, filename):
@@ -29,7 +29,7 @@ class Graph:
         f.close()
         return data
 
-    def _readEvaluatedRespondTime(self):
+    def _readEstimatedRespondTime(self):
         allFiles = os.listdir(self.logPath)
         evaluation = {}
         for algorithmName in self.algorithms:
@@ -130,10 +130,10 @@ class Graph:
             x = [i + 1 for i in range(evaluationData.shape[0])]
             ax.plot(x, evaluationData)
             ax.plot(x, realData)
-            ax.legend(['Evaluated', 'Real'])
+            ax.legend(['Estimated', 'Real'])
             ax.set_ylabel('Respond Time (ms)')
             ax.set_xlabel('Iteration Number')
-            ax.set_title('Average Evaluated and Real Respond Time \nAgainst Iteration Number for %s' % algorithm)
+            ax.set_title('Average Estimated and Real Respond Time \nAgainst Iteration Number for %s' % algorithm)
             plt.show()
 
     def drawConvergence(self):
@@ -148,7 +148,7 @@ class Graph:
         ax.legend(self.evaluation.keys())
         ax.set_ylabel('Respond Time (ms)')
         ax.set_xlabel('Iteration Number')
-        ax.set_title('Evaluated Respond Time ')
+        ax.set_title('Estimated Respond Time ')
         plt.show()
 
 
