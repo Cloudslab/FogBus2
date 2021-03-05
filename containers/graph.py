@@ -77,8 +77,8 @@ class Graph:
 
         self.realRespondTime = realRespondTime
 
-    @staticmethod
     def draw(
+            self,
             visualData, ):
         if not len(visualData):
             return
@@ -116,7 +116,7 @@ class Graph:
                 'on Average ' \
                 'of %d Rounds' % roundNum
         ax.set_title(title)
-        plt.savefig(title)
+        self.saveToFile(title)
         plt.show()
 
     def drawDiff(self):
