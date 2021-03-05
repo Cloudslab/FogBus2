@@ -39,9 +39,11 @@ class Decision:
     def __init__(
             self,
             machines: Dict[str, str],
-            cost: float):
+            cost: float,
+            machinesIndex: List[int]):
         self.machines: Dict[str, str] = machines
         self.cost: float = cost
+        self.machinesIndex = machinesIndex
 
     def __repr__(self):
         return self.__str__()
@@ -345,7 +347,7 @@ class NSGABase(Scheduler):
     ):
         self._generationNum: int = generationNum
         self._populationSize: int = populationSize
-        self._geneticAlgorithm = geneticAlgorithm
+        self.geneticAlgorithm = geneticAlgorithm
         super().__init__(
             name=name,
             medianDelay=medianDelay,
@@ -372,7 +374,7 @@ class NSGABase(Scheduler):
             availableWorkers=availableWorkers,
             populationSize=self._populationSize)
         res = minimize(geneticProblem,
-                       self._geneticAlgorithm,
+                       self.geneticAlgorithm,
                        seed=randint(0, 100),
                        termination=(
                            'n_gen',
@@ -389,7 +391,8 @@ class NSGABase(Scheduler):
         self.saveEstimatingProgress(geneticProblem.myRecords)
         decision = Decision(
             machines=machines,
-            cost=cost)
+            cost=cost,
+            machinesIndex=indexes)
         return decision
 
     @staticmethod
@@ -404,10 +407,13 @@ class NSGABase(Scheduler):
                 pass
 
 
-def _initialize(self):
+def _initialize(self, decisionsFromLog: List[Decision]):
     # create the initial population
     pop = self.initialization.do(self.problem, self.pop_size, algorithm=self)
-
+    for i, decision in enumerate(decisionsFromLog):
+        pop[i].X = decision.machinesIndex
+    if len(decisionsFromLog):
+        print('[*] Used log to improve initialized population. %d individuals are from log.' % len(decisionsFromLog))
     pop.set("n_gen", self.n_gen)
     # then evaluate using the objective function
     self.evaluator.eval(self.problem, pop, algorithm=self)
@@ -422,8 +428,12 @@ def _initialize(self):
 
 class NSGA2InitialWithLog(NSGA2_):
 
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.decisionsFromLog = []
+
     def _initialize(self):
-        return _initialize(self)
+        return _initialize(self, self.decisionsFromLog)
 
 
 class NSGA2(NSGABase):
@@ -436,16 +446,17 @@ class NSGA2(NSGABase):
                  initWithLog: bool = False):
 
         if not initWithLog:
-            algorithm = NSGA2_(
+            geneticAlgorithm = NSGA2_(
                 pop_size=populationSize,
                 eliminate_duplicates=True)
         else:
-            algorithm = NSGA2InitialWithLog(
+            geneticAlgorithm = NSGA2InitialWithLog(
                 pop_size=populationSize,
-                eliminate_duplicates=True)
+                eliminate_duplicates=True,
+            )
         super().__init__(
             'NSGA2',
-            algorithm,
+            geneticAlgorithm,
             medianDelay=medianDelay,
             medianProcessTime=medianProcessTime,
             generationNum=generationNum,
@@ -454,8 +465,12 @@ class NSGA2(NSGABase):
 
 class NSGA3InitialWithLog(NSGA3_):
 
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.decisionsFromLog = []
+
     def _initialize(self):
-        return _initialize(self)
+        return _initialize(self, self.decisionsFromLog)
 
 
 class NSGA3(NSGABase):
@@ -466,7 +481,7 @@ class NSGA3(NSGABase):
                  dasDennisP: int,
                  medianDelay: Dict[str, Dict[str, float]],
                  medianProcessTime: Dict[str, Tuple[float, int, float]],
-                 initWithLog: bool = False):
+                 initWithLog: bool):
         refDirs = get_reference_directions(
             "das-dennis",
             1,

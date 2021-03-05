@@ -16,9 +16,9 @@ class Master(Registry):
             myAddr,
             masterAddr,
             loggerAddr,
+            initWithLog: bool,
             schedulerName: str,
             masterID: int = 0,
-            initWithLog: bool = False,
             logLevel=logging.DEBUG):
         Registry.__init__(
             self,
@@ -261,7 +261,6 @@ def parseArg():
 if __name__ == '__main__':
     args = parseArg()
     containerName_ = args.containerName
-    print(args.initWithLog)
     master_ = Master(
         containerName=containerName_,
         myAddr=(args.ip, args.port),

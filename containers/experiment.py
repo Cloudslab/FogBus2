@@ -43,7 +43,7 @@ class Experiment:
             'Master '
             '192.168.3.20 5000 '
             '192.168.3.20 5001 '
-            '%s '
+            '%s --initWithLog True'
             '> /dev/null 2>&1 &' % schedulerName)
         # self.logger.info('Ran Master')
 
@@ -223,12 +223,6 @@ if __name__ == '__main__':
     repeatTimes_ = 100
     waitTime = 180
     for num in range(targetRound_):
-        experiment.run(
-            'NSGA3',
-            num + 1,
-            targetRound_,
-            repeatTimes=repeatTimes_,
-            userMaxWaitTime=waitTime)
         experiment.run(
             'NSGA2',
             num + 1,

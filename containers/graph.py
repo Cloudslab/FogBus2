@@ -71,11 +71,9 @@ class Graph:
 
         self.realRespondTime = realRespondTime
 
+    @staticmethod
     def draw(
-            self,
-            visualData,
-            statMethod: str,
-            label=''):
+            visualData, ):
         if not len(visualData):
             return
         roundNum = 0
@@ -99,26 +97,20 @@ class Graph:
             if len(visualData[algorithmName].shape) == 1:
                 data = visualData[algorithmName]
             else:
-                if statMethod == 'mean':
-                    data = np.mean(visualData[algorithmName], axis=0)
-                else:
-                    data = np.median(visualData[algorithmName], axis=0)
+                # if statMethod == 'mean':
+                #     data = np.mean(visualData[algorithmName], axis=0)
+                # else:
+                data = np.median(visualData[algorithmName], axis=0)
             ax.plot(x, data)
             algorithms.append(algorithmName)
         ax.legend(algorithms)
         ax.set_ylabel('Respond Time (ms)')
-        ax.set_xlabel('Iteration Number')
-        statMethod = statMethod[0].upper() + statMethod[1:]
-
-        ax.set_title(
-            '%s %s '
-            'Respond Time of '
-            '%d Rounds' %
-            (
-                label,
-                statMethod,
-                roundNum)
-        )
+        ax.set_xlabel('User Request Number')
+        title = 'Real Respond Time \n' \
+                'on Average ' \
+                'of %d Rounds' % roundNum
+        ax.set_title(title)
+        plt.savefig(title)
         plt.show()
 
     def drawDiff(self):
@@ -132,24 +124,37 @@ class Graph:
             ax.plot(x, realData)
             ax.legend(['Estimated', 'Real'])
             ax.set_ylabel('Respond Time (ms)')
-            ax.set_xlabel('Iteration Number')
-            ax.set_title('Average Estimated and Real Respond Time \nAgainst Iteration Number for %s' % algorithm)
+            ax.set_xlabel('User Request Number')
+            title = 'Estimated and Real Respond Time \n' \
+                    'on Average ' \
+                    'of %s' % algorithm
+            ax.set_title(title)
+            self.saveToFile(title)
             plt.show()
 
     def drawConvergence(self):
         fig, ax = plt.subplots()
         for algorithm, evaluationData in self.evaluation.items():
             shape = evaluationData.shape
-            reshapedData = evaluationData.reshape((shape[0]*shape[1], shape[2]))
+            reshapedData = evaluationData.reshape((shape[0] * shape[1], shape[2]))
             meanData = np.mean(reshapedData, axis=0)
-            x = [i+1 for i in range(meanData.shape[0])]
+            x = [i + 1 for i in range(meanData.shape[0])]
             ax.plot(x, meanData)
 
         ax.legend(self.evaluation.keys())
         ax.set_ylabel('Respond Time (ms)')
-        ax.set_xlabel('Iteration Number')
-        ax.set_title('Estimated Respond Time ')
+        ax.set_xlabel('Iteration Number (Generation Number of Genetic Algorithm)')
+        title = 'Estimated Respond Time \n' \
+                'on Average '
+        ax.set_title(title)
+        self.saveToFile(title)
         plt.show()
+
+    @staticmethod
+    def saveToFile(filename):
+        graphPath = 'results/graph'
+        filename = os.path.join(graphPath, filename)
+        plt.savefig(filename)
 
 
 if __name__ == '__main__':
@@ -163,4 +168,4 @@ if __name__ == '__main__':
     graph_.run()
     graph_.drawConvergence()
     graph_.drawDiff()
-    graph_.draw(graph_.realRespondTime, 'mean')
+    graph_.draw(graph_.realRespondTime)

@@ -9,7 +9,7 @@ from datatype import Worker, User, TaskHandler
 from connection import Message
 from typing import Dict, Union, List, Tuple, DefaultDict
 from dependencies import loadDependencies, Application
-from scheduling import Scheduler, Decision, NSGA3, NSGA2
+from scheduling import Scheduler, Decision, NSGA3, NSGA2, NSGA3InitialWithLog, NSGA2InitialWithLog
 from collections import defaultdict
 from time import time, sleep
 
@@ -391,12 +391,15 @@ class Registry(Profiler, Node, ABC):
         self.decisions.update(
             appName=user.appName,
             decision=decision)
-        self.decisions.update(user.appName, decision)
+        if isinstance(self.scheduler.geneticAlgorithm, NSGA3InitialWithLog) \
+                or isinstance(self.scheduler.geneticAlgorithm, NSGA2InitialWithLog):
+            self.scheduler.geneticAlgorithm.decisionsFromLog = self.decisions.good(user.appName)
         messageForWorkers = self.__parseDecision(decision, user)
 
-        del decision.__dict__['machines']
         self.logger.info(
-            'Scheduled by %s: %s' % (self.scheduler.name, decision))
+            'Scheduled by %s, estimated cost: %s' % (
+                self.scheduler.name,
+                decision.cost))
 
         for message, worker in messageForWorkers:
             self.sendMessage(message, worker.addr)
