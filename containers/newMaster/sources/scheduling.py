@@ -11,6 +11,7 @@ from pymoo.factory import get_reference_directions
 from pymoo.optimize import minimize
 from abc import abstractmethod
 from pymoo.model.problem import Problem
+from pymoo.model.population import Population
 from typing import Dict, List, Tuple
 from dependencies import loadDependencies, Task, Application
 from copy import deepcopy
@@ -407,14 +408,45 @@ class NSGABase(Scheduler):
                 pass
 
 
+def _initializationDo(outer, self, problem, n_samples, **kwargs):
+    # provide a whole population object - (individuals might be already evaluated)
+    if isinstance(self.sampling, Population):
+        pop = self.sampling
+    else:
+        if isinstance(self.sampling, np.ndarray):
+            pop = Population.new(X=self.sampling)
+        else:
+            pop = self.sampling.do(problem, n_samples, **kwargs)
+
+    if outer.decisionsFromLog:
+        for i, decision in enumerate(outer.decisionsFromLog):
+            pop[i].X = np.asarray(decision.machinesIndex)
+            pop[i].F = None
+
+    # repair all solutions that are not already evaluated
+    not_eval_yet = [k for k in range(len(pop)) if pop[k].F is None]
+    if len(not_eval_yet) > 0:
+        pop[not_eval_yet] = self.repair.do(problem, pop[not_eval_yet], **kwargs)
+
+    # filter duplicate in the population
+    pop = self.eliminate_duplicates.do(pop)
+
+    return pop
+
+
 def _initialize(self, decisionsFromLog: List[Decision]):
     # create the initial population
-    pop = self.initialization.do(self.problem, self.pop_size, algorithm=self)
-    for i, decision in enumerate(decisionsFromLog):
-        pop[i].X = decision.machinesIndex
+    pop = _initializationDo(
+        self,
+        self.initialization,
+        self.problem,
+        self.pop_size,
+        algorithm=self)
+
     if len(decisionsFromLog):
         print('[*] Used log to improve initialized population. %d individuals are from log.' % len(decisionsFromLog))
     pop.set("n_gen", self.n_gen)
+
     # then evaluate using the objective function
     self.evaluator.eval(self.problem, pop, algorithm=self)
 
@@ -422,7 +454,6 @@ def _initialize(self, decisionsFromLog: List[Decision]):
     if self.survival:
         pop = self.survival.do(self.problem, pop, len(pop), algorithm=self,
                                n_min_infeas_survive=self.min_infeas_pop_size)
-
     self.pop, self.off = pop, pop
 
 

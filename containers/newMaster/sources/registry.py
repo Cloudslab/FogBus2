@@ -30,7 +30,7 @@ class Decisions:
 
     def _clean(self):
         totalRequest = sum(self._requestedAppCount.values())
-        if totalRequest < self._keptDecisionCount:
+        if totalRequest < self._keptDecisionCount // 2:
             return
         factor = totalRequest / self._keptDecisionCount
         for appName, decisions in self.__decisions.items():
