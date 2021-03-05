@@ -12,11 +12,17 @@ class Graph:
     def __init__(
             self,
             logPath: str,
-            algorithms: List[str]):
+            algorithms: List[str],
+            roundNum,
+            iterationEachRound,
+            iterationOfGA):
         self.logPath = logPath
         self.algorithms = algorithms
         self.realRespondTime = {}
         self.evaluation = {}
+        self.roundNum = roundNum
+        self.iterationEachRound = iterationEachRound
+        self.iterationOfGA = iterationOfGA
 
     def run(self):
         self._readEstimatedRespondTime()
@@ -33,7 +39,7 @@ class Graph:
         allFiles = os.listdir(self.logPath)
         evaluation = {}
         for algorithmName in self.algorithms:
-            evaluation[algorithmName] = np.empty((10, 100, 200))
+            evaluation[algorithmName] = np.empty((self.roundNum, self.iterationEachRound, self.iterationOfGA))
         for file in allFiles:
             if os.path.isdir(file):
                 continue
@@ -55,7 +61,7 @@ class Graph:
         allFiles = os.listdir(self.logPath)
         realRespondTime = {}
         for algorithmName in self.algorithms:
-            realRespondTime[algorithmName] = np.empty((10, 100))
+            realRespondTime[algorithmName] = np.empty((self.roundNum, self.iterationEachRound))
         for file in allFiles:
             if os.path.isdir(file):
                 continue
@@ -150,6 +156,24 @@ class Graph:
         self.saveToFile(title)
         plt.show()
 
+    def drawConvergenceForInitWithLog(self):
+        fig, ax = plt.subplots()
+        for algorithm, evaluationData in self.evaluation.items():
+            shape = evaluationData.shape
+            reshapedData = evaluationData.reshape((shape[0] * shape[1], shape[2]))
+            meanData = np.mean(reshapedData, axis=0)
+            x = [i + 1 for i in range(meanData.shape[0])]
+            ax.plot(x, meanData)
+
+        ax.legend([list(self.evaluation.keys())[0] + 'InitWithLog'])
+        ax.set_ylabel('Respond Time (ms)')
+        ax.set_xlabel('Iteration Number (Generation Number of Genetic Algorithm)')
+        title = 'Estimated Respond Time \n' \
+                'on Average with Initializing Population using Previous Log'
+        ax.set_title(title)
+        self.saveToFile(title)
+        plt.show()
+
     @staticmethod
     def saveToFile(filename):
         graphPath = 'results/graph'
@@ -157,15 +181,36 @@ class Graph:
         plt.savefig(filename)
 
 
-if __name__ == '__main__':
+def testNSGA2AndNSGA3():
     resultPath = 'results/10rounds/'
     if len(sys.argv) > 1:
         resultPath = sys.argv[1]
     graph_ = Graph(
         resultPath,
-        ['NSGA2', 'NSGA3']
-    )
+        ['NSGA2', 'NSGA3'],
+        10,
+        100,
+        200)
     graph_.run()
     graph_.drawConvergence()
     graph_.drawDiff()
     graph_.draw(graph_.realRespondTime)
+
+
+def testInitWithLog():
+    resultPath = 'results/initWithLog'
+    if len(sys.argv) > 1:
+        resultPath = sys.argv[1]
+    graph_ = Graph(
+        resultPath,
+        ['NSGA2'],
+        2,
+        100,
+        150)
+    graph_.run()
+    graph_.drawConvergenceForInitWithLog()
+
+
+if __name__ == '__main__':
+    testNSGA2AndNSGA3()
+    testInitWithLog()
