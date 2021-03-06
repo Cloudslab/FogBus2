@@ -1,6 +1,7 @@
 import logging
 import os
 import threading
+import json
 from abc import ABC
 from threading import Lock
 from node import Node
@@ -19,27 +20,45 @@ Address = Tuple[str, int]
 class Decisions:
 
     def __init__(self, keptDecisionsCount: int = 100):
+        self.__machinesIndex: DefaultDict[str, List[List[int]]] = defaultdict(lambda: [])
+        self.__filename = 'decisions.json'
+        self._loadFromFile()
         self._keptDecisionCount = keptDecisionsCount
         self._requestedAppCount: DefaultDict[str, int] = defaultdict(lambda: 0)
-        self.__decisions: DefaultDict[str, List[Decision]] = defaultdict(lambda: [])
 
-    def update(self, appName, decision: Decision):
+    def update(self, appName, machinesIndex: List[int]):
         self._requestedAppCount[appName] += 1
-        self.__decisions[appName].append(decision)
+        self.__machinesIndex[appName].append([int(i) for i in machinesIndex])
         self._clean()
+        self._saveToFile()
 
     def _clean(self):
         totalRequest = sum(self._requestedAppCount.values())
         if totalRequest < self._keptDecisionCount // 2:
             return
         factor = totalRequest / self._keptDecisionCount
-        for appName, decisions in self.__decisions.items():
+        for appName, decisions in self.__machinesIndex.items():
             count = round(factor * self._requestedAppCount[appName])
-            if count < len(self.__decisions[appName]):
-                self.__decisions[appName] = self.__decisions[appName][:count]
+            if count < len(self.__machinesIndex[appName]):
+                self.__machinesIndex[appName] = self.__machinesIndex[appName][:count]
 
     def good(self, appName):
-        return self.__decisions[appName]
+        return self.__machinesIndex[appName]
+
+    def _saveToFile(self):
+        f = open(self.__filename, 'w+')
+        json.dump(dict(self.__machinesIndex), f)
+        f.close()
+
+    def _loadFromFile(self):
+        if os.path.exists(self.__filename):
+            try:
+                f = open(self.__filename, 'w+')
+                content = json.load(f)
+                f.close()
+                self.__machinesIndex = defaultdict(List[List[int]], content)
+            except json.decoder.JSONDecodeError:
+                return
 
 
 class Registry(Profiler, Node, ABC):
@@ -390,7 +409,7 @@ class Registry(Profiler, Node, ABC):
             availableWorkers=allWorkers)
         self.decisions.update(
             appName=user.appName,
-            decision=decision)
+            machinesIndex=decision.machinesIndex)
         if isinstance(self.scheduler.geneticAlgorithm, NSGA3InitialWithLog) \
                 or isinstance(self.scheduler.geneticAlgorithm, NSGA2InitialWithLog):
             self.scheduler.geneticAlgorithm.decisionsFromLog = self.decisions.good(user.appName)

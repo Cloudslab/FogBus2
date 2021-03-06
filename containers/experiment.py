@@ -98,6 +98,7 @@ class Experiment:
     def removeLogs(self):
         os.system('rm -rf %s/newLogger/sources/profiler/*.json' % self.currPath)
         os.system('rm -rf %s/newMaster/sources/profiler/*.json' % self.currPath)
+        os.system('rm -f %s/newMaster/sources/decisions.json' % self.currPath)
         self.logger.info('Removed logs')
 
     def stopLocalTaskHandler(self):

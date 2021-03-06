@@ -198,13 +198,13 @@ def testNSGA2AndNSGA3():
 
 
 def testInitWithLog():
-    resultPath = 'results/initWithLog'
+    resultPath = 'results/tmp'
     if len(sys.argv) > 1:
         resultPath = sys.argv[1]
     graph_ = Graph(
         resultPath,
         ['NSGA2'],
-        2,
+        4,
         100,
         150)
     graph_.run()
@@ -212,5 +212,5 @@ def testInitWithLog():
 
 
 if __name__ == '__main__':
-    testNSGA2AndNSGA3()
+    # testNSGA2AndNSGA3()
     testInitWithLog()
