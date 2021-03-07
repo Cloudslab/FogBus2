@@ -85,6 +85,8 @@ class Master(Registry):
 
         for taskName in user.entranceTasksByName:
             taskHandlerToken = user.taskNameTokenMap[taskName].token
+            if taskHandlerToken not in self.taskHandlerByToken:
+                continue
             taskHandler = self.taskHandlerByToken[taskHandlerToken]
             self.sendMessage(message.content, taskHandler.addr)
 

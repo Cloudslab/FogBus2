@@ -5,6 +5,7 @@ import os
 from queue import Queue
 from random import randint, shuffle
 from pymoo.algorithms.genetic_algorithm import GeneticAlgorithm
+from pymoo.factory import get_crossover, get_mutation, get_sampling
 from pymoo.algorithms.nsga3 import NSGA3 as NSGA3_
 from pymoo.algorithms.nsga2 import NSGA2 as NSGA2_
 from pymoo.factory import get_reference_directions
@@ -12,7 +13,7 @@ from pymoo.optimize import minimize
 from abc import abstractmethod
 from pymoo.model.problem import Problem
 from pymoo.model.population import Population
-from pymoo.model.evaluator import Evaluator_
+from pymoo.model.evaluator import Evaluator as Evaluator_
 from typing import Dict, List, Tuple
 from dependencies import loadDependencies, Task, Application
 from copy import deepcopy
@@ -273,7 +274,7 @@ class GeneticProblem(Problem, Evaluator):
         self.previousMachinesIndex: List[Tuple[List[int], List[str]]] = machinesIndex
         self._variableNumber = len(edgesByName)
         self._availableWorkers = defaultdict(lambda: [])
-        choicesEachVariable = [0 for _ in range(len(edgesByName.keys()))]
+        choicesEachVariable = [-1 for _ in range(len(edgesByName.keys()))]
         for i, name in enumerate(edgesByName.keys()):
             if len(name) > len('TaskHandler') \
                     and name[-11:] == 'TaskHandler':
@@ -288,7 +289,7 @@ class GeneticProblem(Problem, Evaluator):
                 # how stupid I am
                 shuffle(self._availableWorkers[name])
                 continue
-            choicesEachVariable[i] = 1
+            choicesEachVariable[i] = 0
 
         lowerBound = [0 for _ in range(self._variableNumber)]
         upperBound = choicesEachVariable
@@ -331,12 +332,16 @@ class GeneticProblem(Problem, Evaluator):
 
     def replaceX(self, xs):
         machineToIndex = {}
-        for i, machine in enumerate(self.edgesByName.keys()):
+        keys = list(self.edgesByName.keys())
+        for i, machine in enumerate(keys):
             machineToIndex[machine] = i
         for i, (indexes, machines) in enumerate(self.previousMachinesIndex):
             machineX = [machines[j] for j in indexes]
-            x = [machineToIndex[machine] for machine in machineX]
+            # x = [machineToIndex[machine] for machine in machineX]
+            x = [0.1 for machine in machineX]
+            print('ooooooooo ', x)
             xs[i] = x
+
         return xs
 
     def indexesToMachines(self, indexes: List[int]):
@@ -395,18 +400,19 @@ class NSGABase(Scheduler):
             availableWorkers=availableWorkers,
             populationSize=self.populationSize,
             machinesIndex=machinesIndex)
-        if len(machinesIndex):
-            X = np.random.randint(
-                low=0,
-                high=max(machinesIndex[0][0]) + 1,
-                size=(self.geneticProblem.populationSize,
-                      self.geneticProblem.n_var))
-            X = self.geneticProblem.replaceX(X)
-            pop = Population.new("X", X)
-            Evaluator_().eval(self.geneticProblem, pop)
-            # Evaluator().eval(self.geneticProblem, pop)
-            self.geneticAlgorithm.sampling = pop
-            print('[*] Initialized with %d individuals' % len(machinesIndex))
+        # if len(machinesIndex):
+        #     X = np.random.randint(
+        #         low=0,
+        #         high=max(machinesIndex[0][0]) + 1,
+        #         size=(self.geneticProblem.populationSize,
+        #               self.geneticProblem.n_var))
+        #     X = self.geneticProblem.replaceX(X)
+        #     pop = Population.new("X", X)
+        #     Evaluator_().eval(self.geneticProblem, pop)
+        #     # Evaluator().eval(self.geneticProblem, pop)
+        #     self.geneticAlgorithm.sampling = pop
+        #     print('[*] Initialized with %d individuals' % len(machinesIndex))
+
         res = minimize(self.geneticProblem,
                        self.geneticAlgorithm,
                        seed=randint(0, 100),
@@ -442,6 +448,31 @@ class NSGABase(Scheduler):
                 pass
 
 
+class NSGA2T(NSGA2_):
+
+    def _initialize(self):
+        # create the initial population
+        pop = self.initialization.do(self.problem, self.pop_size, algorithm=self)
+        pop.set("n_gen", self.n_gen)
+
+        X = np.random.randint(
+            low=0,
+            high=1,
+            size=(100,
+                  64))
+        for i, x in enumerate(X):
+            pop[i].X = X[i]
+        # then evaluate using the objective function
+        self.evaluator.eval(self.problem, pop, algorithm=self)
+
+        # that call is a dummy survival to set attributes that are necessary for the mating selection
+        if self.survival:
+            pop = self.survival.do(self.problem, pop, len(pop), algorithm=self,
+                                   n_min_infeas_survive=self.min_infeas_pop_size)
+
+        self.pop, self.off = pop, pop
+
+
 class NSGA2(NSGABase):
 
     def __init__(self,
@@ -451,7 +482,10 @@ class NSGA2(NSGABase):
                  medianProcessTime: Dict[str, Tuple[float, int, float]]):
         geneticAlgorithm = NSGA2_(
             pop_size=populationSize,
-            eliminate_duplicates=True)
+            sampling=get_sampling("int_random"),
+            crossover=get_crossover("int_sbx", prob=1.0, eta=3.0),
+            mutation=get_mutation("int_pm", eta=3.0),
+            eliminate_duplicates=False)
         super().__init__(
             'NSGA2',
             geneticAlgorithm,

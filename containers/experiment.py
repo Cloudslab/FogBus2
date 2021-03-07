@@ -201,6 +201,19 @@ class Experiment:
         self.saveRes(schedulerName, respondTimes, roundNum)
         self.logger.info(respondTimes)
 
+    def runInitWithLog(self):
+        schedulerName = 'NSGA2'
+        recordPath = './newMaster/sources/record.json'
+        os.system('rm -f %s' % recordPath)
+        self.rerunNecessaryContainers(schedulerName)
+        sleep(2)
+        self.runUser()
+        while not os.path.exists(recordPath):
+            sleep(1)
+        os.system('cat %s' % recordPath)
+        self.saveEstimatedRecord(schedulerName, 0, 0)
+        self.logger.info('Done init with log')
+
     @staticmethod
     def saveEstimatedRecord(algorithmName, roundNum, iterationNum):
         os.system('mv '
@@ -220,13 +233,14 @@ class Experiment:
 
 if __name__ == '__main__':
     experiment = Experiment()
-    targetRound_ = 10
-    repeatTimes_ = 100
-    waitTime = 150
-    for num in range(targetRound_):
-        experiment.run(
-            'NSGA2',
-            num + 1,
-            targetRound_,
-            repeatTimes=repeatTimes_,
-            userMaxWaitTime=waitTime)
+    experiment.runInitWithLog()
+    # targetRound_ = 10
+    # repeatTimes_ = 100
+    # waitTime = 150
+    # for num in range(targetRound_):
+    #     experiment.run(
+    #         'NSGA2',
+    #         num + 1,
+    #         targetRound_,
+    #         repeatTimes=repeatTimes_,
+    #         userMaxWaitTime=waitTime)
