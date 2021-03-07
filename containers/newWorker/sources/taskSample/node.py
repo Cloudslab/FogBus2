@@ -188,8 +188,8 @@ class Node(Server):
                 self.__statMedianPackageSize(message, messageSize)
                 self.handleMessage(message)
                 self.__respondTimeDiff(message)
-            except Exception as e:
-                print_exc(e)
+            except Exception:
+                print_exc()
 
     def __statMedianPackageSize(self, message: Message, messageSize: int):
         if not message.source.nameConsistent == self.nameConsistent:

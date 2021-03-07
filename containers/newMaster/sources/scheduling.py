@@ -12,7 +12,7 @@ from pymoo.optimize import minimize
 from abc import abstractmethod
 from pymoo.model.problem import Problem
 from pymoo.model.population import Population
-from pymoo.model.evaluator import Evaluator
+from pymoo.model.evaluator import Evaluator_
 from typing import Dict, List, Tuple
 from dependencies import loadDependencies, Task, Application
 from copy import deepcopy
@@ -402,9 +402,10 @@ class NSGABase(Scheduler):
                 size=(self.geneticProblem.populationSize,
                       self.geneticProblem.n_var))
             X = self.geneticProblem.replaceX(X)
-            # pop = Population.new("X", X)
+            pop = Population.new("X", X)
+            Evaluator_().eval(self.geneticProblem, pop)
             # Evaluator().eval(self.geneticProblem, pop)
-            self.geneticAlgorithm.sampling = X
+            self.geneticAlgorithm.sampling = pop
             print('[*] Initialized with %d individuals' % len(machinesIndex))
         res = minimize(self.geneticProblem,
                        self.geneticAlgorithm,
