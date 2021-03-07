@@ -222,7 +222,7 @@ if __name__ == '__main__':
     experiment = Experiment()
     targetRound_ = 10
     repeatTimes_ = 100
-    waitTime = 180
+    waitTime = 150
     for num in range(targetRound_):
         experiment.run(
             'NSGA2',

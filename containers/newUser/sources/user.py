@@ -107,9 +107,11 @@ class User(Node):
     def __waitForWorkers(self):
         targetCount = 5
         msg = {'type': 'workersCount'}
-        while True:
+        count = 15
+        while count > 0:
             self.sendMessage(msg, self.master.addr)
             sleep(1)
+            count -= 1
             if self.workersCount >= targetCount:
                 break
             self.logger.info(

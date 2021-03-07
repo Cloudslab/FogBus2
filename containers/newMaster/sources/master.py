@@ -131,6 +131,7 @@ class Master(Registry):
                 msg = {'type': 'ready'}
                 self.sendMessage(msg, user.addr)
                 user.isReady = True
+                self.logger.info('%s is ready to run. ' % user.nameLogPrinting)
         user.lock.release()
 
     def __handleExit(self, message: Message):
@@ -159,7 +160,7 @@ class Master(Registry):
             if taskHandler.user.id in self.users:
                 user = self.users[taskHandler.user.id]
                 del taskHandler.user.taskHandlerByTaskName[taskHandler.taskName]
-                self.__stopClient(user, 'Your resources was released.')
+                # self.__stopClient(user, 'Your resources was released.')
             del self.taskHandlerByToken[taskHandler.token]
             del self.taskHandlers[message.source.id]
         elif message.source.role == 'Worker':

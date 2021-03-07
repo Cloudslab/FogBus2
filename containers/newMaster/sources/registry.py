@@ -10,7 +10,7 @@ from datatype import Worker, User, TaskHandler
 from connection import Message
 from typing import Dict, Union, List, Tuple, DefaultDict
 from dependencies import loadDependencies, Application
-from scheduling import Scheduler, Decision, NSGA3, NSGA2, NSGA3InitialWithLog, NSGA2InitialWithLog
+from scheduling import Scheduler, Decision, NSGA3, NSGA2
 from collections import defaultdict
 from time import time, sleep
 
@@ -20,15 +20,23 @@ Address = Tuple[str, int]
 class Decisions:
 
     def __init__(self, keptDecisionsCount: int = 100):
-        self.__machinesIndex: DefaultDict[str, List[List[int]]] = defaultdict(lambda: [])
+        self.decision: Dict[str, List[Tuple[List[int], List[str]]]] = {}
         self.__filename = 'decisions.json'
         self._loadFromFile()
         self._keptDecisionCount = keptDecisionsCount
         self._requestedAppCount: DefaultDict[str, int] = defaultdict(lambda: 0)
 
-    def update(self, appName, machinesIndex: List[int]):
+    def update(
+            self,
+            appName,
+            machinesIndex: List[int],
+            indexToMachine: List[str]):
         self._requestedAppCount[appName] += 1
-        self.__machinesIndex[appName].append([int(i) for i in machinesIndex])
+        if appName not in self.decision:
+            self.decision[appName] = []
+        indexes = [int(i) for i in machinesIndex]
+        machines = indexToMachine
+        self.decision[appName].append((indexes, machines))
         self._clean()
         self._saveToFile()
 
@@ -37,28 +45,27 @@ class Decisions:
         if totalRequest < self._keptDecisionCount // 2:
             return
         factor = totalRequest / self._keptDecisionCount
-        for appName, decisions in self.__machinesIndex.items():
+        for appName, decisions in self.decision.items():
             count = round(factor * self._requestedAppCount[appName])
-            if count < len(self.__machinesIndex[appName]):
-                self.__machinesIndex[appName] = self.__machinesIndex[appName][:count]
+            if count < len(self.decision[appName]):
+                self.decision[appName] = self.decision[appName][:count]
 
     def good(self, appName):
-        return self.__machinesIndex[appName]
+        if appName not in self.decision:
+            return []
+        return self.decision[appName]
 
     def _saveToFile(self):
         f = open(self.__filename, 'w+')
-        json.dump(dict(self.__machinesIndex), f)
+        json.dump(self.decision, f)
         f.close()
 
     def _loadFromFile(self):
         if os.path.exists(self.__filename):
-            try:
-                f = open(self.__filename, 'w+')
-                content = json.load(f)
-                f.close()
-                self.__machinesIndex = defaultdict(List[List[int]], content)
-            except json.decoder.JSONDecodeError:
-                return
+            f = open(self.__filename, 'r')
+            content = json.load(f)
+            f.close()
+            self.decision = defaultdict(List[List[int]], content)
 
 
 class Registry(Profiler, Node, ABC):
@@ -103,9 +110,9 @@ class Registry(Profiler, Node, ABC):
         self.profiler = self.__loadProfilers()
         self.tasks, self.applications = self.profiler
         self.scheduler: Scheduler = self._getScheduler(
-            schedulerName=schedulerName,
-            initWithLog=initWithLog)
+            schedulerName=schedulerName)
         self.decisions = Decisions()
+        self.initWithLog = initWithLog
         self.logger = None
 
     @staticmethod
@@ -119,8 +126,7 @@ class Registry(Profiler, Node, ABC):
 
     def _getScheduler(
             self,
-            schedulerName: str,
-            initWithLog: bool) -> Scheduler:
+            schedulerName: str) -> Scheduler:
         populationSize = 200
         generationNum = 150
         if schedulerName in {None, 'NSGA3'}:
@@ -129,15 +135,13 @@ class Registry(Profiler, Node, ABC):
                 medianProcessTime=self.medianProcessTime,
                 populationSize=populationSize,
                 generationNum=generationNum,
-                dasDennisP=1,
-                initWithLog=initWithLog)
+                dasDennisP=1)
         elif schedulerName == 'NSGA2':
             return NSGA2(
                 medianDelay=self.medianDelay,
                 medianProcessTime=self.medianProcessTime,
                 populationSize=populationSize,
-                generationNum=generationNum,
-                initWithLog=initWithLog)
+                generationNum=generationNum)
         self.logger.warning('Unknown scheduler: %s', schedulerName)
         os._exit(0)
 
@@ -399,6 +403,13 @@ class Registry(Profiler, Node, ABC):
                 continue
             worker = self.workers[key]
             allWorkers[key] = worker
+        machinesIndex = []
+
+        # Master failure tolerance
+        if isinstance(self.scheduler, NSGA3) \
+                or isinstance(self.scheduler, NSGA2):
+            machinesIndex = self.decisions.good(user.appName)
+        # self.logger.info(machinesIndex)
         decision = self.scheduler.schedule(
             userName=user.name,
             userMachine=user.machineID,
@@ -406,15 +417,16 @@ class Registry(Profiler, Node, ABC):
             masterMachine=self.machineID,
             applicationName=user.appName,
             label=user.label,
-            availableWorkers=allWorkers)
+            availableWorkers=allWorkers,
+            machinesIndex=machinesIndex)
+        self.logger.info(self.scheduler.geneticProblem.myRecords[:5])
+        self.logger.info(self.scheduler.geneticProblem.myRecords[-5:])
         self.decisions.update(
             appName=user.appName,
-            machinesIndex=decision.machinesIndex)
-        if isinstance(self.scheduler.geneticAlgorithm, NSGA3InitialWithLog) \
-                or isinstance(self.scheduler.geneticAlgorithm, NSGA2InitialWithLog):
-            self.scheduler.geneticAlgorithm.decisionsFromLog = self.decisions.good(user.appName)
-        messageForWorkers = self.__parseDecision(decision, user)
+            machinesIndex=decision.machinesIndex,
+            indexToMachine=decision.indexToMachine)
 
+        messageForWorkers = self.__parseDecision(decision, user)
         self.logger.info(
             'Scheduled by %s, estimated cost: %s' % (
                 self.scheduler.name,

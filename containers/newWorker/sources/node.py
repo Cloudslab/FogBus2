@@ -2,6 +2,7 @@ import threading
 import logging
 import os
 import signal
+from traceback import print_exc
 from hashlib import sha256
 from queue import Queue
 from connection import Server, Message, Connection, Source, Median, Identity
@@ -175,17 +176,20 @@ class Node(Server):
 
     def __messageHandler(self):
         while True:
-            message, messageSize = self.receivedMessage.get()
-            message.content['_receivedAt'] = time() * 1000
-            if message.type == 'respondTimeDiff':
-                self.__handleRespondTimeDiff(message)
-                continue
-            elif message.type == 'stop':
-                self.__handleStop(message)
-                continue
-            self.__statMedianPackageSize(message, messageSize)
-            self.handleMessage(message)
-            self.__respondTimeDiff(message)
+            try:
+                message, messageSize = self.receivedMessage.get()
+                message.content['_receivedAt'] = time() * 1000
+                if message.type == 'respondTimeDiff':
+                    self.__handleRespondTimeDiff(message)
+                    continue
+                elif message.type == 'stop':
+                    self.__handleStop(message)
+                    continue
+                self.__statMedianPackageSize(message, messageSize)
+                self.handleMessage(message)
+                self.__respondTimeDiff(message)
+            except Exception as e:
+                print_exc(e)
 
     def __statMedianPackageSize(self, message: Message, messageSize: int):
         if not message.source.nameConsistent == self.nameConsistent:

@@ -12,6 +12,7 @@ from pymoo.optimize import minimize
 from abc import abstractmethod
 from pymoo.model.problem import Problem
 from pymoo.model.population import Population
+from pymoo.model.evaluator import Evaluator
 from typing import Dict, List, Tuple
 from dependencies import loadDependencies, Task, Application
 from copy import deepcopy
@@ -41,10 +42,12 @@ class Decision:
             self,
             machines: Dict[str, str],
             cost: float,
-            machinesIndex: List[int]):
+            machinesIndex: List[int],
+            indexToMachine: List[str]):
         self.machines: Dict[str, str] = machines
         self.cost: float = cost
         self.machinesIndex = machinesIndex
+        self.indexToMachine = indexToMachine
 
     def __repr__(self):
         return self.__str__()
@@ -78,8 +81,8 @@ class Scheduler:
             masterMachine,
             applicationName: str,
             label: str,
-            availableWorkers: Dict[str, Worker]
-    ) -> Decision:
+            availableWorkers: Dict[str, Worker],
+            machinesIndex) -> Decision:
         edgesByName, entrance = self._getExecutionMap(
             applicationName,
             label=label)
@@ -90,7 +93,8 @@ class Scheduler:
             masterMachine,
             edgesByName,
             entrance,
-            availableWorkers)
+            availableWorkers,
+            machinesIndex)
 
     @abstractmethod
     def _schedule(
@@ -101,7 +105,8 @@ class Scheduler:
             masterMachine,
             edgesByName: EdgesByName,
             entrance: str,
-            availableWorkers: Dict[str, Worker]) -> Decision:
+            availableWorkers: Dict[str, Worker],
+            machinesIndex) -> Decision:
         raise NotImplementedError
 
     def _getExecutionMap(
@@ -171,7 +176,7 @@ class Evaluator:
         self._masterMachine = masterMachine
         self.medianDelay: Dict[str, Dict[str, float]] = medianDelay
         self.medianProcessTime = medianProcessTime
-        self._edgesByName = edgesByName
+        self.edgesByName = edgesByName
         self.entrance = entrance
         self.individual = None
         self.workers = workers
@@ -182,7 +187,7 @@ class Evaluator:
         master = 'Master'
         cost = self._edgeCost(self.entrance, master)
         cost += self._edgeCost(master, self.entrance)
-        for dest in self._edgesByName[master]:
+        for dest in self.edgesByName[master]:
             self._dfs(
                 dest,
                 cost + self._edgeCost(master, dest),
@@ -195,7 +200,7 @@ class Evaluator:
             return
         if source[-11:] == 'TaskHandler':
             cost += self._computingCost(source)
-        for dest in self._edgesByName[source]:
+        for dest in self.edgesByName[source]:
             cost += self._edgeCost(source, dest)
             self._dfs(dest, cost, res)
 
@@ -250,7 +255,8 @@ class GeneticProblem(Problem, Evaluator):
             edgesByName: EdgesByName,
             entrance: str,
             availableWorkers: Dict[str, Worker],
-            populationSize: int):
+            populationSize: int,
+            machinesIndex):
         self.populationSize = populationSize
         self.medianDelay: Dict[str, Dict[str, float]] = medianDelay
         Evaluator.__init__(
@@ -264,6 +270,7 @@ class GeneticProblem(Problem, Evaluator):
             edgesByName=edgesByName,
             entrance=entrance,
             workers=availableWorkers)
+        self.previousMachinesIndex: List[Tuple[List[int], List[str]]] = machinesIndex
         self._variableNumber = len(edgesByName)
         self._availableWorkers = defaultdict(lambda: [])
         choicesEachVariable = [0 for _ in range(len(edgesByName.keys()))]
@@ -277,6 +284,8 @@ class GeneticProblem(Problem, Evaluator):
                     if taskName in worker.images or True:
                         self._availableWorkers[name].append(worker.machineID)
                         choicesEachVariable[i] += 1
+                # I wrote this to remind me myself of
+                # how stupid I am
                 shuffle(self._availableWorkers[name])
                 continue
             choicesEachVariable[i] = 1
@@ -310,7 +319,6 @@ class GeneticProblem(Problem, Evaluator):
             event.set()
 
     def _evaluate(self, xs, out, *args, **kwargs):
-
         events = [threading.Event() for _ in range(len(xs))]
         for i, x in enumerate(xs):
             x = x.astype(int)
@@ -321,9 +329,19 @@ class GeneticProblem(Problem, Evaluator):
         out['F'] = self._res
         self.myRecords.append(min(out['F']))
 
+    def replaceX(self, xs):
+        machineToIndex = {}
+        for i, machine in enumerate(self.edgesByName.keys()):
+            machineToIndex[machine] = i
+        for i, (indexes, machines) in enumerate(self.previousMachinesIndex):
+            machineX = [machines[j] for j in indexes]
+            x = [machineToIndex[machine] for machine in machineX]
+            xs[i] = x
+        return xs
+
     def indexesToMachines(self, indexes: List[int]):
         res = {}
-        keys = list(self._edgesByName.keys())
+        keys = list(self.edgesByName.keys())
         for keysIndex, index in enumerate(indexes):
             key = keys[keysIndex]
             if len(key) <= len('TaskHandler'):
@@ -346,13 +364,14 @@ class NSGABase(Scheduler):
             generationNum: int,
             populationSize: int
     ):
-        self._generationNum: int = generationNum
-        self._populationSize: int = populationSize
+        self.generationNum: int = generationNum
+        self.populationSize: int = populationSize
         self.geneticAlgorithm = geneticAlgorithm
         super().__init__(
             name=name,
             medianDelay=medianDelay,
             medianProcessTime=medianProcessTime)
+        self.geneticProblem = None
 
     def _schedule(
             self,
@@ -362,8 +381,9 @@ class NSGABase(Scheduler):
             masterMachine,
             edgesByName: EdgesByName,
             entrance: str,
-            availableWorkers: Dict[str, Worker]) -> Decision:
-        geneticProblem = GeneticProblem(
+            availableWorkers: Dict[str, Worker],
+            machinesIndex) -> Decision:
+        self.geneticProblem = GeneticProblem(
             userName,
             userMachine,
             masterName,
@@ -373,13 +393,25 @@ class NSGABase(Scheduler):
             edgesByName=edgesByName,
             entrance=entrance,
             availableWorkers=availableWorkers,
-            populationSize=self._populationSize)
-        res = minimize(geneticProblem,
+            populationSize=self.populationSize,
+            machinesIndex=machinesIndex)
+        if len(machinesIndex):
+            X = np.random.randint(
+                low=0,
+                high=max(machinesIndex[0][0]) + 1,
+                size=(self.geneticProblem.populationSize,
+                      self.geneticProblem.n_var))
+            X = self.geneticProblem.replaceX(X)
+            # pop = Population.new("X", X)
+            # Evaluator().eval(self.geneticProblem, pop)
+            self.geneticAlgorithm.sampling = X
+            print('[*] Initialized with %d individuals' % len(machinesIndex))
+        res = minimize(self.geneticProblem,
                        self.geneticAlgorithm,
                        seed=randint(0, 100),
                        termination=(
                            'n_gen',
-                           self._generationNum))
+                           self.generationNum))
         if len(res.X.shape) > 1:
             minIndex = np.argmin(res.F)
             cost = res.F[minIndex][0]
@@ -388,12 +420,13 @@ class NSGABase(Scheduler):
         else:
             cost = res.F[0]
             indexes = list(res.X.astype(int))
-        machines = geneticProblem.indexesToMachines(indexes)
-        self.saveEstimatingProgress(geneticProblem.myRecords)
+        machines = self.geneticProblem.indexesToMachines(indexes)
+        self.saveEstimatingProgress(self.geneticProblem.myRecords)
         decision = Decision(
             machines=machines,
             cost=cost,
-            machinesIndex=indexes)
+            machinesIndex=indexes,
+            indexToMachine=list(self.geneticProblem.edgesByName.keys()))
         return decision
 
     @staticmethod
@@ -408,55 +441,16 @@ class NSGABase(Scheduler):
                 pass
 
 
-def _initialize(self, decisionsFromLog: List[List[int]]):
-    pop = self.initialization.do(self.problem, self.pop_size, algorithm=self)
-    if len(decisionsFromLog):
-        for i, machinesIndex in enumerate(decisionsFromLog):
-            pop[i].X = np.asarray(machinesIndex)
-            pop[i].F = None
-        not_eval_yet = [k for k in range(len(pop)) if pop[k].F is None]
-        pop[not_eval_yet] = self.repair.do(self.problem, pop[not_eval_yet])
-        print('[*] Used log to improve initialized population. %d individuals are from log.' % len(decisionsFromLog))
-    pop.set("n_gen", self.n_gen)
-
-    # then evaluate using the objective function
-    self.evaluator.eval(self.problem, pop, algorithm=self)
-
-    # that call is a dummy survival to set attributes that are necessary for the mating selection
-    if self.survival:
-        pop = self.survival.do(self.problem, pop, len(pop), algorithm=self,
-                               n_min_infeas_survive=self.min_infeas_pop_size)
-    self.pop, self.off = pop, pop
-
-
-class NSGA2InitialWithLog(NSGA2_):
-
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self.decisionsFromLog = []
-
-    def _initialize(self):
-        return _initialize(self, self.decisionsFromLog)
-
-
 class NSGA2(NSGABase):
 
     def __init__(self,
                  populationSize: int,
                  generationNum: int,
                  medianDelay: Dict[str, Dict[str, float]],
-                 medianProcessTime: Dict[str, Tuple[float, int, float]],
-                 initWithLog: bool = False):
-
-        if not initWithLog:
-            geneticAlgorithm = NSGA2_(
-                pop_size=populationSize,
-                eliminate_duplicates=True)
-        else:
-            geneticAlgorithm = NSGA2InitialWithLog(
-                pop_size=populationSize,
-                eliminate_duplicates=True,
-            )
+                 medianProcessTime: Dict[str, Tuple[float, int, float]]):
+        geneticAlgorithm = NSGA2_(
+            pop_size=populationSize,
+            eliminate_duplicates=True)
         super().__init__(
             'NSGA2',
             geneticAlgorithm,
@@ -466,16 +460,6 @@ class NSGA2(NSGABase):
             populationSize=populationSize)
 
 
-class NSGA3InitialWithLog(NSGA3_):
-
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self.decisionsFromLog = []
-
-    def _initialize(self):
-        return _initialize(self, self.decisionsFromLog)
-
-
 class NSGA3(NSGABase):
 
     def __init__(self,
@@ -483,22 +467,15 @@ class NSGA3(NSGABase):
                  generationNum: int,
                  dasDennisP: int,
                  medianDelay: Dict[str, Dict[str, float]],
-                 medianProcessTime: Dict[str, Tuple[float, int, float]],
-                 initWithLog: bool):
+                 medianProcessTime: Dict[str, Tuple[float, int, float]]):
         refDirs = get_reference_directions(
             "das-dennis",
             1,
             n_partitions=dasDennisP)
-        if not initWithLog:
-            algorithm = NSGA3_(
-                pop_size=populationSize,
-                ref_dirs=refDirs,
-                eliminate_duplicates=True)
-        else:
-            algorithm = NSGA3InitialWithLog(
-                pop_size=populationSize,
-                ref_dirs=refDirs,
-                eliminate_duplicates=True)
+        algorithm = NSGA3_(
+            pop_size=populationSize,
+            ref_dirs=refDirs,
+            eliminate_duplicates=True)
         super().__init__(
             'NSGA3',
             algorithm,
