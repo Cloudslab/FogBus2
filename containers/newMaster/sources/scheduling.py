@@ -337,9 +337,8 @@ class GeneticProblem(Problem, Evaluator):
             machineToIndex[machine] = i
         for i, (indexes, machines) in enumerate(self.previousMachinesIndex):
             machineX = [machines[j] for j in indexes]
-            # x = [machineToIndex[machine] for machine in machineX]
-            x = [0.1 for machine in machineX]
-            print('ooooooooo ', x)
+            x = [machineToIndex[machine] for machine in machineX]
+            # x = [0.1 for machine in machineX]
             xs[i] = x
 
         return xs
@@ -400,18 +399,18 @@ class NSGABase(Scheduler):
             availableWorkers=availableWorkers,
             populationSize=self.populationSize,
             machinesIndex=machinesIndex)
-        # if len(machinesIndex):
-        #     X = np.random.randint(
-        #         low=0,
-        #         high=max(machinesIndex[0][0]) + 1,
-        #         size=(self.geneticProblem.populationSize,
-        #               self.geneticProblem.n_var))
-        #     X = self.geneticProblem.replaceX(X)
-        #     pop = Population.new("X", X)
-        #     Evaluator_().eval(self.geneticProblem, pop)
-        #     # Evaluator().eval(self.geneticProblem, pop)
-        #     self.geneticAlgorithm.sampling = pop
-        #     print('[*] Initialized with %d individuals' % len(machinesIndex))
+        if len(machinesIndex):
+            X = np.random.randint(
+                low=0,
+                high=max(machinesIndex[0][0]) + 1,
+                size=(self.geneticProblem.populationSize,
+                      self.geneticProblem.n_var))
+            X = self.geneticProblem.replaceX(X)
+            pop = Population.new("X", X)
+            Evaluator_().eval(self.geneticProblem, pop)
+            # Evaluator().eval(self.geneticProblem, pop)
+            self.geneticAlgorithm.sampling = pop
+            print('[*] Initialized with %d individuals' % len(machinesIndex))
 
         res = minimize(self.geneticProblem,
                        self.geneticAlgorithm,
@@ -448,31 +447,6 @@ class NSGABase(Scheduler):
                 pass
 
 
-class NSGA2T(NSGA2_):
-
-    def _initialize(self):
-        # create the initial population
-        pop = self.initialization.do(self.problem, self.pop_size, algorithm=self)
-        pop.set("n_gen", self.n_gen)
-
-        X = np.random.randint(
-            low=0,
-            high=1,
-            size=(100,
-                  64))
-        for i, x in enumerate(X):
-            pop[i].X = X[i]
-        # then evaluate using the objective function
-        self.evaluator.eval(self.problem, pop, algorithm=self)
-
-        # that call is a dummy survival to set attributes that are necessary for the mating selection
-        if self.survival:
-            pop = self.survival.do(self.problem, pop, len(pop), algorithm=self,
-                                   n_min_infeas_survive=self.min_infeas_pop_size)
-
-        self.pop, self.off = pop, pop
-
-
 class NSGA2(NSGABase):
 
     def __init__(self,
@@ -485,7 +459,7 @@ class NSGA2(NSGABase):
             sampling=get_sampling("int_random"),
             crossover=get_crossover("int_sbx", prob=1.0, eta=3.0),
             mutation=get_mutation("int_pm", eta=3.0),
-            eliminate_duplicates=False)
+            eliminate_duplicates=True)
         super().__init__(
             'NSGA2',
             geneticAlgorithm,
@@ -509,6 +483,9 @@ class NSGA3(NSGABase):
             n_partitions=dasDennisP)
         algorithm = NSGA3_(
             pop_size=populationSize,
+            sampling=get_sampling("int_random"),
+            crossover=get_crossover("int_sbx", prob=1.0, eta=3.0),
+            mutation=get_mutation("int_pm", eta=3.0),
             ref_dirs=refDirs,
             eliminate_duplicates=True)
         super().__init__(

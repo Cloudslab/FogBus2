@@ -32,7 +32,7 @@ class Experiment:
             '> /dev/null 2>&1 &')
         # self.logger.info('Ran RemoteLogger')
 
-    def runMaster(self, schedulerName):
+    def runMaster(self, schedulerName, initWithLog=False):
         self.logger.info('Starting Master ...')
         os.system(
             'cd ./newMaster && '
@@ -43,8 +43,11 @@ class Experiment:
             'Master '
             '192.168.3.20 5000 '
             '192.168.3.20 5001 '
-            '%s --initWithLog True'
-            '> /dev/null 2>&1 &' % schedulerName)
+            '%s %s'
+            '> /dev/null 2>&1 &'
+            % (
+                schedulerName,
+                '--initWithLog True' if initWithLog else ''))
         # self.logger.info('Ran Master')
 
     def runWorker(self):
@@ -146,11 +149,11 @@ class Experiment:
         self.manageRpi(self._sshRunScript, './runWorker.sh')
         # self.logger.info('Ran remote Workers')
 
-    def rerunNecessaryContainers(self, schedulerName):
+    def rerunNecessaryContainers(self, schedulerName, initWithLog=False):
         self.stopAllContainers()
         self.stopRemoteWorkers()
         self.runRemoteLogger()
-        self.runMaster(schedulerName)
+        self.runMaster(schedulerName, initWithLog)
         self.runWorker()
         self.runRemoteWorkers()
         sleep(1)
@@ -158,16 +161,21 @@ class Experiment:
     def run(
             self,
             schedulerName,
+            initWithLog,
             roundNum=None,
             targetRound=None,
+            removeLog=False,
             repeatTimes=100,
             userMaxWaitTime=200):
         respondTimeFilePath = '%s/newUser/sources/log/respondTime.json' % self.currPath
         os.system('rm -f %s > /dev/null 2>&1' % respondTimeFilePath)
         respondTimes = [0 for _ in range(repeatTimes)]
 
-        self.removeLogs()
-        self.rerunNecessaryContainers(schedulerName)
+        if removeLog:
+            self.removeLogs()
+        self.rerunNecessaryContainers(
+            schedulerName,
+            initWithLog)
         if roundNum is None:
             desc = schedulerName
         else:
@@ -192,7 +200,11 @@ class Experiment:
                 continue
             self.stopUser()
             respondTimes[i] = self.readRespondTime(respondTimeFilePath)
-            self.saveEstimatedRecord(schedulerName, roundNum, i)
+            self.saveEstimatedRecord(
+                schedulerName,
+                roundNum,
+                i,
+                initWithLog)
             i += 1
             processBar.update(1)
             self.logger.info('[*] Result-[%d/%d]: %s', i, repeatTimes, str(respondTimes))
@@ -201,24 +213,44 @@ class Experiment:
         self.saveRes(schedulerName, respondTimes, roundNum)
         self.logger.info(respondTimes)
 
-    def runInitWithLog(self):
+    def runInitWithLog(
+            self,
+            initWithLog,
+            roundNum):
         schedulerName = 'NSGA2'
         recordPath = './newMaster/sources/record.json'
         os.system('rm -f %s' % recordPath)
-        self.rerunNecessaryContainers(schedulerName)
+        self.rerunNecessaryContainers(
+            schedulerName,
+            initWithLog)
         sleep(2)
-        self.runUser()
-        while not os.path.exists(recordPath):
-            sleep(1)
-        os.system('cat %s' % recordPath)
-        self.saveEstimatedRecord(schedulerName, 0, 0)
+        for i in tqdm(range(100)):
+            self.runUser()
+            while not os.path.exists(recordPath):
+                sleep(1)
+            self.saveEstimatedRecord(
+                schedulerName,
+                roundNum,
+                i,
+                True
+            )
+            self.stopUser()
         self.logger.info('Done init with log')
 
     @staticmethod
-    def saveEstimatedRecord(algorithmName, roundNum, iterationNum):
+    def saveEstimatedRecord(
+            algorithmName,
+            roundNum,
+            iterationNum,
+            initWithLog=False):
         os.system('mv '
                   './newMaster/sources/record.json '
-                  './Evaluation-%s-%d-%d.json' % (algorithmName, roundNum, iterationNum))
+                  './Evaluation-%s-%d-%d.json' % (
+                      '%s%s' % (
+                          algorithmName,
+                          'InitWithLog' if initWithLog else ''),
+                      roundNum,
+                      iterationNum))
 
     @staticmethod
     def saveRes(schedulerName, respondTimes, roundNum):
@@ -233,14 +265,16 @@ class Experiment:
 
 if __name__ == '__main__':
     experiment = Experiment()
-    experiment.runInitWithLog()
-    # targetRound_ = 10
-    # repeatTimes_ = 100
-    # waitTime = 150
-    # for num in range(targetRound_):
-    #     experiment.run(
-    #         'NSGA2',
-    #         num + 1,
-    #         targetRound_,
-    #         repeatTimes=repeatTimes_,
-    #         userMaxWaitTime=waitTime)
+    targetRound_ = 1
+    repeatTimes_ = 10
+    waitTime = 150
+    for num in range(targetRound_):
+        for algorithm in ['NSGA2', 'NSGA3']:
+            for initWithLog_ in [True, False]:
+                experiment.run(
+                    algorithm,
+                    initWithLog_,
+                    num + 1,
+                    targetRound_,
+                    repeatTimes=repeatTimes_,
+                    userMaxWaitTime=waitTime)

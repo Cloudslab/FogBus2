@@ -161,7 +161,9 @@ class Master(Registry):
             taskHandler = self.taskHandlers[message.source.id]
             if taskHandler.user.id in self.users:
                 user = self.users[taskHandler.user.id]
-                del taskHandler.user.taskHandlerByTaskName[taskHandler.taskName]
+                if taskHandler.taskName in \
+                        taskHandler.user.taskHandlerByTaskName:
+                    del taskHandler.user.taskHandlerByTaskName[taskHandler.taskName]
                 # self.__stopClient(user, 'Your resources was released.')
             del self.taskHandlerByToken[taskHandler.token]
             del self.taskHandlers[message.source.id]

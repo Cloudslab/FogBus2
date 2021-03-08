@@ -165,11 +165,10 @@ class Graph:
             x = [i + 1 for i in range(meanData.shape[0])]
             ax.plot(x, meanData)
 
-        ax.legend([list(self.evaluation.keys())[0] + 'InitWithLog'])
+        ax.legend(self.evaluation.keys())
         ax.set_ylabel('Respond Time (ms)')
         ax.set_xlabel('Iteration Number (Generation Number of Genetic Algorithm)')
-        title = 'Estimated Respond Time \n' \
-                'on Average with Initializing Population using Previous Log'
+        title = 'Estimated Respond Time on Average'
         ax.set_title(title)
         self.saveToFile(title)
         plt.show()
@@ -203,10 +202,10 @@ def testInitWithLog():
         resultPath = sys.argv[1]
     graph_ = Graph(
         resultPath,
-        ['NSGA2'],
-        4,
-        100,
-        150)
+        ['NSGA2', 'NSGA3'],
+        1,
+        10,
+        200)
     graph_.run()
     graph_.drawConvergenceForInitWithLog()
 

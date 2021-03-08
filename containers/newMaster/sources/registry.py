@@ -128,7 +128,7 @@ class Registry(Profiler, Node, ABC):
             self,
             schedulerName: str) -> Scheduler:
         populationSize = 200
-        generationNum = 150
+        generationNum = 200
         if schedulerName in {None, 'NSGA3'}:
             return NSGA3(
                 medianDelay=self.medianDelay,
@@ -408,7 +408,8 @@ class Registry(Profiler, Node, ABC):
         # Master failure tolerance
         if isinstance(self.scheduler, NSGA3) \
                 or isinstance(self.scheduler, NSGA2):
-            machinesIndex = self.decisions.good(user.appName)
+            if self.initWithLog:
+                machinesIndex = self.decisions.good(user.appName)
         # self.logger.info(machinesIndex)
         decision = self.scheduler.schedule(
             userName=user.name,
