@@ -10,6 +10,7 @@ from pymoo.algorithms.nsga3 import NSGA3 as NSGA3_
 from pymoo.algorithms.nsga2 import NSGA2 as NSGA2_
 from pymoo.factory import get_reference_directions
 from pymoo.optimize import minimize
+from pymoo.operators.selection.tournament_selection import TournamentSelection, compare
 from abc import abstractmethod
 from pymoo.model.problem import Problem
 from pymoo.model.population import Population
@@ -22,9 +23,57 @@ from pprint import pformat
 from pymoo.configuration import Configuration
 from hashlib import sha256
 from datatype import Worker
+import math
+from pymoo.model.selection import Selection
+from pymoo.util.misc import random_permuations
 
 Configuration.show_compile_hint = False
 EdgesByName = Dict[str, List[str]]
+
+
+class MyTournamentSelection(Selection):
+    """
+      The Tournament selection is used to simulated a tournament between individuals. The pressure balances
+      greedy the genetic algorithm will be.
+    """
+
+    def __init__(self, func_comp=None, pressure=2):
+        """
+
+        Parameters
+        ----------
+        func_comp: func
+            The function to compare two individuals. It has the shape: comp(pop, indices) and returns the winner.
+            If the function is None it is assumed the population is sorted by a criterium and only indices are compared.
+
+        pressure: int
+            The selection pressure to bie applied. Default it is a binary tournament.
+        """
+
+        # selection pressure to be applied
+        super().__init__()
+        self.pressure = pressure
+
+        self.f_comp = func_comp
+        if self.f_comp is None:
+            raise Exception("Please provide the comparing function for the tournament selection!")
+
+    def _do(self, pop, n_select, n_parents=1, **kwargs):
+        # print('n_select: ', n_select)
+        # number of random individuals needed
+        n_random = n_select * n_parents * self.pressure
+
+        # number of permutations needed
+        n_perms = math.ceil(n_random / len(pop))
+
+        # get random permutations and reshape them
+        P = random_permuations(n_perms, len(pop))[:n_random]
+        P = np.reshape(P, (n_select * n_parents, self.pressure))
+
+        # compare using tournament function
+        S = self.f_comp(pop, P, **kwargs)
+
+        return np.reshape(S, (n_select, n_parents))
 
 
 def genMachineIDForTaskHandler(
@@ -270,6 +319,7 @@ class GeneticProblem(Problem, Evaluator):
             edgesByName=edgesByName,
             entrance=entrance,
             workers=availableWorkers)
+
         self._variableNumber = len(edgesByName)
         self._availableWorkers = defaultdict(lambda: [])
         choicesEachVariable = [-1 for _ in range(len(edgesByName.keys()))]
@@ -285,10 +335,9 @@ class GeneticProblem(Problem, Evaluator):
                         choicesEachVariable[i] += 1
                 # I wrote this to remind me myself of
                 # how stupid I am
-                shuffle(self._availableWorkers[name])
+                # shuffle(self._availableWorkers[name])
                 continue
             choicesEachVariable[i] = 0
-
         lowerBound = [0 for _ in range(self._variableNumber)]
         upperBound = choicesEachVariable
         Problem.__init__(
@@ -318,25 +367,29 @@ class GeneticProblem(Problem, Evaluator):
             event.set()
 
     def _evaluate(self, xs, out, *args, **kwargs):
+        # print('[Population]: ')
         events = [threading.Event() for _ in range(len(xs))]
         for i, x in enumerate(xs):
-            x = x.astype(int)
+            # print('chromosome ----> ', x)
             individual = self.indexesToMachines(x)
+            # print(individual)
             self._individualToProcess.put((i, individual, events[i]))
         for event in events:
             event.wait()
         out['F'] = self._res
         self.myRecords.append(min(out['F']))
+        # print('< ---- ', min(out['F']))
+        # print('=========================')
 
-    def replaceX(self, xs):
+    def replaceX(self, xs, machinesIndex):
         machineToIndex = {}
         keys = list(self.edgesByName.keys())
         for i, machine in enumerate(keys):
             machineToIndex[machine] = i
-        for i, (indexes, machines) in enumerate(self.previousMachinesIndex):
+        for i, (indexes, machines) in enumerate(machinesIndex):
             machineX = [machines[j] for j in indexes]
             x = [machineToIndex[machine] for machine in machineX]
-            # x = [0.1 for machine in machineX]
+            # x = [0 for machine in machineX]
             xs[i] = x
 
         return xs
@@ -375,6 +428,33 @@ class NSGABase(Scheduler):
             medianProcessTime=medianProcessTime)
         self.geneticProblem = None
 
+    @staticmethod
+    def selectionCmp(pop, P, **kwargs):
+        # print('[P]: ', P)
+        S = np.full(P.shape[0], np.nan)
+        # print('[Selection]: ')
+        for i in range(P.shape[0]):
+            a, b = P[i, 0], P[i, 1]
+            if pop[a].CV > 0.0 or pop[b].CV > 0.0:
+                S[i] = compare(a, pop[a].CV, b, pop[b].CV, method='smaller_is_better', return_random_if_equal=True)
+                # print('Used cv to select: -> ', S[i], pop[S[i]])
+                # print(' -> ', pop[int(S[i])].X)
+                continue
+            if pop[a].F > 0.0 or pop[b].F > 0.0:
+                S[i] = compare(a, pop[a].F, b, pop[b].F, method='smaller_is_better', return_random_if_equal=True)
+                # print('Used F to select: -> ', S[i], pop[S[i]])
+                # print(' -> ', pop[int(S[i])].X)
+                continue
+            # both solutions are feasible just set random
+            S[i] = np.random.choice([a, b])
+            # print(' -> ', pop[int(S[i])].X)
+
+            # print('randomly selected: -> ', S[i], pop[S[i]])
+
+        # print('%%%%%%%%%%%%%')
+
+        return S[:, None].astype(np.int, copy=False)
+
     def _schedule(
             self,
             userName,
@@ -398,20 +478,47 @@ class NSGABase(Scheduler):
             availableWorkers=availableWorkers,
             populationSize=self.populationSize)
 
-        if isinstance(self.geneticAlgorithm, NSGA2):
-            self.geneticAlgorithm = self.geneticAlgorithm.__init__(
-                populationSize=self.geneticAlgorithm.populationSize,
-                generationNum=self.geneticAlgorithm.generationNum,
-                medianDelay=self.medianDelay,
-                medianProcessTime=self.medianProcessTime
-            )
-        if isinstance(self.geneticAlgorithm, NSGA3):
-            self.geneticAlgorithm = self.geneticAlgorithm.__init__(
-                populationSize=self.geneticAlgorithm.populationSize,
-                generationNum=self.geneticAlgorithm.generationNum,
-                medianDelay=self.medianDelay,
-                medianProcessTime=self.medianProcessTime
-            )
+        if len(machinesIndex):
+            X = np.random.randint(
+                low=0,
+                high=max(machinesIndex[0][0]) + 1,
+                size=(self.geneticProblem.populationSize,
+                      self.geneticProblem.n_var))
+            X = self.geneticProblem.replaceX(
+                X,
+                machinesIndex=machinesIndex)
+            pop = Population.new("X", X)
+            Evaluator_().eval(self.geneticProblem, pop)
+            for i in range(len(pop)):
+                # print(chromosome.CV, chromosome.F)
+                pop[i].CV = pop[i].F
+            # Evaluator().eval(self.geneticProblem, pop)
+            crossover = get_crossover(
+                "int_sbx",
+                prob=0.5,
+                eta=3.0)
+            mutation = get_mutation("int_pm", eta=3.0)
+            selection = MyTournamentSelection(
+                func_comp=self.selectionCmp)
+            if isinstance(self.geneticAlgorithm, NSGA2_):
+                self.geneticAlgorithm = NSGA2_(
+                    pop_size=self.geneticAlgorithm.pop_size,
+                    sampling=pop,
+                    crossover=crossover,
+                    mutation=mutation,
+                    selection=selection,
+                    eliminate_duplicates=False)
+            if isinstance(self.geneticAlgorithm, NSGA3_):
+                self.geneticAlgorithm = NSGA3_(
+                    pop_size=self.geneticAlgorithm.pop_size,
+                    sampling=pop,
+                    crossover=crossover,
+                    mutation=mutation,
+                    selection=selection,
+                    ref_dirs=self.geneticAlgorithm.ref_dirs,
+                    eliminate_duplicates=False)
+            print('[*] Initialized with %d individuals' % len(machinesIndex))
+
         res = minimize(self.geneticProblem,
                        self.geneticAlgorithm,
                        seed=randint(0, 100),
@@ -453,10 +560,11 @@ class NSGA2(NSGABase):
                  populationSize: int,
                  generationNum: int,
                  medianDelay: Dict[str, Dict[str, float]],
-                 medianProcessTime: Dict[str, Tuple[float, int, float]]):
+                 medianProcessTime: Dict[str, Tuple[float, int, float]],
+                 sampling=get_sampling("int_random")):
         geneticAlgorithm = NSGA2_(
             pop_size=populationSize,
-            sampling=get_sampling("int_random"),
+            sampling=sampling,
             crossover=get_crossover("int_sbx", prob=1.0, eta=3.0),
             mutation=get_mutation("int_pm", eta=3.0),
             eliminate_duplicates=True)
@@ -476,14 +584,15 @@ class NSGA3(NSGABase):
                  generationNum: int,
                  dasDennisP: int,
                  medianDelay: Dict[str, Dict[str, float]],
-                 medianProcessTime: Dict[str, Tuple[float, int, float]]):
+                 medianProcessTime: Dict[str, Tuple[float, int, float]],
+                 sampling=get_sampling("int_random")):
         refDirs = get_reference_directions(
             "das-dennis",
             1,
             n_partitions=dasDennisP)
         algorithm = NSGA3_(
             pop_size=populationSize,
-            sampling=get_sampling("int_random"),
+            sampling=sampling,
             crossover=get_crossover("int_sbx", prob=1.0, eta=3.0),
             mutation=get_mutation("int_pm", eta=3.0),
             ref_dirs=refDirs,

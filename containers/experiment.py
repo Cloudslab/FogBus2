@@ -199,7 +199,8 @@ class Experiment:
                 self.rerunNecessaryContainers(schedulerName)
                 continue
             self.stopUser()
-            respondTimes[i] = self.readRespondTime(respondTimeFilePath)
+            respondTimes[i] = self.readRespondTime(
+                respondTimeFilePath)
             self.saveEstimatedRecord(
                 schedulerName,
                 roundNum,
@@ -210,13 +211,18 @@ class Experiment:
             self.logger.info('[*] Result-[%d/%d]: %s', i, repeatTimes, str(respondTimes))
             self.stopLocalTaskHandler()
             self.stopRemoteTaskHandler()
-        self.saveRes(schedulerName, respondTimes, roundNum)
+        self.saveRes(
+            schedulerName,
+            respondTimes,
+            roundNum,
+            initWithLog=initWithLog)
         self.logger.info(respondTimes)
 
     def runInitWithLog(
             self,
             initWithLog,
-            roundNum):
+            roundNum,
+            iterNum):
         schedulerName = 'NSGA2'
         recordPath = './newMaster/sources/record.json'
         os.system('rm -f %s' % recordPath)
@@ -224,7 +230,7 @@ class Experiment:
             schedulerName,
             initWithLog)
         sleep(2)
-        for i in tqdm(range(100)):
+        for i in tqdm(range(iterNum)):
             self.runUser()
             while not os.path.exists(recordPath):
                 sleep(1)
@@ -232,7 +238,7 @@ class Experiment:
                 schedulerName,
                 roundNum,
                 i,
-                True
+                initWithLog=initWithLog
             )
             self.stopUser()
         self.logger.info('Done init with log')
@@ -253,11 +259,19 @@ class Experiment:
                       iterationNum))
 
     @staticmethod
-    def saveRes(schedulerName, respondTimes, roundNum):
+    def saveRes(
+            schedulerName,
+            respondTimes,
+            roundNum,
+            initWithLog):
+        fix = 'InitWithLog' if initWithLog else ''
         if roundNum is None:
             filename = '%s.json' % schedulerName
         else:
-            filename = '%s-%d.json' % (schedulerName, roundNum)
+            filename = '%s%s-%d.json' % (
+                fix,
+                schedulerName,
+                roundNum)
         with open(filename, 'w+') as f:
             json.dump(respondTimes, f)
             f.close()
@@ -266,8 +280,12 @@ class Experiment:
 if __name__ == '__main__':
     experiment = Experiment()
     targetRound_ = 1
-    repeatTimes_ = 10
+    repeatTimes_ = 30
     waitTime = 150
+    # experiment.runInitWithLog(
+    #     initWithLog=True,
+    #     roundNum=targetRound_,
+    #     iterNum=repeatTimes_)
     for num in range(targetRound_):
         for algorithm in ['NSGA2', 'NSGA3']:
             for initWithLog_ in [True, False]:

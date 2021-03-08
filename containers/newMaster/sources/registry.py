@@ -19,7 +19,9 @@ Address = Tuple[str, int]
 
 class Decisions:
 
-    def __init__(self, keptDecisionsCount: int = 100):
+    def __init__(
+            self,
+            keptDecisionsCount: int = 50):
         self.decision: Dict[str, List[Tuple[List[int], List[str]]]] = {}
         self.__filename = 'decisions.json'
         self._loadFromFile()
