@@ -14,7 +14,7 @@ from abc import abstractmethod
 from pymoo.model.problem import Problem
 from pymoo.model.population import Population
 from pymoo.model.evaluator import Evaluator as Evaluator_
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, Union
 from dependencies import loadDependencies, Task, Application
 from copy import deepcopy
 from collections import defaultdict
@@ -256,8 +256,7 @@ class GeneticProblem(Problem, Evaluator):
             edgesByName: EdgesByName,
             entrance: str,
             availableWorkers: Dict[str, Worker],
-            populationSize: int,
-            machinesIndex):
+            populationSize: int):
         self.populationSize = populationSize
         self.medianDelay: Dict[str, Dict[str, float]] = medianDelay
         Evaluator.__init__(
@@ -271,7 +270,6 @@ class GeneticProblem(Problem, Evaluator):
             edgesByName=edgesByName,
             entrance=entrance,
             workers=availableWorkers)
-        self.previousMachinesIndex: List[Tuple[List[int], List[str]]] = machinesIndex
         self._variableNumber = len(edgesByName)
         self._availableWorkers = defaultdict(lambda: [])
         choicesEachVariable = [-1 for _ in range(len(edgesByName.keys()))]
@@ -387,6 +385,7 @@ class NSGABase(Scheduler):
             entrance: str,
             availableWorkers: Dict[str, Worker],
             machinesIndex) -> Decision:
+
         self.geneticProblem = GeneticProblem(
             userName,
             userMachine,
@@ -397,21 +396,22 @@ class NSGABase(Scheduler):
             edgesByName=edgesByName,
             entrance=entrance,
             availableWorkers=availableWorkers,
-            populationSize=self.populationSize,
-            machinesIndex=machinesIndex)
-        if len(machinesIndex):
-            X = np.random.randint(
-                low=0,
-                high=max(machinesIndex[0][0]) + 1,
-                size=(self.geneticProblem.populationSize,
-                      self.geneticProblem.n_var))
-            X = self.geneticProblem.replaceX(X)
-            pop = Population.new("X", X)
-            Evaluator_().eval(self.geneticProblem, pop)
-            # Evaluator().eval(self.geneticProblem, pop)
-            self.geneticAlgorithm.sampling = pop
-            print('[*] Initialized with %d individuals' % len(machinesIndex))
+            populationSize=self.populationSize)
 
+        if isinstance(self.geneticAlgorithm, NSGA2):
+            self.geneticAlgorithm = self.geneticAlgorithm.__init__(
+                populationSize=self.geneticAlgorithm.populationSize,
+                generationNum=self.geneticAlgorithm.generationNum,
+                medianDelay=self.medianDelay,
+                medianProcessTime=self.medianProcessTime
+            )
+        if isinstance(self.geneticAlgorithm, NSGA3):
+            self.geneticAlgorithm = self.geneticAlgorithm.__init__(
+                populationSize=self.geneticAlgorithm.populationSize,
+                generationNum=self.geneticAlgorithm.generationNum,
+                medianDelay=self.medianDelay,
+                medianProcessTime=self.medianProcessTime
+            )
         res = minimize(self.geneticProblem,
                        self.geneticAlgorithm,
                        seed=randint(0, 100),
