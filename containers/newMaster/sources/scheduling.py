@@ -389,6 +389,13 @@ class GeneticProblem(Problem, Evaluator):
         for i, (indexes, machines) in enumerate(machinesIndex):
             machineX = [machines[j] for j in indexes]
             x = [machineToIndex[machine] for machine in machineX]
+            if x.count(x[0]) / len(x) > .8:
+                maxIndex = max(x)
+                for j in range(len(x)):
+                    randNum = np.random.random(1)[0]
+                    if randNum < .3:
+                        x[j] = np.random.randint(maxIndex + 1)
+                # print(x)
             # x = [0 for machine in machineX]
             xs[i] = x
 
@@ -507,7 +514,7 @@ class NSGABase(Scheduler):
                     crossover=crossover,
                     mutation=mutation,
                     selection=selection,
-                    eliminate_duplicates=False)
+                    eliminate_duplicates=True)
             if isinstance(self.geneticAlgorithm, NSGA3_):
                 self.geneticAlgorithm = NSGA3_(
                     pop_size=self.geneticAlgorithm.pop_size,
@@ -516,7 +523,7 @@ class NSGABase(Scheduler):
                     mutation=mutation,
                     selection=selection,
                     ref_dirs=self.geneticAlgorithm.ref_dirs,
-                    eliminate_duplicates=False)
+                    eliminate_duplicates=True)
             print('[*] Initialized with %d individuals' % len(machinesIndex))
 
         res = minimize(self.geneticProblem,

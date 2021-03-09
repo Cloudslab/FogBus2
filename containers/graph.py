@@ -197,23 +197,23 @@ def testNSGA2AndNSGA3():
 
 
 def testInitWithLog():
-    resultPath = 'results/0308-1'
+    resultPath = 'results/initWithLog'
     if len(sys.argv) > 1:
         resultPath = sys.argv[1]
     graph_ = Graph(
         resultPath,
         [
             'NSGA2',
-            # 'NSGA3',
-            # 'NSGA3InitWithLog',
+            'NSGA3',
+            'NSGA3InitWithLog',
             'NSGA2InitWithLog'],
         1,
-        10,
+        30,
         200)
     graph_.run()
     graph_.drawConvergenceForInitWithLog()
 
 
 if __name__ == '__main__':
-    # testNSGA2AndNSGA3()
+    testNSGA2AndNSGA3()
     testInitWithLog()

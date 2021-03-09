@@ -21,12 +21,12 @@ class Decisions:
 
     def __init__(
             self,
-            keptDecisionsCount: int = 50):
+            keptDecisionsCount: int = 100):
         self.decision: Dict[str, List[Tuple[List[int], List[str]]]] = {}
         self.__filename = 'decisions.json'
-        self._loadFromFile()
         self._keptDecisionCount = keptDecisionsCount
         self._requestedAppCount: DefaultDict[str, int] = defaultdict(lambda: 0)
+        self._loadFromFile()
 
     def update(
             self,
@@ -45,8 +45,9 @@ class Decisions:
     def _clean(self):
         totalRequest = sum(self._requestedAppCount.values())
         if totalRequest < self._keptDecisionCount // 2:
+            print(totalRequest, self._keptDecisionCount // 2, self._keptDecisionCount)
             return
-        factor = totalRequest / self._keptDecisionCount
+        factor = self._keptDecisionCount / totalRequest
         for appName, decisions in self.decision.items():
             count = round(factor * self._requestedAppCount[appName])
             if count < len(self.decision[appName]):
@@ -68,6 +69,9 @@ class Decisions:
             content = json.load(f)
             f.close()
             self.decision = defaultdict(List[List[int]], content)
+            for appName, records in self.decision.items():
+                self._requestedAppCount[appName] = len(records)
+            self._clean()
 
 
 class Registry(Profiler, Node, ABC):
