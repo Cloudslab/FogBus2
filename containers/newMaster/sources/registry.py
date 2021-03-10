@@ -450,8 +450,8 @@ class Registry(Profiler, Node, ABC):
                 availableWorkers=allWorkers,
                 machinesIndex=machinesIndex
             )
-        self.logger.info(self.scheduler.geneticProblem.myRecords[:5])
-        self.logger.info(self.scheduler.geneticProblem.myRecords[-5:])
+        # self.logger.info(self.scheduler.geneticProblem.myRecords[:5])
+        # self.logger.info(self.scheduler.geneticProblem.myRecords[-5:])
         self.decisions.update(
             appName=user.appName,
             machinesIndex=decision.machinesIndex,
@@ -525,7 +525,7 @@ class Registry(Profiler, Node, ABC):
             'machinesIndex': machinesIndex,
         }
         workerKey = list(self.workers.keys())[-1]
-        worker = self.workers[workerKey]
+        worker = self.workers[1]
         self.sendMessage(msg, worker.addr)
         self.logger.info('Forwarded scheduling task to %s' % worker.nameLogPrinting)
         lockName = 'schedulingUser-%d' % userID

@@ -210,7 +210,7 @@ class Master(Registry):
 
     def __handleSchedulingResult(self, message: Message):
         userID = message.content['userID']
-        decision = message.content['schedulingResult']
+        decision = message.content['decision']
         lockName = 'schedulingUser-%d' % userID
         self.decisionResultFromWorker[lockName] = decision
         self.locks[lockName].release()
