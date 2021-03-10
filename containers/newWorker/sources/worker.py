@@ -12,6 +12,7 @@ from logger import get_logger
 from gatherContainerStat import GatherContainerStat
 from queue import Queue
 from time import time
+from scheduling import NSGA2, NSGA3
 
 
 class Worker(Node, GatherContainerStat):
@@ -73,6 +74,8 @@ class Worker(Node, GatherContainerStat):
             self.__handleRunTaskHandler(message)
         elif message.type == 'resourcesQuery':
             self.__handleResourcesQuery(message)
+        elif message.type == 'scheduling':
+            self.__handleScheduling(message)
 
     def __handleRegistered(self, message: Message):
         role = message.content['role']
@@ -146,6 +149,60 @@ class Worker(Node, GatherContainerStat):
             self.logger.info('Ran %s: %s', taskName, containerName)
         except docker.errors.APIError as e:
             self.logger.warning(str(e))
+
+    def __handleScheduling(self, message: Message):
+        self.logger.info('Handling scheduling task ...')
+        schedulerName = message.content['schedulerName']
+        medianDelay = message.content['medianDelay']
+        medianProcessTime = message.content['medianProcessTime']
+        populationSize = message.content['populationSize']
+        generationNum = message.content['generationNum']
+        userID = message.content['userID']
+        userName = message.content['userName']
+        userMachine = message.content['userMachine']
+        userAppName = message.content['userAppName']
+        userLabel = message.content['userLabel']
+        masterName = message.content['masterName']
+        masterMachine = message.content['masterMachine']
+        availableWorkers = message.content['availableWorkers']
+        machinesIndex = message.content['machinesIndex']
+
+        self.logger.info(populationSize)
+        self.logger.info(generationNum)
+        if schedulerName == 'NSGA2':
+            scheduler = NSGA2(
+                medianDelay=medianDelay,
+                medianProcessTime=medianProcessTime,
+                populationSize=populationSize,
+                generationNum=generationNum)
+        elif schedulerName == 'NSGA3':
+            scheduler = NSGA3(
+                medianDelay=medianDelay,
+                medianProcessTime=medianProcessTime,
+                populationSize=populationSize,
+                generationNum=generationNum,
+                dasDennisP=1)
+        else:
+            return
+        decision = scheduler.schedule(
+            userName=userName,
+            userMachine=userMachine,
+            masterName=masterName,
+            masterMachine=masterMachine,
+            applicationName=userAppName,
+            label=userLabel,
+            availableWorkers=availableWorkers,
+            machinesIndex=machinesIndex
+        )
+        self.logger.info(decision.machinesIndex)
+        self.logger.info(decision.cost)
+        msg = {
+            'type': 'schedulingResult',
+            'userID': userID,
+            'decision': decision}
+        self.sendMessage(msg, message.source.addr)
+        self.logger.info('Sent decision to master.')
+
 
     @staticmethod
     def snake_to_camel(snake_str):

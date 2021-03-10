@@ -59,6 +59,8 @@ class Master(Registry):
             self.__handleWorkersCount(message=message)
         elif message.type == 'nodeResources':
             self.__handleWorkerResources(message=message)
+        elif message.type == 'schedulingResult':
+            self.__handleSchedulingResult(message=message)
 
     def __handleRegister(self, message: Message):
         respond = self.registerClient(message=message)
@@ -205,6 +207,14 @@ class Master(Registry):
         worker.maxMemory = resources['maxMemory']
         worker.totalCPUCores = resources['totalCPUCores']
         worker.cpuFreq = resources['cpuFreq']
+
+    def __handleSchedulingResult(self, message: Message):
+        userID = message.content['userID']
+        decision = message.content['schedulingResult']
+        lockName = 'schedulingUser-%d' % userID
+        self.decisionResultFromWorker[lockName] = decision
+        self.locks[lockName].release()
+        self.logger.info('Received decision from %s' % message.source.nameLogPrinting)
 
     def __stopClient(self, identity: Identity, reason: str = 'No reason'):
         msg = {'type': 'stop', 'reason': reason}

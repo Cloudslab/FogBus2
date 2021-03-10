@@ -16,6 +16,15 @@ RUN python -m \
     pip install --no-cache-dir \
     numpy psutil GPUtil docker
 
+RUN apk add --no-cache \
+    gfortran openblas-dev lapack-dev \
+    jpeg-dev zlib-dev
+
+RUN python -m \
+    pip install --no-cache-dir \
+    -i https://pypi.tuna.tsinghua.edu.cn/simple \
+    pymoo
+
 # Hostname
 RUN echo "Worker" > /etc/hostname
 

@@ -119,6 +119,9 @@ class Registry(Profiler, Node, ABC):
             schedulerName=schedulerName)
         self.decisions = Decisions()
         self.initWithLog = initWithLog
+        self.__schedulingNum = 0
+        self.locks: DefaultDict[str, Lock] = defaultdict(lambda: Lock())
+        self.decisionResultFromWorker: Dict[Decision] = {}
         self.logger = None
 
     @staticmethod
@@ -417,15 +420,36 @@ class Registry(Profiler, Node, ABC):
             if self.initWithLog:
                 machinesIndex = self.decisions.good(user.appName)
         # self.logger.info(machinesIndex)
-        decision = self.scheduler.schedule(
-            userName=user.name,
-            userMachine=user.machineID,
-            masterName=self.name,
-            masterMachine=self.machineID,
-            applicationName=user.appName,
-            label=user.label,
-            availableWorkers=allWorkers,
-            machinesIndex=machinesIndex)
+        #  TODO: thread safe
+        if False and self.__schedulingNum < 5:
+            self.__schedulingNum += 1
+            decision = self.scheduler.schedule(
+                userName=user.name,
+                userMachine=user.machineID,
+                masterName=self.name,
+                masterMachine=self.machineID,
+                applicationName=user.appName,
+                label=user.label,
+                availableWorkers=allWorkers,
+                machinesIndex=machinesIndex)
+            self.__schedulingNum -= 1
+        else:
+            decision = self.__scheduleOnWorker(
+                schedulerName=self.scheduler.name,
+                medianDelay=self.scheduler.medianDelay,
+                medianProcessTime=self.scheduler.medianProcessTime,
+                populationSize=self.scheduler.populationSize,
+                generationNum=self.scheduler.generationNum,
+                userID=user.id,
+                userName=user.name,
+                userMachine=user.machineID,
+                userAppName=user.appName,
+                userLabel=user.label,
+                masterName=self.name,
+                masterMachine=self.machineID,
+                availableWorkers=allWorkers,
+                machinesIndex=machinesIndex
+            )
         self.logger.info(self.scheduler.geneticProblem.myRecords[:5])
         self.logger.info(self.scheduler.geneticProblem.myRecords[-5:])
         self.decisions.update(
@@ -466,3 +490,49 @@ class Registry(Profiler, Node, ABC):
     def __requestProfiler(self):
         msg = {'type': 'requestProfiler'}
         self.sendMessage(msg, self.remoteLogger.addr)
+
+    def __scheduleOnWorker(
+            self,
+            schedulerName,
+            medianDelay,
+            medianProcessTime,
+            populationSize,
+            generationNum,
+            userID,
+            userName,
+            userAppName,
+            userMachine,
+            userLabel,
+            masterName,
+            masterMachine,
+            availableWorkers,
+            machinesIndex):
+        msg = {
+            'type': 'scheduling',
+            'schedulerName': schedulerName,
+            'medianDelay': medianDelay,
+            'medianProcessTime': medianProcessTime,
+            'populationSize': populationSize,
+            'generationNum': generationNum,
+            'userID': userID,
+            'userName': userName,
+            'userMachine': userMachine,
+            'userAppName': userAppName,
+            'userLabel': userLabel,
+            'masterName': masterName,
+            'masterMachine': masterMachine,
+            'availableWorkers': availableWorkers,
+            'machinesIndex': machinesIndex,
+        }
+        workerKey = list(self.workers.keys())[-1]
+        worker = self.workers[workerKey]
+        self.sendMessage(msg, worker.addr)
+        self.logger.info('Forwarded scheduling task to %s' % worker.nameLogPrinting)
+        lockName = 'schedulingUser-%d' % userID
+        self.locks[lockName].acquire()
+        self.logger.info('Waiting for decision from %s ...' % worker.nameLogPrinting)
+        self.locks[lockName].acquire()
+        decision = self.decisionResultFromWorker[lockName]
+        self.logger.info('Use decision from %s' % worker.nameLogPrinting)
+        self.locks[lockName].release()
+        return decision
