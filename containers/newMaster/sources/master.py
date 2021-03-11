@@ -4,6 +4,7 @@ from logger import get_logger
 from registry import Registry
 from connection import Message, Identity
 from typing import Tuple
+from datatype import TaskHandler
 
 Address = Tuple[str, int]
 
@@ -155,7 +156,8 @@ class Master(Registry):
                 return
             user = self.users[message.source.id]
             for taskHandler in user.taskHandlerByTaskName.values():
-                self.__stopClient(taskHandler, 'Your User has exited.')
+                self.__askTaskHandlerToWait(taskHandler)
+                # self.__stopClient(taskHandler, 'Your User has exited.')
             del self.users[message.source.id]
         elif message.source.role == 'TaskHandler':
             if message.source.id not in self.taskHandlers:
@@ -215,6 +217,10 @@ class Master(Registry):
         self.decisionResultFromWorker[lockName] = decision
         self.locks[lockName].release()
         self.logger.info('Received decision from %s' % message.source.nameLogPrinting)
+
+    def __askTaskHandlerToWait(self, taskHandler: TaskHandler):
+        msg = {'type': 'wait'}
+        self.sendMessage(msg, taskHandler.addr)
 
     def __stopClient(self, identity: Identity, reason: str = 'No reason'):
         msg = {'type': 'stop', 'reason': reason}

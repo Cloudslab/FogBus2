@@ -205,20 +205,21 @@ class TaskHandler(Node):
                 self.cpuFreq)}
         self.sendMessage(msg, self.remoteLogger.addr)
 
-    def run(self):
-        self.__register()
+    def run(self, reRegister: bool = False):
+        self.__register(reRegister)
         self.__lookupChildren()
 
-    def __register(self):
-        message = {
-            'type': 'register',
-            'role': 'TaskHandler',
-            'userID': self.userID,
-            'taskName': self.taskName,
-            'workerID': self.workerID,
-            'token': self.token,
-            'machineID': self.machineID}
-        self.sendMessage(message, self.master.addr)
+    def __register(self, reRegister: bool):
+        if reRegister:
+            message = {
+                'type': 'register',
+                'role': 'TaskHandler',
+                'userID': self.userID,
+                'taskName': self.taskName,
+                'workerID': self.workerID,
+                'token': self.token,
+                'machineID': self.machineID}
+            self.sendMessage(message, self.master.addr)
         self.isRegistered.wait()
         self.logger.info("Registered.")
 
@@ -243,6 +244,8 @@ class TaskHandler(Node):
             self.__handleTaskHandlerInfo(message)
         elif message.type == 'data':
             self.__handleData(message)
+        elif message.type == 'wait':
+            self.__handleWait()
 
     def __handleRegistered(self, message: Message):
         role = message.content['role']
@@ -290,6 +293,11 @@ class TaskHandler(Node):
         msg['result'] = result
 
         self.sendMessage(msg, self.master.addr)
+
+    def __handleWait(self):
+        msg = {'type': 'waiting'}
+        self.sendMessage(msg, self.master.addr)
+        self.run(reRegister=True)
 
 
 def parseArg():
