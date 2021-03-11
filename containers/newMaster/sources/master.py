@@ -62,6 +62,8 @@ class Master(Registry):
             self.__handleWorkerResources(message=message)
         elif message.type == 'schedulingResult':
             self.__handleSchedulingResult(message=message)
+        elif message.type == 'waiting':
+            self.__handleTaskHandlerWaiting(message=message)
 
     def __handleRegister(self, message: Message):
         respond = self.registerClient(message=message)
@@ -217,6 +219,12 @@ class Master(Registry):
         self.decisionResultFromWorker[lockName] = decision
         self.locks[lockName].release()
         self.logger.info('Received decision from %s' % message.source.nameLogPrinting)
+
+    def __handleTaskHandlerWaiting(self, message: Message):
+        taskHandler = self.taskHandlers[message.source.id]
+        if taskHandler.taskName not in self.waitingTaskHandlerIdByTaskName:
+            self.waitingTaskHandlerIdByTaskName[taskHandler.taskName] = set([])
+        self.waitingTaskHandlerIdByTaskName[taskHandler.taskName].add(taskHandler.id)
 
     def __askTaskHandlerToWait(self, taskHandler: TaskHandler):
         msg = {'type': 'wait'}

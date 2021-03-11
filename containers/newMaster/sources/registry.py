@@ -112,7 +112,7 @@ class Registry(Profiler, Node, ABC):
         self.taskHandlerByToken: Dict[str, TaskHandler] = {}
 
         self.taskHandlers: Dict[int, TaskHandler] = {}
-
+        self.waitingTaskHandlerIdByTaskName: Dict[str, set[int]] = {}
         self.profiler = self.__loadProfilers()
         self.tasks, self.applications = self.profiler
         self.scheduler: Scheduler = self._getScheduler(

@@ -295,10 +295,7 @@ class TaskHandler(Node):
         self.sendMessage(msg, self.master.addr)
 
     def __handleWait(self):
-        msg = {
-            'type': 'waiting',
-            'taskName': self.app.taskName
-        }
+        msg = {'type': 'waiting'}
         self.sendMessage(msg, self.master.addr)
         self.run(reRegister=True)
 
