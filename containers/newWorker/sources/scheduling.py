@@ -337,7 +337,7 @@ class GeneticProblem(Problem, Evaluator):
                 # how stupid I am
                 # shuffle(self._availableWorkers[name])
                 continue
-            choicesEachVariable[i] = 0
+            choicesEachVariable[i] = 1
         lowerBound = [0 for _ in range(self._variableNumber)]
         upperBound = choicesEachVariable
         Problem.__init__(

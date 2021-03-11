@@ -204,21 +204,20 @@ class TaskHandler(Node):
                 self.cpuFreq)}
         self.sendMessage(msg, self.remoteLogger.addr)
 
-    def run(self, reRegister: bool = False):
-        self.__register(reRegister)
+    def run(self):
+        self.__register()
         self.__lookupChildren()
 
-    def __register(self, reRegister: bool):
-        if reRegister:
-            message = {
-                'type': 'register',
-                'role': 'TaskHandler',
-                'userID': self.userID,
-                'taskName': self.taskName,
-                'workerID': self.workerID,
-                'token': self.token,
-                'machineID': self.machineID}
-            self.sendMessage(message, self.master.addr)
+    def __register(self):
+        message = {
+            'type': 'register',
+            'role': 'TaskHandler',
+            'userID': self.userID,
+            'taskName': self.taskName,
+            'workerID': self.workerID,
+            'token': self.token,
+            'machineID': self.machineID}
+        self.sendMessage(message, self.master.addr)
         self.isRegistered.wait()
         self.logger.info("Registered.")
 
