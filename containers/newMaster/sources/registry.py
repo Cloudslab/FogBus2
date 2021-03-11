@@ -524,8 +524,9 @@ class Registry(Profiler, Node, ABC):
             'availableWorkers': availableWorkers,
             'machinesIndex': machinesIndex,
         }
+        # workerKey = list(self.workers.keys())[-1]
         workerKey = list(self.workers.keys())[-1]
-        worker = self.workers[1]
+        worker = self.workers['d656b2725025de511893d7f9037e215606444ac842e972abbf118bf728d4264c']
         self.sendMessage(msg, worker.addr)
         self.logger.info('Forwarded scheduling task to %s' % worker.nameLogPrinting)
         lockName = 'schedulingUser-%d' % userID
