@@ -1,11 +1,11 @@
 import logging
 import argparse
+
 from logger import get_logger
 from registry import Registry
 from connection import Message, Identity
 from typing import Tuple
 from datatype import TaskHandler
-
 Address = Tuple[str, int]
 
 
@@ -222,9 +222,7 @@ class Master(Registry):
 
     def __handleTaskHandlerWaiting(self, message: Message):
         taskHandler = self.taskHandlers[message.source.id]
-        if taskHandler.taskName not in self.waitingTaskHandlerIdByTaskName:
-            self.waitingTaskHandlerIdByTaskName[taskHandler.taskName] = set([])
-        self.waitingTaskHandlerIdByTaskName[taskHandler.taskName].add(taskHandler.id)
+        self.__makeTaskHandlerWait(taskHandler)
 
     def __askTaskHandlerToWait(self, taskHandler: TaskHandler):
         msg = {'type': 'wait'}

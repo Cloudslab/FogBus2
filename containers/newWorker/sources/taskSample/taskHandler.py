@@ -27,7 +27,6 @@ class TaskHandler(Node):
             totalCPUCores: int,
             cpuFreq: float,
             logLevel=logging.DEBUG):
-
         self.userID: int = userID
         self.userName: str = userName
         self.taskName: str = taskName
@@ -246,6 +245,8 @@ class TaskHandler(Node):
             self.__handleData(message)
         elif message.type == 'wait':
             self.__handleWait()
+        elif message.type == 'reRegister':
+            self.__reRegister()
 
     def __handleRegistered(self, message: Message):
         role = message.content['role']
@@ -297,7 +298,29 @@ class TaskHandler(Node):
     def __handleWait(self):
         msg = {'type': 'waiting'}
         self.sendMessage(msg, self.master.addr)
-        self.run(reRegister=True)
+
+    def __reRegister(self, message: Message):
+        userID = message.content['userID']
+        userName = message.content['userName']
+        taskName = message.content['taskName']
+        token = message.content['token']
+        childTaskTokens = message.content['childTaskTokens']
+
+        self.__init__(
+            containerName=self.containerName,
+            myAddr=self.myAddr,
+            masterAddr=self.masterAddr,
+            loggerAddr=self.loggerAddr,
+            userID=userID,
+            userName=userName,
+            taskName=taskName,
+            token=token,
+            childTaskTokens=childTaskTokens,
+            workerID=self.workerID,
+            totalCPUCores=self.totalCPUCores,
+            cpuFreq=self.cpuFreq
+        )
+        self.logger.info('ReRegistered')
 
 
 def parseArg():

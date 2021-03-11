@@ -13,6 +13,7 @@ from dependencies import loadDependencies, Application
 from scheduling import Scheduler, Decision, NSGA3, NSGA2
 from collections import defaultdict
 from time import time, sleep
+from queue import Queue, Empty
 
 Address = Tuple[str, int]
 
@@ -112,7 +113,7 @@ class Registry(Profiler, Node, ABC):
         self.taskHandlerByToken: Dict[str, TaskHandler] = {}
 
         self.taskHandlers: Dict[int, TaskHandler] = {}
-        self.waitingTaskHandlerIdByTaskName: Dict[str, set[int]] = {}
+        self.waitingTaskHandlerIdByTaskName: Dict[str, Dict[str, Queue[TaskHandler]]] = {}
         self.profiler = self.__loadProfilers()
         self.tasks, self.applications = self.profiler
         self.scheduler: Scheduler = self._getScheduler(
@@ -330,6 +331,13 @@ class Registry(Profiler, Node, ABC):
             'workerMachineID': worker.machineID}
         return respond
 
+    def __makeTaskHandlerWait(self, taskHandler: TaskHandler):
+        if taskHandler.taskName not in self.waitingTaskHandlerIdByTaskName:
+            self.waitingTaskHandlerIdByTaskName[taskHandler.taskName] = {}
+        if taskHandler.machineID not in self.waitingTaskHandlerIdByTaskName[taskHandler.taskName]:
+            self.waitingTaskHandlerIdByTaskName[taskHandler.taskName][taskHandler.machineID] = Queue()
+        self.waitingTaskHandlerIdByTaskName[taskHandler.taskName][taskHandler.machineID].put(taskHandler)
+
     def _checkTaskHandlerForUser(self, user: User):
         threading.Thread(
             target=self.__checkTaskHandlerForUser,
@@ -457,18 +465,22 @@ class Registry(Profiler, Node, ABC):
             machinesIndex=decision.machinesIndex,
             indexToMachine=decision.indexToMachine)
 
-        messageForWorkers = self.__parseDecision(decision, user)
+        messageForAssignees = self.__parseDecision(decision, user)
         self.logger.info(
             'Scheduled by %s, estimated cost: %s' % (
                 self.scheduler.name,
                 decision.cost))
 
-        for message, worker in messageForWorkers:
-            self.sendMessage(message, worker.addr)
+        for message, assignee in messageForAssignees:
+            if isinstance(assignee, TaskHandler):
+                if assignee.id in self.taskHandlers:
+                    del self.taskHandlers[assignee.id]
+            self.sendMessage(message, assignee.addr)
+
         return True
 
     def __parseDecision(self, decision: Decision, user: User) -> List[Tuple[Dict, Worker]]:
-        messageForWorkers = []
+        messageFoAssignees = []
         for machineName, machineID in decision.machines.items():
             nameSplit = machineName.split('@')
             machineRole = nameSplit[-1]
@@ -476,16 +488,37 @@ class Registry(Profiler, Node, ABC):
             if machineRole == 'TaskHandler':
                 user.notReadyTasks.add((taskName, machineID))
                 userTask = user.taskNameTokenMap[taskName]
-                message = {
-                    'type': 'runTaskHandler',
-                    'userID': user.id,
-                    'userName': user.name,
-                    'taskName': taskName,
-                    'token': userTask.token,
-                    'childTaskTokens': userTask.childTaskTokens}
                 worker = self.workers[machineID]
-                messageForWorkers.append((message, worker))
-        return messageForWorkers
+                didNotReuseTaskHandler = True
+                if taskName in self.waitingTaskHandlerIdByTaskName \
+                        and worker.machineID in self.waitingTaskHandlerIdByTaskName[taskName]:
+                    try:
+                        taskHandler = self.waitingTaskHandlerIdByTaskName[taskName][worker.machineID].get(
+                            block=False
+                        )
+                        message = {
+                            'type': 'reRegister',
+                            'userID': user.id,
+                            'userName': user.name,
+                            'taskName': taskName,
+                            'token': userTask.token,
+                            'childTaskTokens': userTask.childTaskTokens
+                        }
+                        messageFoAssignees.append((message, taskHandler))
+                        didNotReuseTaskHandler = False
+                    except Empty:
+                        pass
+
+                if didNotReuseTaskHandler:
+                    message = {
+                        'type': 'runTaskHandler',
+                        'userID': user.id,
+                        'userName': user.name,
+                        'taskName': taskName,
+                        'token': userTask.token,
+                        'childTaskTokens': userTask.childTaskTokens}
+                    messageFoAssignees.append((message, worker))
+        return messageFoAssignees
 
     def __requestProfiler(self):
         msg = {'type': 'requestProfiler'}
