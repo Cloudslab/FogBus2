@@ -303,7 +303,7 @@ class TaskHandler(Node):
         if not self.resetEvent.isSet():
             msg = {
                 'type': 'exit',
-                'reason': 'Be idle more than %s seconds' % s waitTimeout}
+                'reason': 'Be idle more than %s seconds' % waitTimeout}
             self.sendMessage(msg, self.master.addr)
 
     def __reRegister(self, message: Message):
