@@ -331,7 +331,7 @@ class Registry(Profiler, Node, ABC):
             'workerMachineID': worker.machineID}
         return respond
 
-    def __makeTaskHandlerWait(self, taskHandler: TaskHandler):
+    def makeTaskHandlerWait(self, taskHandler: TaskHandler):
         if taskHandler.taskName not in self.waitingTaskHandlerIdByTaskName:
             self.waitingTaskHandlerIdByTaskName[taskHandler.taskName] = {}
         if taskHandler.machineID not in self.waitingTaskHandlerIdByTaskName[taskHandler.taskName]:
@@ -429,7 +429,8 @@ class Registry(Profiler, Node, ABC):
                 machinesIndex = self.decisions.good(user.appName)
         # self.logger.info(machinesIndex)
         #  TODO: thread safe
-        if False and self.__schedulingNum < 5:
+        # if False and self.__schedulingNum < 5:
+        if True:
             self.__schedulingNum += 1
             decision = self.scheduler.schedule(
                 userName=user.name,

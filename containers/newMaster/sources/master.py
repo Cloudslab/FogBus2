@@ -222,7 +222,7 @@ class Master(Registry):
 
     def __handleTaskHandlerWaiting(self, message: Message):
         taskHandler = self.taskHandlers[message.source.id]
-        self.__makeTaskHandlerWait(taskHandler)
+        self.makeTaskHandlerWait(taskHandler)
 
     def __askTaskHandlerToWait(self, taskHandler: TaskHandler):
         msg = {'type': 'wait'}
