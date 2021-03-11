@@ -38,6 +38,7 @@ class TaskHandler(Node):
         self.processTime: Median = Median()
         self.totalCPUCores = totalCPUCores
         self.cpuFreq = cpuFreq
+        self.resetEvent: threading.Event = threading.Event()
 
         super().__init__(
             role='TaskHandler',
@@ -297,8 +298,16 @@ class TaskHandler(Node):
     def __handleWait(self):
         msg = {'type': 'waiting'}
         self.sendMessage(msg, self.master.addr)
+        waitTimeout = 60
+        sleep(waitTimeout)
+        if not self.resetEvent.isSet():
+            msg = {
+                'type': 'exit',
+                'reason': 'Be idle more than %s seconds' % s waitTimeout}
+            self.sendMessage(msg, self.master.addr)
 
     def __reRegister(self, message: Message):
+        self.resetEvent.set()
         userID = message.content['userID']
         userName = message.content['userName']
         taskName = message.content['taskName']

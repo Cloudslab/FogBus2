@@ -494,9 +494,13 @@ class Registry(Profiler, Node, ABC):
                 if taskName in self.waitingTaskHandlerIdByTaskName \
                         and worker.machineID in self.waitingTaskHandlerIdByTaskName[taskName]:
                     try:
-                        taskHandler = self.waitingTaskHandlerIdByTaskName[taskName][worker.machineID].get(
-                            block=False
-                        )
+                        while True:
+                            taskHandler = self.waitingTaskHandlerIdByTaskName[taskName][worker.machineID].get(
+                                block=False
+                            )
+                            # Make sure the TaskHandler is still available
+                            if taskHandler.id in self.taskHandlers:
+                                break
                         message = {
                             'type': 'reRegister',
                             'userID': user.id,
