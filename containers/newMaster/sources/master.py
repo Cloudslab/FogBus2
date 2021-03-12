@@ -247,6 +247,11 @@ class Master(Registry):
         self.makeTaskHandlerWait(taskHandler)
 
     def __handleWorkersAddr(self, message: Message):
+        """
+        :param message:
+        :return: Workers' addr registered here
+        """
+
         workersAddr = self.__getWorkersAddr()
         if not len(workersAddr):
             return
@@ -257,20 +262,33 @@ class Master(Registry):
         self.sendMessage(msg, message.source.addr)
 
     def __handleWorkersAddrResult(self, message: Message):
+        """
+        Handle Workers' Addr from another Master
+        :param message:
+        :return:
+        """
         workersAddr = message.content['workersAddrResult']
         self.__advertiseSelfToWorkers(workersAddr)
 
     def __advertiseSelfToWorkers(self, workersAddr: set[Address]):
-        selfWorkersAddr = self.__getWorkersAddr()
-        if not len(selfWorkersAddr):
+        """
+        Advertise myself to Workers that registered at another Master
+        :param workersAddr:
+        :return:
+        """
+        workersAddr = self.__getWorkersAddr()
+        if not len(workersAddr):
             return
         msg = {'type': 'advertise'}
         for workerAddr in workersAddr:
-            if workerAddr in selfWorkersAddr:
+            if workerAddr in workersAddr:
                 continue
             self.sendMessage(msg, workerAddr)
 
     def __getWorkersAddr(self):
+        """
+        :return: Workers' addr info
+        """
         workersAddr = set([])
         for worker in self.workers.values():
             if worker.addr in workersAddr:
@@ -278,11 +296,12 @@ class Master(Registry):
             workersAddr.add(worker.addr)
         return workersAddr
 
-    def __askWorkerToCreateMaster(self, worker: Worker):
-        msg = {'type': 'createMaster'}
-        self.sendMessage(msg, worker.addr)
 
     def __getWorkerAddrFromOtherMasters(self):
+        """
+        Get Workers' addr from neighbours in the network
+        :return:
+        """
         if self.neighboursIP is None:
             self.neighboursIP = self.__generateNeighboursIP()
         for ip in self.neighboursIP:
@@ -291,10 +310,19 @@ class Master(Registry):
             sleep(1)
 
     def __getWorkersAddrFrom(self, addr: Address):
+        """
+        Get Workers' info from the addr
+        :param addr:
+        :return:
+        """
         msg = {'type': 'workersAddr'}
         self.sendMessage(msg, addr)
 
     def __generateNeighboursIP(self):
+        """
+        Generatate neighbours' IP using subnetwork mask
+        :return:
+        """
         selfIP = self.addr[0]
         if self.netGateway == '':
             self.netGateway = selfIP[:selfIP.rfind('.')] + '.0'

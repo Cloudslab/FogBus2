@@ -580,3 +580,12 @@ class Registry(Profiler, Node, ABC):
         self.logger.info('Use decision from %s' % worker.nameLogPrinting)
         self.locks[lockName].release()
         return decision
+
+    def __askWorkerToCreateMaster(self, worker: Worker):
+        """
+        Ask a worker to create a Master container
+        :param worker:
+        :return:
+        """
+        msg = {'type': 'createMaster'}
+        self.sendMessage(msg, worker.addr)
