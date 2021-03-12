@@ -184,7 +184,7 @@ class Server:
 
     def __init__(
             self,
-            addr,
+            addr: Address,
             messagesQueue: Queue[Tuple[Message, int]],
             threadNumber: int = 32):
         self.addr = addr

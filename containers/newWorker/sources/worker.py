@@ -76,6 +76,8 @@ class Worker(Node, GatherContainerStat):
             self.__handleResourcesQuery(message)
         elif message.type == 'scheduling':
             self.__handleScheduling(message)
+        elif message.type == 'createMaster':
+            self.__handleCreateMaster(message)
 
     def __handleRegistered(self, message: Message):
         role = message.content['role']
@@ -194,6 +196,7 @@ class Worker(Node, GatherContainerStat):
             availableWorkers=availableWorkers,
             machinesIndex=machinesIndex
         )
+
         self.logger.info(decision.machinesIndex)
         self.logger.info(decision.cost)
         msg = {
@@ -203,6 +206,8 @@ class Worker(Node, GatherContainerStat):
         self.sendMessage(msg, message.source.addr)
         self.logger.info('Sent decision to master.')
 
+    def __handleCreateMaster(self, message: Message):
+        pass
 
     @staticmethod
     def snake_to_camel(snake_str):

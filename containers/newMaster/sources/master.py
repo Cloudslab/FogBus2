@@ -5,7 +5,10 @@ from logger import get_logger
 from registry import Registry
 from connection import Message, Identity
 from typing import Tuple
-from datatype import TaskHandler
+from datatype import TaskHandler, Worker
+from ipaddress import ip_network
+from time import sleep
+
 Address = Tuple[str, int]
 
 
@@ -19,7 +22,10 @@ class Master(Registry):
             loggerAddr,
             initWithLog: bool,
             schedulerName: str,
+            createdBy: str,
             masterID: int = 0,
+            netGateway: str = '',
+            subnetMask: str = '255.255.255.0',
             logLevel=logging.DEBUG):
         Registry.__init__(
             self,
@@ -30,8 +36,15 @@ class Master(Registry):
             ignoreSocketErr=True,
             schedulerName=schedulerName,
             initWithLog=initWithLog,
-            logLevel=logLevel)
+            logLevel=logLevel,
+            periodicTasks=[
+                (self.__getWorkerAddrFromOtherMasters, 300)],
+        )
         self.id = masterID
+        self.netGateway = netGateway
+        self.subnetMask = subnetMask
+        self.neighboursIP = None
+        self.createdBy = createdBy
 
     def run(self):
         self.role = 'Master'
@@ -40,6 +53,11 @@ class Master(Registry):
             logger_name=self.nameLogPrinting,
             level_name=self.logLevel)
         self.logger.info("Serving ...")
+        if len(self.createdBy):
+            # A Master listens on a fixed port
+            # TODO: make the port flexible
+            addr = (self.createdBy, 5000)
+            self.__getWorkersAddrFrom(addr)
 
     def handleMessage(self, message: Message):
         if message.type == 'register':
@@ -64,6 +82,10 @@ class Master(Registry):
             self.__handleSchedulingResult(message=message)
         elif message.type == 'waiting':
             self.__handleTaskHandlerWaiting(message=message)
+        elif message.type == 'workersAddr':
+            self.__handleWorkersAddr(message=message)
+        elif message.type == 'workersAddrResult':
+            self.__handleWorkersAddrResult(message=message)
 
     def __handleRegister(self, message: Message):
         respond = self.registerClient(message=message)
@@ -224,6 +246,61 @@ class Master(Registry):
         taskHandler = self.taskHandlers[message.source.id]
         self.makeTaskHandlerWait(taskHandler)
 
+    def __handleWorkersAddr(self, message: Message):
+        workersAddr = self.__getWorkersAddr()
+        if not len(workersAddr):
+            return
+        msg = {
+            'type': 'workersAddrResult',
+            'workersAddrResult': workersAddr
+        }
+        self.sendMessage(msg, message.source.addr)
+
+    def __handleWorkersAddrResult(self, message: Message):
+        workersAddr = message.content['workersAddrResult']
+        self.__advertiseSelfToWorkers(workersAddr)
+
+    def __advertiseSelfToWorkers(self, workersAddr: set[Address]):
+        selfWorkersAddr = self.__getWorkersAddr()
+        if not len(selfWorkersAddr):
+            return
+        msg = {'type': 'advertise'}
+        for workerAddr in workersAddr:
+            if workerAddr in selfWorkersAddr:
+                continue
+            self.sendMessage(msg, workerAddr)
+
+    def __getWorkersAddr(self):
+        workersAddr = set([])
+        for worker in self.workers.values():
+            if worker.addr in workersAddr:
+                continue
+            workersAddr.add(worker.addr)
+        return workersAddr
+
+    def __askWorkerToCreateMaster(self, worker: Worker):
+        msg = {'type': 'createMaster'}
+        self.sendMessage(msg, worker.addr)
+
+    def __getWorkerAddrFromOtherMasters(self):
+        if self.neighboursIP is None:
+            self.neighboursIP = self.__generateNeighboursIP()
+        for ip in self.neighboursIP:
+            addr = (str(ip), 5000)
+            self.__getWorkersAddrFrom(addr)
+            sleep(1)
+
+    def __getWorkersAddrFrom(self, addr: Address):
+        msg = {'type': 'workersAddr'}
+        self.sendMessage(msg, addr)
+
+    def __generateNeighboursIP(self):
+        selfIP = self.addr[0]
+        if self.netGateway == '':
+            self.netGateway = selfIP[:selfIP.rfind('.')] + '.0'
+        network = ip_network('%s/%s' % (self.netGateway, self.subnetMask))
+        return network
+
     def __askTaskHandlerToWait(self, taskHandler: TaskHandler):
         msg = {'type': 'wait'}
         self.sendMessage(msg, taskHandler.addr)
@@ -282,6 +359,15 @@ def parseArg():
         type=bool,
         help='True or False'
     )
+
+    parser.add_argument(
+        'createdBy',
+        metavar='CreatedBy',
+        nargs='?',
+        default='',
+        type=str,
+        help='IP of the Master who asked to create this new Master'
+    )
     return parser.parse_args()
 
 
@@ -294,5 +380,6 @@ if __name__ == '__main__':
         masterAddr=(args.ip, args.port),
         loggerAddr=(args.loggerIP, args.loggerPort),
         schedulerName=args.schedulerName,
-        initWithLog=True if args.initWithLog else False)
+        initWithLog=True if args.initWithLog else False,
+        createdBy=args.createdBy)
     master_.run()

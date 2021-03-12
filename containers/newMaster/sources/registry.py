@@ -86,7 +86,11 @@ class Registry(Profiler, Node, ABC):
             ignoreSocketErr: bool,
             schedulerName: str,
             initWithLog: bool,
+            periodicTasks=None,
             logLevel=logging.DEBUG):
+
+        if periodicTasks is None:
+            periodicTasks = []
         Profiler.__init__(self)
         Node.__init__(
             self,
@@ -96,7 +100,7 @@ class Registry(Profiler, Node, ABC):
             masterAddr=masterAddr,
             loggerAddr=loggerAddr,
             ignoreSocketErr=ignoreSocketErr,
-            periodicTasks=[
+            periodicTasks=periodicTasks + [
                 (self._saveToPersistentStorage, 2),
                 (self.__requestProfiler, 1)],
             logLevel=logLevel
@@ -429,8 +433,8 @@ class Registry(Profiler, Node, ABC):
                 machinesIndex = self.decisions.good(user.appName)
         # self.logger.info(machinesIndex)
         #  TODO: thread safe
-        # if False and self.__schedulingNum < 5:
-        if True:
+        if self.__schedulingNum < 5:
+            # if True:
             self.__schedulingNum += 1
             decision = self.scheduler.schedule(
                 userName=user.name,
@@ -565,6 +569,7 @@ class Registry(Profiler, Node, ABC):
         # workerKey = list(self.workers.keys())[-1]
         workerKey = list(self.workers.keys())[-1]
         worker = self.workers['d656b2725025de511893d7f9037e215606444ac842e972abbf118bf728d4264c']
+        # worker = self.whichWorkerHasMoreResources()
         self.sendMessage(msg, worker.addr)
         self.logger.info('Forwarded scheduling task to %s' % worker.nameLogPrinting)
         lockName = 'schedulingUser-%d' % userID
