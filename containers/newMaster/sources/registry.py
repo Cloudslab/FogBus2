@@ -249,20 +249,36 @@ class Registry(Profiler, Node, ABC):
             label=label,
             machineID=machineID)
         self.users[user.id] = user
-        if not self.__handleRequest(user):
+        success, reason = self.__handleRequest(user)
+
+        if success:
+            respond = {
+                'type': 'registered',
+                'role': 'User',
+                'id': userID,
+                'name': user.name,
+                'nameLogPrinting': user.nameLogPrinting,
+                'nameConsistent': user.nameConsistent,
+            }
+            return respond
+
+        if reason == 'No Worker':
             respond = {
                 'type': 'stop',
                 'reason': 'No Worker'}
             return respond
+
+        if not isinstance(reason, str):
+            respond = {
+                'type': 'forward',
+                'addr': reason}
+            return respond
+
         respond = {
-            'type': 'registered',
-            'role': 'User',
-            'id': userID,
-            'name': user.name,
-            'nameLogPrinting': user.nameLogPrinting,
-            'nameConsistent': user.nameConsistent,
-        }
+            'type': 'stop',
+            'addr': 'No Worker and No Master'}
         return respond
+
 
     def __addTaskHandler(self, message: Message):
         taskHandlerID = self.__newTaskID()
@@ -379,7 +395,7 @@ class Registry(Profiler, Node, ABC):
         user.lock.release()
         user.lockCheckResource.release()
 
-    def __handleRequest(self, user: User):
+    def __handleRequest(self, user: User) -> Tuple[bool, str]:
 
         app: Application = self.applications[user.appName]
 
@@ -416,7 +432,7 @@ class Registry(Profiler, Node, ABC):
     def __schedule(self, user):
         allWorkers = {}
         if len(self.workers) == 0:
-            return False
+            return False, 'No Worker'
         for key in self.workers.keys():
             if not isinstance(key, str):
                 continue
@@ -446,43 +462,29 @@ class Registry(Profiler, Node, ABC):
                 availableWorkers=allWorkers,
                 machinesIndex=machinesIndex)
             self.__schedulingNum -= 1
-        else:
-            decision = self.__scheduleOnWorker(
-                schedulerName=self.scheduler.name,
-                medianDelay=self.scheduler.medianDelay,
-                medianProcessTime=self.scheduler.medianProcessTime,
-                populationSize=self.scheduler.populationSize,
-                generationNum=self.scheduler.generationNum,
-                userID=user.id,
-                userName=user.name,
-                userMachine=user.machineID,
-                userAppName=user.appName,
-                userLabel=user.label,
-                masterName=self.name,
-                masterMachine=self.machineID,
-                availableWorkers=allWorkers,
-                machinesIndex=machinesIndex
-            )
-        # self.logger.info(self.scheduler.geneticProblem.myRecords[:5])
-        # self.logger.info(self.scheduler.geneticProblem.myRecords[-5:])
-        self.decisions.update(
-            appName=user.appName,
-            machinesIndex=decision.machinesIndex,
-            indexToMachine=decision.indexToMachine)
+            self.decisions.update(
+                appName=user.appName,
+                machinesIndex=decision.machinesIndex,
+                indexToMachine=decision.indexToMachine)
 
-        messageForAssignees = self.__parseDecision(decision, user)
-        self.logger.info(
-            'Scheduled by %s, estimated cost: %s' % (
-                self.scheduler.name,
-                decision.cost))
+            messageForAssignees = self.__parseDecision(decision, user)
+            self.logger.info(
+                'Scheduled by %s, estimated cost: %s' % (
+                    self.scheduler.name,
+                    decision.cost))
 
-        for message, assignee in messageForAssignees:
-            if isinstance(assignee, TaskHandler):
-                if assignee.id in self.taskHandlers:
-                    del self.taskHandlers[assignee.id]
-            self.sendMessage(message, assignee.addr)
+            for message, assignee in messageForAssignees:
+                if isinstance(assignee, TaskHandler):
+                    if assignee.id in self.taskHandlers:
+                        del self.taskHandlers[assignee.id]
+                self.sendMessage(message, assignee.addr)
 
-        return True
+            return True, None
+
+        worker = self.__getWorkerWithMostUtilization()
+        if worker is not None:
+            return False, worker.addr
+        return False, 'No Worker and Cannot Create New Master'
 
     def __parseDecision(self, decision: Decision, user: User) -> List[Tuple[Dict, Worker]]:
         messageFoAssignees = []
@@ -589,3 +591,45 @@ class Registry(Profiler, Node, ABC):
         """
         msg = {'type': 'createMaster'}
         self.sendMessage(msg, worker.addr)
+
+    def __getWorkerWithMostUtilization(self) -> Worker:
+        workers: set[Address] = set([])
+
+        if not len(self.workers):
+            return None
+        workerWithMostUtilization = self.workers[list(self.workers.keys())[0]]
+        for worker in self.workers.values():
+            if worker.addr in workers:
+                continue
+            workers.add(worker.addr)
+
+            if self.__compareTwoWorkers(
+                    workerA=worker,
+                    workerB=workerWithMostUtilization
+            ):
+                workerWithMostUtilization = worker
+
+        return workerWithMostUtilization
+
+    def __compareTwoWorkers(self, workerA: Worker, workerB: Worker):
+        workerAResources = self.nodeResources[workerA.machineID]
+        systemCPUUsageA = workerAResources['systemCPUUsage']
+        cpuUsageA = workerAResources['cpuUsage']
+        memoryUsageA = workerAResources['memoryUsage']
+        maxMemoryA = workerAResources['maxMemory']
+        cpuPercentA = cpuUsageA / systemCPUUsageA
+        memPercentA = memoryUsageA / maxMemoryA
+
+        workerBResources = self.nodeResources[workerB.machineID]
+        systemCPUUsageB = workerBResources['systemCPUUsage']
+        cpuUsageB = workerBResources['cpuUsage']
+        memoryUsageB = workerBResources['memoryUsage']
+        maxMemoryB = workerBResources['maxMemory']
+        cpuPercentB = cpuUsageB / systemCPUUsageB
+        memPercentB = memoryUsageB / maxMemoryB
+
+        if cpuPercentA < cpuPercentB:
+            return True
+        if memPercentA < memPercentB:
+            return True
+        return False

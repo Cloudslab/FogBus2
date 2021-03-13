@@ -141,6 +141,8 @@ class User(Node):
             self.__handleResult(message)
         elif message.type == 'workersCount':
             self.__handleWorkersCount(message)
+        elif message.type == 'forward':
+            self.__handleForward(message)
 
     def __handleRegistered(self, message: Message):
         role = message.content['role']
@@ -176,6 +178,22 @@ class User(Node):
 
     def __handleWorkersCount(self, message: Message):
         self.workersCount = message.content['workersCount']
+
+    def __handleForward(self, message: Message):
+        newMasterAddr = message.content['addr']
+        # give the new Master some time to rise
+        self.logger.info(
+            'Request is forwarding to %s' % str(newMasterAddr))
+        sleep(1)
+        self.__init__(
+            containerName=self.containerName,
+            myAddr=(self.addr[0], 0),
+            masterAddr=newMasterAddr,
+            loggerAddr=self.loggerAddr,
+            appName=self.appName,
+            label=self.label,
+            showWindow=self.showWindow,
+            videoPath=self.videoPath)
 
     def __uploadMedianRespondTime(self):
         if self.app.respondTime.median() is None:
