@@ -9,12 +9,12 @@ services:
       context: ./
       dockerfile: ./Dockerfile
     volumes:
-      - ./sources:/workplace
       - /var/run/docker.sock:/var/run/docker.sock
     environment:
       PUID: 1000
       PGID: 1000
       TZ: Australia/Melbourne
+      PYTHONUNBUFFERED: 0
     network_mode: "host"
     restart: unless-stopped
 

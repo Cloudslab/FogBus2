@@ -220,14 +220,14 @@ class Worker(Node, GatherContainerStat):
                       '%s 5000 ' \
                       '%s %d ' \
                       '%s ' \
-                      '--initWithLog %s ' \
-                      '%s ' % (
+                      '%s ' \
+                      '--initWithLog %s ' % (
                           self.addr[0],
                           loggerIP,
                           loggerPort,
                           schedulerName,
-                          initWithLog,
-                          message.source.addr[0])
+                          message.source.addr[0],
+                          initWithLog)
             self.dockerClient.containers.run(
                 name='Master',
                 detach=True,
@@ -235,13 +235,13 @@ class Worker(Node, GatherContainerStat):
                 image='master',
                 network_mode='host',
                 working_dir='/workplace',
-                # volumes={
-                #     '/var/run/docker.sock':
-                #         {
-                #             'bind': '/var/run/docker.sock',
-                #             'mode': 'rw'
-                #         }
-                # },
+                volumes={
+                    '/var/run/docker.sock':
+                        {
+                            'bind': '/var/run/docker.sock',
+                            'mode': 'rw'
+                        }
+                },
                 command=command)
         except Exception:
             print_exc()

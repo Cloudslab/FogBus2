@@ -5,7 +5,7 @@ import json
 import argparse
 from apps import *
 from node import Node
-from connection import Message
+from connection import Message, Identity
 from exceptions import *
 from logger import get_logger
 from time import time, sleep
@@ -34,6 +34,7 @@ class User(Node):
             label: str,
             videoPath: str,
             logLevel=logging.DEBUG):
+        self.containerName = containerName
         Node.__init__(
             self,
             role='User',
@@ -105,7 +106,7 @@ class User(Node):
         self.__register()
 
     def __waitForWorkers(self):
-        targetCount = 1
+        targetCount = 2
         msg = {'type': 'workersCount'}
         count = 15
         while count > 0:
@@ -180,20 +181,25 @@ class User(Node):
         self.workersCount = message.content['workersCount']
 
     def __handleForward(self, message: Message):
-        newMasterAddr = message.content['addr']
+        newMasterIP = message.content['ip']
         # give the new Master some time to rise
         self.logger.info(
-            'Request is forwarding to %s' % str(newMasterAddr))
+            'Request is forwarding to %s' % str(newMasterIP))
         sleep(1)
-        self.__init__(
-            containerName=self.containerName,
-            myAddr=(self.addr[0], 0),
-            masterAddr=newMasterAddr,
-            loggerAddr=self.loggerAddr,
-            appName=self.appName,
-            label=self.label,
-            showWindow=self.showWindow,
-            videoPath=self.videoPath)
+        self.masterAddr = (newMasterIP, 5000)
+        self.master = Identity(
+            nameLogPrinting='Master',
+            addr=self.masterAddr,
+        )
+        self.__waitForWorkers()
+        self.logger.info('Waiting for scheduling decision ...')
+        message = {
+            'type': 'register',
+            'role': 'User',
+            'label': self.label,
+            'appName': self.appName,
+            'machineID': self.machineID}
+        self.sendMessage(message, self.master.addr)
 
     def __uploadMedianRespondTime(self):
         if self.app.respondTime.median() is None:

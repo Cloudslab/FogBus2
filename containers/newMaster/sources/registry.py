@@ -271,14 +271,13 @@ class Registry(Profiler, Node, ABC):
         if not isinstance(reason, str):
             respond = {
                 'type': 'forward',
-                'addr': reason}
+                'ip': reason[0]}
             return respond
 
         respond = {
             'type': 'stop',
             'addr': 'No Worker and No Master'}
         return respond
-
 
     def __addTaskHandler(self, message: Message):
         taskHandlerID = self.__newTaskID()
@@ -449,7 +448,7 @@ class Registry(Profiler, Node, ABC):
                 machinesIndex = self.decisions.good(user.appName)
         # self.logger.info(machinesIndex)
         #  TODO: thread safe
-        if self.__schedulingNum < 5:
+        if self.__schedulingNum < 2:
             # if True:
             self.__schedulingNum += 1
             decision = self.scheduler.schedule(
@@ -483,6 +482,7 @@ class Registry(Profiler, Node, ABC):
 
         worker = self.__getWorkerWithMostUtilization()
         if worker is not None:
+            self.__askWorkerToCreateMaster(worker)
             return False, worker.addr
         return False, 'No Worker and Cannot Create New Master'
 
@@ -589,19 +589,29 @@ class Registry(Profiler, Node, ABC):
         :param worker:
         :return:
         """
-        msg = {'type': 'createMaster'}
+        msg = {
+            'type': 'createMaster',
+            'loggerAddr': self.loggerAddr,
+            'schedulerName': self.scheduler.name,
+            'initWithLog': self.initWithLog,
+        }
         self.sendMessage(msg, worker.addr)
 
     def __getWorkerWithMostUtilization(self) -> Worker:
-        workers: set[Address] = set([])
+        workers: set[str] = set([])
 
         if not len(self.workers):
             return None
-        workerWithMostUtilization = self.workers[list(self.workers.keys())[0]]
+        workerWithMostUtilization = None
         for worker in self.workers.values():
-            if worker.addr in workers:
+
+            if worker.addr[0] == self.addr[0]:
                 continue
-            workers.add(worker.addr)
+
+            if worker.addr[0] in workers:
+                continue
+
+            workers.add(worker.addr[0])
 
             if self.__compareTwoWorkers(
                     workerA=worker,
@@ -612,7 +622,9 @@ class Registry(Profiler, Node, ABC):
         return workerWithMostUtilization
 
     def __compareTwoWorkers(self, workerA: Worker, workerB: Worker):
-        workerAResources = self.nodeResources[workerA.machineID]
+        if workerB is None:
+            return True
+        workerAResources = self.nodeResources[workerA.nameConsistent]
         systemCPUUsageA = workerAResources['systemCPUUsage']
         cpuUsageA = workerAResources['cpuUsage']
         memoryUsageA = workerAResources['memoryUsage']
@@ -620,7 +632,7 @@ class Registry(Profiler, Node, ABC):
         cpuPercentA = cpuUsageA / systemCPUUsageA
         memPercentA = memoryUsageA / maxMemoryA
 
-        workerBResources = self.nodeResources[workerB.machineID]
+        workerBResources = self.nodeResources[workerB.nameConsistent]
         systemCPUUsageB = workerBResources['systemCPUUsage']
         cpuUsageB = workerBResources['cpuUsage']
         memoryUsageB = workerBResources['memoryUsage']

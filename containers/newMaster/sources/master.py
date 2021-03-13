@@ -59,6 +59,7 @@ class Master(Registry):
             # and then advertise itself
             # A Master listens on a fixed port
             # TODO: make the port flexible
+            self.logger.info('Created by %s' % self.createdBy)
             addr = (self.createdBy, 5000)
             self.__getWorkersAddrFrom(addr)
 
@@ -271,6 +272,9 @@ class Master(Registry):
         :return:
         """
         workersAddr = message.content['workersAddrResult']
+
+        self.logger.info('Get Workers\' addr')
+        self.logger.info(workersAddr)
         self.__advertiseSelfToWorkers(workersAddr)
 
     def __advertiseSelfToWorkers(self, workersAddr: set[Address]):
@@ -299,7 +303,6 @@ class Master(Registry):
             workersAddr.add(worker.addr)
         return workersAddr
 
-
     def __getWorkerAddrFromOtherMasters(self):
         """
         Get Workers' addr from neighbours in the network
@@ -309,6 +312,8 @@ class Master(Registry):
             self.neighboursIP = self.__generateNeighboursIP()
         for ip in self.neighboursIP:
             addr = (str(ip), 5000)
+            if addr == self.addr:
+                continue
             self.__getWorkersAddrFrom(addr)
             sleep(1)
 
