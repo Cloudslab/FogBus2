@@ -17,6 +17,8 @@ RUN python -m \
     numpy psutil GPUtil docker \
     pymoo autograd
 
+ADD ./sources /workplace
+
 # Hostname
 RUN echo "Master" > /etc/hostname
 

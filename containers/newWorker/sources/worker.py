@@ -13,6 +13,7 @@ from gatherContainerStat import GatherContainerStat
 from queue import Queue
 from time import time
 from scheduling import NSGA2, NSGA3
+from traceback import print_exc
 
 
 class Worker(Node, GatherContainerStat):
@@ -48,6 +49,7 @@ class Worker(Node, GatherContainerStat):
         self.taskHandlers = {}
         self.totalCPUCores = 0
         self.cpuFreq = .0
+        self.resources = None
 
     def run(self):
         self.__register()
@@ -78,6 +80,8 @@ class Worker(Node, GatherContainerStat):
             self.__handleScheduling(message)
         elif message.type == 'createMaster':
             self.__handleCreateMaster(message)
+        elif message.type == 'advertise':
+            self.__handleAdvertise(message)
 
     def __handleRegistered(self, message: Message):
         role = message.content['role']
@@ -207,7 +211,92 @@ class Worker(Node, GatherContainerStat):
         self.logger.info('Sent decision to master.')
 
     def __handleCreateMaster(self, message: Message):
-        pass
+        loggerIP, loggerPort = message.content['loggerAddr']
+        schedulerName = message.content['schedulerName']
+        initWithLog = message.content['initWithLog']
+        # try to create a Master
+        try:
+            command = 'Master ' \
+                      '%s 5000 ' \
+                      '%s %d ' \
+                      '%s ' \
+                      '--initWithLog %s ' \
+                      '%s ' % (
+                          self.addr[0],
+                          loggerIP,
+                          loggerPort,
+                          schedulerName,
+                          initWithLog,
+                          message.source.addr[0])
+            self.dockerClient.containers.run(
+                name='Master',
+                detach=True,
+                auto_remove=True,
+                image='master',
+                network_mode='host',
+                working_dir='/workplace',
+                # volumes={
+                #     '/var/run/docker.sock':
+                #         {
+                #             'bind': '/var/run/docker.sock',
+                #             'mode': 'rw'
+                #         }
+                # },
+                command=command)
+        except Exception:
+            print_exc()
+
+    def __handleAdvertise(self, message: Message):
+        if not self.__shouldCreateWorker():
+            return
+        self.__createWorker(message)
+
+    def __shouldCreateWorker(self):
+        if self.resources is None:
+            self.resources = self._getResources()
+
+        systemCPUUsage = self.resources['systemCPUUsage']
+        cpuUsage = self.resources['cpuUsage']
+        memoryUsage = self.resources['memoryUsage']
+        maxMemory = self.resources['maxMemory']
+        cpuPercent = cpuUsage / systemCPUUsage
+        memPercent = memoryUsage / maxMemory
+        if cpuPercent > .8 or memPercent > .8:
+            return False
+
+        return True
+
+    def __createWorker(self, message: Message):
+
+        try:
+            newWorkerName = 'Worker-%f' % time()
+            command = '%s ' \
+                      '%s ' \
+                      '%s %d ' \
+                      '%s %d ' % (
+                          newWorkerName,
+                          self.addr[0],
+                          message.source.addr[0],
+                          message.source.addr[1],
+                          self.loggerAddr[0],
+                          self.loggerAddr[1],)
+            self.dockerClient.containers.run(
+                name=newWorkerName,
+                detach=True,
+                auto_remove=True,
+                image='worker',
+                network_mode='host',
+                working_dir='/workplace',
+                volumes={
+                    '/var/run/docker.sock':
+                        {
+                            'bind': '/var/run/docker.sock',
+                            'mode': 'rw'
+                        }
+                },
+                command=command)
+        except Exception:
+            print_exc()
 
     @staticmethod
     def snake_to_camel(snake_str):
@@ -279,6 +368,7 @@ class Worker(Node, GatherContainerStat):
             'maxMemory': maxMemory,
             'totalCPUCores': totalCPUCores,
             'cpuFreq': cpuFreq}
+        self.resources = resources
         return resources
 
     def __uploadResources(self):

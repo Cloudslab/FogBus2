@@ -22,6 +22,8 @@ RUN python -m \
 
 RUN apk add --no-cache docker docker-compose
 
+ADD ./sources /workplace
+
 # Hostname
 RUN echo "Worker" > /etc/hostname
 

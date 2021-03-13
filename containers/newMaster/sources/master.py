@@ -53,7 +53,10 @@ class Master(Registry):
             logger_name=self.nameLogPrinting,
             level_name=self.logLevel)
         self.logger.info("Serving ...")
+        # if this Master was created by another
         if len(self.createdBy):
+            # get the Workers' addr
+            # and then advertise itself
             # A Master listens on a fixed port
             # TODO: make the port flexible
             addr = (self.createdBy, 5000)

@@ -9,7 +9,6 @@ services:
       context: ./
       dockerfile: ./Dockerfile
     volumes:
-      - ./sources/:/workplace
       - /var/run/docker.sock:/var/run/docker.sock
     environment:
       PUID: 1000
