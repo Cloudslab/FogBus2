@@ -273,7 +273,7 @@ class Master(Registry):
         """
         workersAddr = message.content['workersAddrResult']
 
-        self.logger.info('Get Workers\' addr')
+        self.logger.info('Got Workers\' addrs from %s' % str(message.source.addr))
         self.logger.info(workersAddr)
         self.__advertiseSelfToWorkers(workersAddr)
 
@@ -283,12 +283,13 @@ class Master(Registry):
         :param workersAddr:
         :return:
         """
-        workersAddr = self.__getWorkersAddr()
+        myWorkersAddr = self.__getWorkersAddr()
         if not len(workersAddr):
             return
+        myWorkersSet = set([addr[0] for addr in myWorkersAddr])
         msg = {'type': 'advertise'}
         for workerAddr in workersAddr:
-            if workerAddr in workersAddr:
+            if workerAddr[0] in myWorkersSet:
                 continue
             self.sendMessage(msg, workerAddr)
 

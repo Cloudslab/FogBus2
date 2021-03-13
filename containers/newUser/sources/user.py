@@ -108,7 +108,7 @@ class User(Node):
     def __waitForWorkers(self):
         targetCount = 2
         msg = {'type': 'workersCount'}
-        count = 15
+        count = 3000
         while count > 0:
             self.sendMessage(msg, self.master.addr)
             sleep(1)
@@ -118,6 +118,7 @@ class User(Node):
             self.logger.info(
                 'Waiting for enough workers '
                 '[%d/%d]' % (self.workersCount, targetCount))
+        sleep(1)
 
     def __register(self):
         self.logger = get_logger('User', logging.DEBUG)
@@ -185,7 +186,7 @@ class User(Node):
         # give the new Master some time to rise
         self.logger.info(
             'Request is forwarding to %s' % str(newMasterIP))
-        sleep(1)
+        sleep(5)
         self.masterAddr = (newMasterIP, 5000)
         self.master = Identity(
             nameLogPrinting='Master',

@@ -244,24 +244,26 @@ class Worker(Node, GatherContainerStat):
                 },
                 command=command)
         except Exception:
-            print_exc()
+            pass
 
     def __handleAdvertise(self, message: Message):
         if not self.__shouldCreateWorker():
+            self.logger.info(
+                'Decided not to create another worker for '
+                '%s' % str(message.source.addr))
             return
+
+        self.logger.info(
+            'Decided to create another worker for '
+            '%s' % str(message.source.addr))
         self.__createWorker(message)
 
-    def __shouldCreateWorker(self):
-        if self.resources is None:
-            self.resources = self._getResources()
-
-        systemCPUUsage = self.resources['systemCPUUsage']
-        cpuUsage = self.resources['cpuUsage']
-        memoryUsage = self.resources['memoryUsage']
-        maxMemory = self.resources['maxMemory']
-        cpuPercent = cpuUsage / systemCPUUsage
-        memPercent = memoryUsage / maxMemory
-        if cpuPercent > .8 or memPercent > .8:
+    @staticmethod
+    def __shouldCreateWorker():
+        cpuPercent = psutil.cpu_percent()
+        memPercent = psutil.virtual_memory().percent
+        print(cpuPercent, memPercent)
+        if cpuPercent > 80 or memPercent > 80:
             return False
 
         return True
