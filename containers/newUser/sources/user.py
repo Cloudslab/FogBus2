@@ -3,7 +3,7 @@ import json
 import argparse
 from apps import *
 from node import Node
-from connection import Message, Identity
+from connection import Message, Identity, Connection
 from exceptions import *
 from logger import get_logger
 from time import time, sleep
@@ -120,15 +120,7 @@ class User(Node):
 
     def __register(self):
         self.logger = get_logger('User', logging.DEBUG)
-        self.__waitForWorkers()
-        self.logger.info('Waiting for scheduling decision ...')
-        message = {
-            'type': 'register',
-            'role': 'User',
-            'label': self.label,
-            'appName': self.appName,
-            'machineID': self.machineID}
-        self.sendMessage(message, self.master.addr)
+        self.__registerAt(self.masterAddr)
         self.isRegistered.wait()
 
     def handleMessage(self, message: Message):
@@ -158,20 +150,6 @@ class User(Node):
     def __handleReady(self):
         threading.Thread(target=self.__ready).start()
 
-    def __ready(self):
-        self.logger.info("Resources is ready.")
-        self.logger.info('Running ...')
-        self.app.run()
-
-        while True:
-            data = self.app.dataToSubmit.get()
-            message = {
-                'type': 'data',
-                'userID': self.id,
-                'data': data}
-            self.sendMessage(message, self.master.addr)
-            self.__lastDataSentTime = time()
-
     def __handleResult(self, message: Message):
         result = message.content['result']
         self.app.result.put(result)
@@ -185,21 +163,31 @@ class User(Node):
         # give the new Master some time to rise
         self.logger.info(
             'Request is forwarding to %s' % str(newMasterIP))
-        sleep(10)
-        self.masterAddr = (newMasterIP, 5000)
-        self.master = Identity(
-            nameLogPrinting='Master',
-            addr=self.masterAddr,
+        newMasterAddr = (newMasterIP, 5000)
+        self.logger.info(
+            'Lookup Master at %s' % str(newMasterAddr)
         )
-        self.__waitForWorkers()
-        message = {
-            'type': 'register',
-            'role': 'User',
-            'label': self.label,
-            'appName': self.appName,
-            'machineID': self.machineID}
-        self.sendMessage(message, self.master.addr)
-        self.logger.info('Waiting for scheduling decision from %s ...' % str(self.master.addr))
+        while not self.__testConnectivity(newMasterAddr):
+            sleep(1)
+
+        self.logger.info(
+            'Found Master at %s' % str(newMasterAddr)
+        )
+        self.__registerAt(newMasterAddr)
+
+    def __ready(self):
+        self.logger.info("Resources is ready.")
+        self.logger.info('Running ...')
+        self.app.run()
+
+        while True:
+            data = self.app.dataToSubmit.get()
+            message = {
+                'type': 'data',
+                'userID': self.id,
+                'data': data}
+            self.sendMessage(message, self.master.addr)
+            self.__lastDataSentTime = time()
 
     def __uploadMedianRespondTime(self):
         if self.app.respondTime.median() is None:
@@ -223,6 +211,30 @@ class User(Node):
             json.dump(content, f)
             f.close()
             self.logger.info(content)
+
+    @staticmethod
+    def __testConnectivity(addr: Address):
+        try:
+            Connection(addr).send({})
+            return True
+        except Exception:
+            return False
+
+    def __registerAt(self, masterAddr: Address):
+        self.masterAddr = masterAddr
+        self.master = Identity(
+            nameLogPrinting='Master',
+            addr=self.masterAddr,
+        )
+        self.__waitForWorkers()
+        message = {
+            'type': 'register',
+            'role': 'User',
+            'label': self.label,
+            'appName': self.appName,
+            'machineID': self.machineID}
+        self.sendMessage(message, self.master.addr)
+        self.logger.info('Sent registration to  %s ...' % str(self.master.addr))
 
 
 def parseArg():
