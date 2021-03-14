@@ -1,5 +1,3 @@
-import logging
-import sys
 import os
 import json
 import argparse
@@ -132,7 +130,6 @@ class User(Node):
             'machineID': self.machineID}
         self.sendMessage(message, self.master.addr)
         self.isRegistered.wait()
-        self.logger.info("Registered. Waiting for resources to be ready ...")
 
     def handleMessage(self, message: Message):
         if message.type == 'registered':
@@ -147,6 +144,8 @@ class User(Node):
             self.__handleForward(message)
 
     def __handleRegistered(self, message: Message):
+        self.logger.info("Registered at %s"
+                         ". Waiting for resources to be ready ..." % str(message.source.addr))
         role = message.content['role']
         if not role == 'User':
             raise RegisteredAsWrongRole
@@ -186,14 +185,13 @@ class User(Node):
         # give the new Master some time to rise
         self.logger.info(
             'Request is forwarding to %s' % str(newMasterIP))
-        sleep(5)
+        sleep(10)
         self.masterAddr = (newMasterIP, 5000)
         self.master = Identity(
             nameLogPrinting='Master',
             addr=self.masterAddr,
         )
         self.__waitForWorkers()
-        self.logger.info('Waiting for scheduling decision ...')
         message = {
             'type': 'register',
             'role': 'User',
@@ -201,6 +199,7 @@ class User(Node):
             'appName': self.appName,
             'machineID': self.machineID}
         self.sendMessage(message, self.master.addr)
+        self.logger.info('Waiting for scheduling decision from %s ...' % str(self.master.addr))
 
     def __uploadMedianRespondTime(self):
         if self.app.respondTime.median() is None:

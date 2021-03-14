@@ -273,8 +273,8 @@ class Master(Registry):
         """
         workersAddr = message.content['workersAddrResult']
 
-        self.logger.info('Got Workers\' addrs from %s' % str(message.source.addr))
-        self.logger.info(workersAddr)
+        # self.logger.info('Got Workers\' addrs from %s' % str(message.source.addr))
+        # self.logger.info(workersAddr)
         self.__advertiseSelfToWorkers(workersAddr)
 
     def __advertiseSelfToWorkers(self, workersAddr: set[Address]):
