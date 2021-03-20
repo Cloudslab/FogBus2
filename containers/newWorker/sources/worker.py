@@ -14,8 +14,9 @@ from queue import Queue
 from time import time
 from scheduling import NSGA2, NSGA3
 from traceback import print_exc
-from networkProfilter import NetProfiler
 from time import sleep
+from iperf3 import Server as NetProfServer
+from iperf3 import Client as NetProfClient
 
 
 class Worker(Node, GatherContainerStat):
@@ -52,7 +53,6 @@ class Worker(Node, GatherContainerStat):
         self.totalCPUCores = 0
         self.cpuFreq = .0
         self.resources = None
-        self.netProfiler: NetProfiler = NetProfiler()
 
     def run(self):
         self.__register()
@@ -280,7 +280,9 @@ class Worker(Node, GatherContainerStat):
     def __runNetTestReceive(
             self,
             sourceMachineID: str):
-        result = self.netProfiler.receive(self.addr)
+        server = NetProfServer()
+        server.bind_address = self.addr[0]
+        result = server.run()
         msg = {'type': 'netTestResult',
                'sourceMachineID': sourceMachineID,
                'targetMachineID': self.machineID,
@@ -293,11 +295,13 @@ class Worker(Node, GatherContainerStat):
         )
 
     def __handleNetTestSend(self, message: Message):
-        receiverAddr = (message.source.addr[0], 10000)
         while True:
             try:
-                print(receiverAddr)
-                self.netProfiler.send(serverAddr=receiverAddr)
+                client = NetProfClient()
+                client.server_hostname = message.source.addr[0]
+                client.port = 10000
+                client.run()
+                del client
                 break
             except AttributeError:
                 sleep(1)
@@ -305,7 +309,7 @@ class Worker(Node, GatherContainerStat):
         self.logger.info(
             'Done net profiling from %s to %s as source',
             self.myAddr[0],
-            receiverAddr[0]
+            message.source.addr[0]
         )
 
     @staticmethod

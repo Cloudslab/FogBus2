@@ -5,12 +5,13 @@ from logger import get_logger
 from registry import Registry
 from connection import Message, Identity
 from collections import defaultdict
-from typing import Tuple, List, Dict, DefaultDict, Set
-from datatype import TaskHandler, Worker
+from typing import Tuple, DefaultDict, Set
+from datatype import TaskHandler
 from ipaddress import ip_network
 from time import sleep
 from threading import Event
-from networkProfilter import NetProfiler
+from iperf3 import Server as NetProfServer
+from iperf3 import Client as NetProfClient
 
 Address = Tuple[str, int]
 
@@ -51,7 +52,6 @@ class Master(Registry):
         self.createdBy = createdBy
         self.minWorkers: int = minWorkers
 
-        self.netProfiler: NetProfiler = NetProfiler()
         self.sysHosts: Set = set([])
         self.netTestEvent: DefaultDict[str, DefaultDict[str, Event]] = defaultdict(lambda: defaultdict(lambda: Event()))
 
@@ -347,7 +347,7 @@ class Master(Registry):
 
     def __generateNeighboursIP(self):
         """
-        Generatate neighbours' IP using subnetwork mask
+        Generate neighbours' IP using subnetwork mask
         :return:
         """
         selfIP = self.addr[0]
@@ -429,7 +429,9 @@ class Master(Registry):
     def __runNetTestReceive(
             self,
             sourceMachineID: str):
-        result = self.netProfiler.receive(self.addr)
+        server = NetProfServer()
+        server.bind_address = self.addr[0]
+        result = server.run()
         msg = {'type': 'netTestResult',
                'sourceMachineID': sourceMachineID,
                'targetMachineID': self.machineID,
@@ -442,10 +444,13 @@ class Master(Registry):
         )
 
     def __handleNetTestSend(self, message: Message):
-        receiverAddr = (message.source.addr[0], 10000)
         while True:
             try:
-                self.netProfiler.send(serverAddr=receiverAddr)
+                client = NetProfClient()
+                client.server_hostname = message.source.addr[0]
+                client.port = 10000
+                client.run()
+                del client
                 break
             except AttributeError:
                 sleep(1)
@@ -453,7 +458,7 @@ class Master(Registry):
         self.logger.info(
             'Done net profiling from %s to %s as source',
             self.myAddr[0],
-            receiverAddr[0]
+            message.source.addr[0]
         )
 
     def __handleNetTestResult(self, message: Message):
@@ -465,10 +470,10 @@ class Master(Registry):
         self.bps[sourceMachineID][targetMachineID] = bps
         self.netTestEvent[sourceMachineID][targetMachineID].set()
         self.logger.info(
-            'got NetTest result from %s to %s ',
+            'got NetTest result from %s to %s: %f',
             sourceMachineID[:7],
-            targetMachineID[:7]
-
+            targetMachineID[:7],
+            bps
         )
 
 
