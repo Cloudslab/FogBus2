@@ -281,7 +281,8 @@ class Worker(Node, GatherContainerStat):
             self,
             sourceMachineID: str):
         server = NetProfServer()
-        server.bind_address = self.addr[0]
+        server.bind_address = self.myAddr[0]
+        server.port = 10000
         result = server.run()
         msg = {'type': 'netTestResult',
                'sourceMachineID': sourceMachineID,
