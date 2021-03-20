@@ -381,6 +381,7 @@ class Master(Registry):
                 self.__runNetTest(sourceMachineID, targetMachineID)
                 self.netTestEvent[sourceMachineID][targetMachineID].wait()
                 del self.netTestEvent[sourceMachineID][targetMachineID]
+        self.logger.info('Finished Net Test')
 
     def __getHosts(self):
         hosts = {self.machineID}
@@ -444,7 +445,6 @@ class Master(Registry):
         receiverAddr = (message.source.addr[0], 10000)
         while True:
             try:
-                self.logger.info(receiverAddr)
                 self.netProfiler.send(serverAddr=receiverAddr)
                 break
             except AttributeError:
@@ -463,8 +463,13 @@ class Master(Registry):
         if sourceMachineID not in self.bps:
             self.bps[sourceMachineID] = {}
         self.bps[sourceMachineID][targetMachineID] = bps
-
         self.netTestEvent[sourceMachineID][targetMachineID].set()
+        self.logger.info(
+            'got NetTest result from %s to %s ',
+            sourceMachineID[:7],
+            targetMachineID[:7]
+
+        )
 
 
 def parseArg():

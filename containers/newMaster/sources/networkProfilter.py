@@ -29,7 +29,6 @@ class NetProfiler:
             serverAddr = self._serverAddr
         self.__client.server_hostname = serverAddr[0]
         self.__client.port = serverAddr[1]
-        print("inner", self.__client.server_hostname, self.__client.port)
         result = self.__client.run()
         return result.sent_bps
 
