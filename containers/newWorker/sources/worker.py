@@ -280,7 +280,7 @@ class Worker(Node, GatherContainerStat):
     def __runNetTestReceive(
             self,
             sourceMachineID: str):
-        result = self.netProfiler.receive()
+        result = self.netProfiler.receive(self.addr)
         msg = {'type': 'netTestResult',
                'sourceMachineID': sourceMachineID,
                'targetMachineID': self.machineID,
