@@ -13,9 +13,6 @@ RUN python -m \
     pip install --no-cache-dir \
     numpy psutil GPUtil docker
 
-RUN python -m \
-    iperf3
-
 # Hostname
 RUN echo "RemoteLogger" > /etc/hostname
 
