@@ -461,7 +461,7 @@ class Master(Registry):
         targetMachineID = message.content['targetMachineID']
         bps = message.content['bps']
         if sourceMachineID not in self.bps:
-            self.bps = {}
+            self.bps[sourceMachineID] = {}
         self.bps[sourceMachineID][targetMachineID] = bps
 
         self.netTestEvent[sourceMachineID][targetMachineID].set()
