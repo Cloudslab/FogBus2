@@ -365,22 +365,21 @@ class Master(Registry):
         self.sendMessage(msg, identity.addr)
 
     def __netProfile(self):
-        minHosts = self.minWorkers + 1
         self.logger.info('Waiting for %d workers', self.minWorkers)
-        while len(self.sysHosts) < minHosts:
+        while len(self.sysHosts) < self.minWorkers:
             self.sysHosts = self.__getHosts()
             sleep(1)
         self.logger.info('%d workers connected, begin network profiling', self.minWorkers)
-        for source in self.sysHosts:
-            for target in self.sysHosts:
-                if target == source:
+        for sourceMachineID in self.sysHosts:
+            for targetMachineID in self.sysHosts:
+                if targetMachineID == sourceMachineID:
                     continue
-                if source in self.bps \
-                        and target in self.bps[source]:
+                if sourceMachineID in self.bps \
+                        and targetMachineID in self.bps[sourceMachineID]:
                     continue
-                self.__runNetTest(source, target)
-                self.netTestEvent[source][target].wait()
-                del self.netTestEvent[source][target]
+                self.__runNetTest(sourceMachineID, targetMachineID)
+                self.netTestEvent[sourceMachineID][targetMachineID].wait()
+                del self.netTestEvent[sourceMachineID][targetMachineID]
 
     def __getHosts(self):
         hosts = {self.machineID}
@@ -390,21 +389,21 @@ class Master(Registry):
             hosts.add(worker.machineID)
         return hosts
 
-    def __runNetTest(self, source: str, target: str):
-        if source == self.machineID:
+    def __runNetTest(self, sourceMachineID: str, targetMachineID: str):
+        if sourceMachineID == self.machineID:
             sourceAddr = self.myAddr
         else:
-            sourceAddr = self.workers[source].addr
+            sourceAddr = self.workers[sourceMachineID].addr
 
-        if target == self.machineID:
+        if targetMachineID == self.machineID:
             targetAddr = self.myAddr
         else:
-            targetAddr = self.workers[target].addr
+            targetAddr = self.workers[targetMachineID].addr
 
         msg = {
             'type': 'netTestReceive',
-            'source': sourceAddr,
-            'sourceMachineID': source
+            'sourceAddr': sourceAddr,
+            'sourceMachineID': sourceMachineID
         }
         self.sendMessage(msg, targetAddr)
         self.logger.info(
@@ -414,7 +413,7 @@ class Master(Registry):
         )
 
     def __handleNetTestReceive(self, message: Message):
-        sourceAddr = message.content['source']
+        sourceAddr = message.content['sourceAddr']
         sourceMachineID = message.content['sourceMachineID']
         msg = {'type': 'netTestSend'}
         self.sendMessage(msg, sourceAddr)
@@ -430,8 +429,8 @@ class Master(Registry):
             sourceMachineID: str):
         result = self.netProfiler.receive()
         msg = {'type': 'netTestResult',
-               'source': sourceMachineID,
-               'target': self.machineID,
+               'sourceMachineID': sourceMachineID,
+               'targetMachineID': self.machineID,
                'bps': result}
         self.sendMessage(msg, self.masterAddr)
         self.logger.info(
@@ -450,14 +449,14 @@ class Master(Registry):
         )
 
     def __handleNetTestResult(self, message: Message):
-        source = message.content['source']
-        target = message.content['target']
+        sourceMachineID = message.content['sourceMachineID']
+        targetMachineID = message.content['targetMachineID']
         bps = message.content['bps']
-        if source not in self.bps:
+        if sourceMachineID not in self.bps:
             self.bps = {}
-        self.bps[source][target] = bps
+        self.bps[sourceMachineID][targetMachineID] = bps
 
-        self.netTestEvent[source][target].set()
+        self.netTestEvent[sourceMachineID][targetMachineID].set()
 
 
 def parseArg():

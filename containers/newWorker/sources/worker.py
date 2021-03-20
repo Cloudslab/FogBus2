@@ -265,7 +265,7 @@ class Worker(Node, GatherContainerStat):
         self.__createWorker(message)
 
     def __handleNetTestReceive(self, message: Message):
-        sourceAddr = message.content['source']
+        sourceAddr = message.content['sourceAddr']
         sourceMachineID = message.content['sourceMachineID']
         msg = {'type': 'netTestSend'}
         self.sendMessage(msg, sourceAddr)
@@ -281,8 +281,8 @@ class Worker(Node, GatherContainerStat):
             sourceMachineID: str):
         result = self.netProfiler.receive()
         msg = {'type': 'netTestResult',
-               'source': sourceMachineID,
-               'target': self.machineID,
+               'sourceMachineID': sourceMachineID,
+               'targetMachineID': self.machineID,
                'bps': result}
         self.sendMessage(msg, self.masterAddr)
         self.logger.info(
