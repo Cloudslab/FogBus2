@@ -451,7 +451,7 @@ class Master(Registry):
                 client.bind_address=self.myAddr[0]
                 client.server_hostname = message.source.addr[0]
                 client.port = 10000
-                print(client.run())
+                client.run()
                 del client
                 break
             except AttributeError:

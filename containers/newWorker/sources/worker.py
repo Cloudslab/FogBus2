@@ -283,7 +283,7 @@ class Worker(Node, GatherContainerStat):
         server = NetProfServer()
         server.bind_address = self.myAddr[0]
         server.port = 10000
-        result = server.run()
+        result = server.run().received_bps
         msg = {'type': 'netTestResult',
                'sourceMachineID': sourceMachineID,
                'targetMachineID': self.machineID,
@@ -302,7 +302,7 @@ class Worker(Node, GatherContainerStat):
                 client.bind_address=self.myAddr[0]
                 client.server_hostname = message.source.addr[0]
                 client.port = 10000
-                print(client.run())
+                client.run()
                 del client
                 break
             except AttributeError:
