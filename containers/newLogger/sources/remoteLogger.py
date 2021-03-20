@@ -50,6 +50,8 @@ class RemoteLogger(Profiler, Node):
             self.__handleDelays(message=message)
         elif message.type == 'imagesAndRunningContainers':
             self.__handleImagesAndRunningContainers(message=message)
+        elif message.type == 'bps':
+            self.__handleBPS(message=message)
         elif message.type == 'requestProfiler':
             self.__handleRequestProfiler(message=message)
         self.lock.release()

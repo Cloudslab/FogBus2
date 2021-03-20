@@ -43,6 +43,7 @@ class Master(Registry):
             initWithLog=initWithLog,
             logLevel=logLevel,
             periodicTasks=[
+                (self.__uploadBPS, 20),
                 (self.__getWorkerAddrFromOtherMasters, 300)],
         )
         self.id = masterID
@@ -241,7 +242,6 @@ class Master(Registry):
         self.scheduler.medianDelay = self.medianDelay
         self.scheduler.medianProcessTime = self.medianProcessTime
         self.scheduler.bps = self.bps
-
 
     def __handleWorkersCount(self, message: Message):
         msg = {'type': 'workersCount', 'workersCount': self.workersCount}
@@ -489,6 +489,10 @@ class Master(Registry):
         )
         from pprint import pformat
         print(pformat(self.bps))
+
+    def __uploadBPS(self):
+        msg = {'type': 'bps'}
+        self.sendMessage(msg, self.remoteLogger.addr)
 
 
 def parseArg():
