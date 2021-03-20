@@ -520,7 +520,7 @@ def parseArg():
     )
 
     parser.add_argument(
-        'minWorkers',
+        '--minWorkers',
         metavar='MinWorkers',
         default=1,
         type=int,

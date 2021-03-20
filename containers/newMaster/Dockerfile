@@ -8,14 +8,24 @@ RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.tuna.tsinghua.edu.cn/g' /etc/apk/re
 RUN apk add --no-cache \
     make automake gcc g++ subversion \
     linux-headers
+
 RUN apk add --no-cache \
     gfortran openblas-dev lapack-dev \
     jpeg-dev zlib-dev
+
 RUN python -m pip install -U --force-reinstall pip
+
 RUN python -m \
     pip install --no-cache-dir \
     numpy psutil GPUtil docker \
     pymoo autograd
+
+RUN apk add --no-cache \
+    iperf3
+
+RUN python -m \
+    pip install --no-cache-dir \
+    iperf3
 
 ADD ./sources /workplace
 
