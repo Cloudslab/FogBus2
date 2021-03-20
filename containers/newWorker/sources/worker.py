@@ -293,7 +293,13 @@ class Worker(Node, GatherContainerStat):
 
     def __handleNetTestSend(self, message: Message):
         receiverAddr = (message.source.addr[0], 10000)
-        self.netProfiler.send(serverAddr=receiverAddr)
+        while True:
+            try:
+                self.netProfiler.send(serverAddr=receiverAddr)
+                break
+            except AttributeError:
+                sleep(1)
+                continue
         self.logger.info(
             'Done net profiling from %s to %s as source',
             self.myAddr[0],
