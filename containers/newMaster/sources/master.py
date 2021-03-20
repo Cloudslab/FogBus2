@@ -432,7 +432,7 @@ class Master(Registry):
         server = NetProfServer()
         server.bind_address = self.addr[0]
         server.port = 10000
-        result = server.run()
+        result = server.run().received_bps
         msg = {'type': 'netTestResult',
                'sourceMachineID': sourceMachineID,
                'targetMachineID': self.machineID,
