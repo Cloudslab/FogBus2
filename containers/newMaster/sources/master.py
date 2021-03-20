@@ -444,6 +444,7 @@ class Master(Registry):
         receiverAddr = (message.source.addr[0], 10000)
         while True:
             try:
+                self.logger.info(receiverAddr)
                 self.netProfiler.send(serverAddr=receiverAddr)
                 break
             except AttributeError:

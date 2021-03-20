@@ -15,6 +15,7 @@ from time import time
 from scheduling import NSGA2, NSGA3
 from traceback import print_exc
 from networkProfilter import NetProfiler
+from time import sleep
 
 
 class Worker(Node, GatherContainerStat):
@@ -295,6 +296,7 @@ class Worker(Node, GatherContainerStat):
         receiverAddr = (message.source.addr[0], 10000)
         while True:
             try:
+                print(receiverAddr)
                 self.netProfiler.send(serverAddr=receiverAddr)
                 break
             except AttributeError:

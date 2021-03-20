@@ -18,7 +18,8 @@ class NetProfiler:
         self.__client = iperf3.Client()
         self.__client.bind_address = self._serverAddr[0]
 
-    def receive(self):
+    def receive(self, addr: Address):
+        self.__server.bind_address = addr[0]
         result = self.__server.run()
         return result.received_bps
 
