@@ -234,11 +234,14 @@ class Master(Registry):
         self.medianProcessTime = {**self.medianProcessTime, **profilers[3]}
         self.medianRespondTime = {**self.medianRespondTime, **profilers[4]}
         self.imagesAndRunningContainers = {**self.imagesAndRunningContainers, **profilers[5]}
+        self.bps = {**self.imagesAndRunningContainers, **profilers[6]}
 
         # update
         self.scheduler.medianPackageSize = self.medianPackageSize
         self.scheduler.medianDelay = self.medianDelay
         self.scheduler.medianProcessTime = self.medianProcessTime
+        self.scheduler.bps = self.bps
+
 
     def __handleWorkersCount(self, message: Message):
         msg = {'type': 'workersCount', 'workersCount': self.workersCount}

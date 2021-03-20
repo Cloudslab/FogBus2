@@ -149,10 +149,12 @@ class Registry(Profiler, Node, ABC):
                 medianProcessTime=self.medianProcessTime,
                 populationSize=populationSize,
                 generationNum=generationNum,
-                dasDennisP=1)
+                dasDennisP=1,
+                bps=self.bps)
         elif schedulerName == 'NSGA2':
             return NSGA2(
                 medianDelay=self.medianDelay,
+                bps=self.bps,
                 medianProcessTime=self.medianProcessTime,
                 populationSize=populationSize,
                 generationNum=generationNum)

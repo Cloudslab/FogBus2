@@ -114,6 +114,10 @@ class RemoteLogger(Profiler, Node):
         workerInfo = message.content['imagesAndRunningContainers']
         self.imagesAndRunningContainers[workerName] = workerInfo
 
+    def __handleBPS(self, message: Message):
+        bps = message.content['bps']
+        self.bps = bps
+
     def __handleRequestProfiler(self, message: Message):
         if not message.source.role == 'Master':
             return
@@ -126,6 +130,7 @@ class RemoteLogger(Profiler, Node):
                 self.medianProcessTime,
                 self.medianRespondTime,
                 self.imagesAndRunningContainers,
+                self.bps
             ]}
         self.sendMessage(msg, message.source.addr)
 
