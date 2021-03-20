@@ -491,7 +491,7 @@ class Master(Registry):
         print(pformat(self.bps))
 
     def __uploadBPS(self):
-        msg = {'type': 'bps'}
+        msg = {'type': 'bps','bps':self.bps}
         self.sendMessage(msg, self.remoteLogger.addr)
 
 
