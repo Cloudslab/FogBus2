@@ -445,14 +445,14 @@ class Master(Registry):
         )
 
     def __handleNetTestSend(self, message: Message):
+        client = NetProfClient()
+        client.bind_address = self.myAddr[0]
+        client.server_hostname = message.source.addr[0]
+        client.port = 10000
         while True:
             try:
-                client = NetProfClient()
-                client.bind_address = self.myAddr[0]
-                client.server_hostname = message.source.addr[0]
-                client.port = 10000
-                client.run()
-                del client
+                res = client.run().sent_bps
+                print(res)
                 break
             except AttributeError:
                 self.logger.warning(
