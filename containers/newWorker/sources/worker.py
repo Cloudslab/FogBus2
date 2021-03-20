@@ -302,6 +302,7 @@ class Worker(Node, GatherContainerStat):
         client.port = 10000
         while True:
             try:
+                # client.run()
                 res = client.run().sent_bps
                 print(res)
                 break

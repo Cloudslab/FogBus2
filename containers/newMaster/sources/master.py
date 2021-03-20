@@ -54,6 +54,7 @@ class Master(Registry):
 
         self.sysHosts: Set = set([])
         self.netTestEvent: DefaultDict[str, DefaultDict[str, Event]] = defaultdict(lambda: defaultdict(lambda: Event()))
+        self.netTest: Event = Event()
 
     def run(self):
         self.role = 'Master'
@@ -381,6 +382,7 @@ class Master(Registry):
                 self.__runNetTest(sourceMachineID, targetMachineID)
                 self.netTestEvent[sourceMachineID][targetMachineID].wait()
                 del self.netTestEvent[sourceMachineID][targetMachineID]
+        self.netTest.set()
         self.logger.info('Finished Net Test')
 
     def __getHosts(self):
@@ -451,6 +453,7 @@ class Master(Registry):
         client.port = 10000
         while True:
             try:
+                # client.run()
                 res = client.run().sent_bps
                 print(res)
                 break
@@ -481,6 +484,8 @@ class Master(Registry):
             targetMachineID[:7],
             bps
         )
+        from pprint import pformat
+        print(pformat(self.bps))
 
 
 def parseArg():
