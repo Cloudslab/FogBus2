@@ -448,9 +448,10 @@ class Master(Registry):
         while True:
             try:
                 client = NetProfClient()
+                client.bind_address=self.myAddr[0]
                 client.server_hostname = message.source.addr[0]
                 client.port = 10000
-                client.run()
+                print(client.run())
                 del client
                 break
             except AttributeError:
