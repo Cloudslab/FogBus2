@@ -14,6 +14,7 @@ from queue import Queue
 from time import time
 from scheduling import NSGA2, NSGA3
 from traceback import print_exc
+from networkProfilter import NetProfiler
 
 
 class Worker(Node, GatherContainerStat):
@@ -50,6 +51,7 @@ class Worker(Node, GatherContainerStat):
         self.totalCPUCores = 0
         self.cpuFreq = .0
         self.resources = None
+        self.netProfiler: NetProfiler = NetProfiler()
 
     def run(self):
         self.__register()
@@ -82,6 +84,10 @@ class Worker(Node, GatherContainerStat):
             self.__handleCreateMaster(message)
         elif message.type == 'advertise':
             self.__handleAdvertise(message)
+        elif message.type == 'netTestReceive':
+            self.__handleNetTestReceive(message=message)
+        elif message.type == 'netTestSend':
+            self.__handleNetTestSend(message=message)
 
     def __handleRegistered(self, message: Message):
         role = message.content['role']
@@ -257,6 +263,42 @@ class Worker(Node, GatherContainerStat):
             'Decided to create another worker for '
             '%s' % str(message.source.addr))
         self.__createWorker(message)
+
+    def __handleNetTestReceive(self, message: Message):
+        sourceAddr = message.content['source']
+        sourceMachineID = message.content['sourceMachineID']
+        msg = {'type': 'netTestSend'}
+        self.sendMessage(msg, sourceAddr)
+        self.logger.info(
+            'Running net profiling from %s to %s as target',
+            sourceAddr[0],
+            self.myAddr[0]
+        )
+        self.__runNetTestReceive(sourceMachineID)
+
+    def __runNetTestReceive(
+            self,
+            sourceMachineID: str):
+        result = self.netProfiler.receive()
+        msg = {'type': 'netTestResult',
+               'source': sourceMachineID,
+               'target': self.machineID,
+               'bps': result}
+        self.sendMessage(msg, self.masterAddr)
+        self.logger.info(
+            'Uploaded net profiling log from %s to %s ',
+            sourceMachineID[:7],
+            self.machineID[:7]
+        )
+
+    def __handleNetTestSend(self, message: Message):
+        receiverAddr = (message.source.addr[0], 10000)
+        self.netProfiler.send(serverAddr=receiverAddr)
+        self.logger.info(
+            'Done net profiling from %s to %s as source',
+            self.myAddr[0],
+            receiverAddr[0]
+        )
 
     @staticmethod
     def __shouldCreateWorker():

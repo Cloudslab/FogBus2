@@ -4,10 +4,13 @@ import argparse
 from logger import get_logger
 from registry import Registry
 from connection import Message, Identity
-from typing import Tuple
+from collections import defaultdict
+from typing import Tuple, List, Dict, DefaultDict, Set
 from datatype import TaskHandler, Worker
 from ipaddress import ip_network
 from time import sleep
+from threading import Event
+from networkProfilter import NetProfiler
 
 Address = Tuple[str, int]
 
@@ -23,6 +26,7 @@ class Master(Registry):
             initWithLog: bool,
             schedulerName: str,
             createdBy: str,
+            minWorkers: int,
             masterID: int = 0,
             netGateway: str = '',
             subnetMask: str = '255.255.255.0',
@@ -45,6 +49,11 @@ class Master(Registry):
         self.subnetMask = subnetMask
         self.neighboursIP = None
         self.createdBy = createdBy
+        self.minWorkers: int = minWorkers
+
+        self.netProfiler: NetProfiler = NetProfiler()
+        self.sysHosts: Set = set([])
+        self.netTestEvent: DefaultDict[str, DefaultDict[str, Event]] = defaultdict(lambda: defaultdict(lambda: Event()))
 
     def run(self):
         self.role = 'Master'
@@ -62,6 +71,9 @@ class Master(Registry):
             self.logger.info('Created by %s' % self.createdBy)
             addr = (self.createdBy, 5000)
             self.__getWorkersAddrFrom(addr)
+            return
+
+        self.__netProfile()
 
     def handleMessage(self, message: Message):
         if message.type == 'register':
@@ -90,6 +102,12 @@ class Master(Registry):
             self.__handleWorkersAddr(message=message)
         elif message.type == 'workersAddrResult':
             self.__handleWorkersAddrResult(message=message)
+        elif message.type == 'netTestReceive':
+            self.__handleNetTestReceive(message=message)
+        elif message.type == 'netTestSend':
+            self.__handleNetTestSend(message=message)
+        elif message.type == 'netTestResult':
+            self.__handleNetTestResult(message=message)
 
     def __handleRegister(self, message: Message):
         respond = self.registerClient(message=message)
@@ -346,6 +364,101 @@ class Master(Registry):
         msg = {'type': 'stop', 'reason': reason}
         self.sendMessage(msg, identity.addr)
 
+    def __netProfile(self):
+        minHosts = self.minWorkers + 1
+        self.logger.info('Waiting for %d workers', self.minWorkers)
+        while len(self.sysHosts) < minHosts:
+            self.sysHosts = self.__getHosts()
+            sleep(1)
+        self.logger.info('%d workers connected, begin network profiling', self.minWorkers)
+        for source in self.sysHosts:
+            for target in self.sysHosts:
+                if target == source:
+                    continue
+                if source in self.bps \
+                        and target in self.bps[source]:
+                    continue
+                self.__runNetTest(source, target)
+                self.netTestEvent[source][target].wait()
+                del self.netTestEvent[source][target]
+
+    def __getHosts(self):
+        hosts = {self.machineID}
+        for worker in self.workers.values():
+            if worker.machineID in hosts:
+                continue
+            hosts.add(worker.machineID)
+        return hosts
+
+    def __runNetTest(self, source: str, target: str):
+        if source == self.machineID:
+            sourceAddr = self.myAddr
+        else:
+            sourceAddr = self.workers[source].addr
+
+        if target == self.machineID:
+            targetAddr = self.myAddr
+        else:
+            targetAddr = self.workers[target].addr
+
+        msg = {
+            'type': 'netTestReceive',
+            'source': sourceAddr,
+            'sourceMachineID': source
+        }
+        self.sendMessage(msg, targetAddr)
+        self.logger.info(
+            'Waiting for net profile from %s to %s',
+            sourceAddr[0],
+            targetAddr[0]
+        )
+
+    def __handleNetTestReceive(self, message: Message):
+        sourceAddr = message.content['source']
+        sourceMachineID = message.content['sourceMachineID']
+        msg = {'type': 'netTestSend'}
+        self.sendMessage(msg, sourceAddr)
+        self.logger.info(
+            'Running net profiling from %s to %s as target',
+            sourceAddr[0],
+            self.myAddr[0]
+        )
+        self.__runNetTestReceive(sourceMachineID)
+
+    def __runNetTestReceive(
+            self,
+            sourceMachineID: str):
+        result = self.netProfiler.receive()
+        msg = {'type': 'netTestResult',
+               'source': sourceMachineID,
+               'target': self.machineID,
+               'bps': result}
+        self.sendMessage(msg, self.masterAddr)
+        self.logger.info(
+            'Uploaded net profiling log from %s to %s ',
+            sourceMachineID[:7],
+            self.machineID[:7]
+        )
+
+    def __handleNetTestSend(self, message: Message):
+        receiverAddr = (message.source.addr[0], 10000)
+        self.netProfiler.send(serverAddr=receiverAddr)
+        self.logger.info(
+            'Done net profiling from %s to %s as source',
+            self.myAddr[0],
+            receiverAddr[0]
+        )
+
+    def __handleNetTestResult(self, message: Message):
+        source = message.content['source']
+        target = message.content['target']
+        bps = message.content['bps']
+        if source not in self.bps:
+            self.bps = {}
+        self.bps[source][target] = bps
+
+        self.netTestEvent[source][target].set()
+
 
 def parseArg():
     parser = argparse.ArgumentParser(
@@ -405,6 +518,14 @@ def parseArg():
         type=str,
         help='IP of the Master who asked to create this new Master'
     )
+
+    parser.add_argument(
+        'minWorkers',
+        metavar='MinWorkers',
+        default=1,
+        type=int,
+        help='minimum workers needed'
+    )
     return parser.parse_args()
 
 
@@ -418,5 +539,7 @@ if __name__ == '__main__':
         loggerAddr=(args.loggerIP, args.loggerPort),
         schedulerName=args.schedulerName,
         initWithLog=True if args.initWithLog else False,
-        createdBy=args.createdBy)
+        createdBy=args.createdBy,
+        minWorkers=args.minWorkers
+    )
     master_.run()
