@@ -283,15 +283,14 @@ class Evaluator:
 
         if sourceMachine in self.ping \
                 and destMachine in self.ping[sourceMachine]:
-            cost = self.ping[sourceMachine][destMachine]
+            pingCost = self.ping[sourceMachine][destMachine]
             bps = self.bps[sourceMachine][destMachine]
             if sourceName in self.medianPackageSize \
                     and destName in self.medianPackageSize[sourceName]:
                 packageSize = self.medianPackageSize[sourceName][destName]
                 bytePerSecond = bps / 8
-                return packageSize / bytePerSecond * 1000 + cost
-            return cost
-
+                return (packageSize / bytePerSecond * 1000) + pingCost
+            return pingCost
         return 1
 
     def _computingCost(self, machineName) -> float:
