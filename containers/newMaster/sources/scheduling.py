@@ -221,6 +221,9 @@ class Evaluator:
             masterName,
             masterMachine,
             medianDelay: Dict[str, Dict[str, float]],
+            bps: Dict[str, Dict[str, float]],
+            ping: Dict[str, Dict[str, float]],
+            medianPackageSize: Dict[str, Dict[str, float]],
             medianProcessTime: Dict[str, Tuple[float, int, float]],
             edgesByName: EdgesByName,
             entrance: str,
@@ -232,6 +235,9 @@ class Evaluator:
         self.medianDelay: Dict[str, Dict[str, float]] = medianDelay
         self.medianProcessTime = medianProcessTime
         self.edgesByName = edgesByName
+        self.bps = bps
+        self.ping = ping
+        self.medianPackageSize = medianPackageSize
         self.entrance = entrance
         self.individual = None
         self.workers = workers
@@ -264,14 +270,22 @@ class Evaluator:
         sourceName = '%s#%s' % (source, sourceMachine)
         destMachine = self.individual[dest]
         destName = '%s#%s' % (dest, destMachine)
+
         if sourceName in self.medianDelay \
                 and destName in self.medianDelay[sourceName]:
             return self.medianDelay[sourceName][destName]
-        if sourceMachine not in self.medianDelay:
-            return 1
-        if destMachine not in self.medianDelay[sourceMachine]:
-            return 1
-        return self.medianDelay[sourceMachine][destMachine]
+
+        if sourceMachine in self.ping \
+                and destMachine in self.ping[sourceMachine]:
+            cost = self.ping[sourceMachine][destMachine]
+            bps = self.bps[sourceMachine][destMachine]
+            if sourceName in self.medianPackageSize \
+                    and destName in self.medianPackageSize[sourceName]:
+                packageSize = self.medianPackageSize[sourceName][destName]
+                return packageSize / bps * 1000 + cost
+            return cost
+
+        return 1
 
     def _computingCost(self, machineName) -> float:
         workerMachineId = self.individual[machineName]
@@ -320,6 +334,9 @@ class GeneticProblem(Problem, Evaluator):
             masterName,
             masterMachine,
             medianDelay=self.medianDelay,
+            bps=self.bps,
+            ping=self.ping,
+            medianPackageSize=self.medianPackageSize,
             medianProcessTime=medianProcessTime,
             edgesByName=edgesByName,
             entrance=entrance,
