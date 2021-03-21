@@ -21,7 +21,7 @@ RUN python -m \
     pymoo autograd
 
 RUN apk add --no-cache \
-    iperf3
+    iperf3 pythonping
 
 RUN python -m \
     pip install --no-cache-dir \

@@ -15,6 +15,7 @@ class Profiler:
         self.medianRespondTime: Dict[str, float] = {}
         self.imagesAndRunningContainers: Dict[str, ImagesAndContainers] = {}
         self.bps: Dict[str, Dict[str, float]] = {}
+        self.ping: Dict[str, Dict[str, float]] = {}
 
         self._medianDelay: Dict[str, Dict[str, Median]] = {}
         self._medianProcessTime: Dict[str, Median] = {}
@@ -31,6 +32,7 @@ class Profiler:
         self.persistentStorage.write('medianRespondTime', self.medianRespondTime)
         self.persistentStorage.write('imagesAndRunningContainers', self.imagesAndRunningContainers)
         self.persistentStorage.write('bps', self.bps)
+        self.persistentStorage.write('ping', self.ping)
         self.lock.release()
 
     def __readFromPersistentStorage(self):
@@ -42,4 +44,5 @@ class Profiler:
         self.medianRespondTime = self.persistentStorage.read('medianRespondTime')
         self.imagesAndRunningContainers = self.persistentStorage.read('imagesAndRunningContainers')
         self.bps = self.persistentStorage.read('bps')
+        self.ping = self.persistentStorage.read('ping')
         self.lock.release()

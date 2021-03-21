@@ -12,6 +12,7 @@ from time import sleep
 from threading import Event
 from iperf3 import Server as NetProfServer
 from iperf3 import Client as NetProfClient
+from pythonping import ping
 
 Address = Tuple[str, int]
 
@@ -44,6 +45,7 @@ class Master(Registry):
             logLevel=logLevel,
             periodicTasks=[
                 (self.__uploadBPS, 20),
+                (self.__uploadPing, 20),
                 (self.__getWorkerAddrFromOtherMasters, 300)],
         )
         self.id = masterID
@@ -110,6 +112,8 @@ class Master(Registry):
             self.__handleNetTestSend(message=message)
         elif message.type == 'netTestResult':
             self.__handleNetTestResult(message=message)
+        elif message.type == 'pingResult':
+            self.__handlePingResult(message=message)
 
     def __handleRegister(self, message: Message):
         respond = self.registerClient(message=message)
@@ -236,12 +240,14 @@ class Master(Registry):
         self.medianRespondTime = {**self.medianRespondTime, **profilers[4]}
         self.imagesAndRunningContainers = {**self.imagesAndRunningContainers, **profilers[5]}
         self.bps = {**self.bps, **profilers[6]}
+        self.ping = {**self.ping, **profilers[7]}
 
         # update
         self.scheduler.medianPackageSize = self.medianPackageSize
         self.scheduler.medianDelay = self.medianDelay
         self.scheduler.medianProcessTime = self.medianProcessTime
         self.scheduler.bps = self.bps
+        self.scheduler.ping = self.ping
 
     def __handleWorkersCount(self, message: Message):
         msg = {'type': 'workersCount', 'workersCount': self.workersCount}
@@ -422,7 +428,10 @@ class Master(Registry):
     def __handleNetTestReceive(self, message: Message):
         sourceAddr = message.content['sourceAddr']
         sourceMachineID = message.content['sourceMachineID']
-        msg = {'type': 'netTestSend'}
+        msg = {
+            'type': 'netTestSend',
+            'targetMachineID': self.machineID
+        }
         self.sendMessage(msg, sourceAddr)
         self.logger.info(
             'Running net profiling from %s to %s as target',
@@ -437,12 +446,13 @@ class Master(Registry):
         server = NetProfServer()
         server.bind_address = self.addr[0]
         server.port = 10000
-        result = server.run().received_bps
+        bps = server.run().received_bps
         msg = {'type': 'netTestResult',
                'sourceMachineID': sourceMachineID,
                'targetMachineID': self.machineID,
-               'bps': result}
+               'bps': bps}
         self.sendMessage(msg, self.masterAddr)
+
         self.logger.info(
             'Uploaded net profiling log from %s to %s ',
             sourceMachineID[:7],
@@ -473,6 +483,22 @@ class Master(Registry):
             message.source.addr[0]
         )
 
+        pingResponseList = ping(message.source.addr[0], size=40, count=10)
+        pingResult = pingResponseList.rtt_avg_ms
+
+        msg = {
+            'type': 'pingResult',
+            'sourceMachineID': self.machineID,
+            'targetMachineID': message.content['targetMachineID'],
+            'pingResult': pingResult
+        }
+        self.sendMessage(msg, self.masterAddr)
+        self.logger.info(
+            'Uploaded ping from %s to %s',
+            self.myAddr[0],
+            message.source.addr[0]
+        )
+
     def __handleNetTestResult(self, message: Message):
         sourceMachineID = message.content['sourceMachineID']
         targetMachineID = message.content['targetMachineID']
@@ -480,18 +506,32 @@ class Master(Registry):
         if sourceMachineID not in self.bps:
             self.bps[sourceMachineID] = {}
         self.bps[sourceMachineID][targetMachineID] = bps
+
+    def __handlePingResult(self, message: Message):
+        sourceMachineID = message.content['sourceMachineID']
+        targetMachineID = message.content['targetMachineID']
+        pingResult = message.content['pingResult']
+
+        if sourceMachineID not in self.ping:
+            self.ping[sourceMachineID] = {}
+        self.ping[sourceMachineID][targetMachineID] = pingResult
         self.netTestEvent[sourceMachineID][targetMachineID].set()
         self.logger.info(
-            'got NetTest result from %s to %s: %f',
+            'got NetTest result from %s to %s: %f, %f',
             sourceMachineID[:7],
             targetMachineID[:7],
-            bps
+            pingResult,
+            self.bps[sourceMachineID][targetMachineID]
         )
         from pprint import pformat
-        print(pformat(self.bps))
+        print(pformat(self.bps), pformat(self.ping))
 
     def __uploadBPS(self):
-        msg = {'type': 'bps','bps':self.bps}
+        msg = {'type': 'bps', 'bps': self.bps}
+        self.sendMessage(msg, self.remoteLogger.addr)
+
+    def __uploadPing(self):
+        msg = {'type': 'ping', 'ping': self.ping}
         self.sendMessage(msg, self.remoteLogger.addr)
 
 

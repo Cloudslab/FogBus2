@@ -28,7 +28,7 @@ RUN apk add --no-cache \
 
 RUN python -m \
     pip install --no-cache-dir \
-    iperf3
+    iperf3 pythonping
 
 RUN apk add --no-cache docker docker-compose
 

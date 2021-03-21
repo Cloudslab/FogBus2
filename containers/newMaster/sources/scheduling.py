@@ -115,7 +115,9 @@ class Scheduler:
             name: str,
             medianDelay: Dict[str, Dict[str, float]],
             medianProcessTime: Dict[str, Tuple[float, int, float]],
-            bps: Dict[str, Dict[str, float]]):
+            bps: Dict[str, Dict[str, float]],
+            ping: Dict[str, Dict[str, float]],
+    ):
         self.name: str = name
         self.medianDelay: Dict[str, Dict[str, float]] = medianDelay
         self.medianProcessTime: Dict[str, Tuple[float, int, float]] = medianProcessTime
@@ -124,6 +126,7 @@ class Scheduler:
         self.applications: Dict[str, Application] = tasksAndApps[1]
         self.edgesByName = {}
         self.bps = bps
+        self.ping = ping
 
     def schedule(
             self,
@@ -425,6 +428,7 @@ class NSGABase(Scheduler):
             geneticAlgorithm: GeneticAlgorithm,
             medianDelay: Dict[str, Dict[str, float]],
             bps: Dict[str, Dict[str, float]],
+            ping: Dict[str, Dict[str, float]],
             medianProcessTime: Dict[str, Tuple[float, int, float]],
             generationNum: int,
             populationSize: int
@@ -436,7 +440,8 @@ class NSGABase(Scheduler):
             name=name,
             medianDelay=medianDelay,
             medianProcessTime=medianProcessTime,
-            bps=bps
+            bps=bps,
+            ping=ping
         )
         self.geneticProblem = None
 
@@ -573,6 +578,7 @@ class NSGA2(NSGABase):
                  generationNum: int,
                  medianDelay: Dict[str, Dict[str, float]],
                  bps: Dict[str, Dict[str, float]],
+                 ping: Dict[str, Dict[str, float]],
                  medianProcessTime: Dict[str, Tuple[float, int, float]],
                  sampling=get_sampling("int_random")):
         geneticAlgorithm = NSGA2_(
@@ -588,7 +594,9 @@ class NSGA2(NSGABase):
             medianProcessTime=medianProcessTime,
             generationNum=generationNum,
             populationSize=populationSize,
-            bps=bps)
+            bps=bps,
+            ping=ping
+        )
 
 
 class NSGA3(NSGABase):
@@ -599,6 +607,7 @@ class NSGA3(NSGABase):
                  dasDennisP: int,
                  medianDelay: Dict[str, Dict[str, float]],
                  bps: Dict[str, Dict[str, float]],
+                 ping: Dict[str, Dict[str, float]],
                  medianProcessTime: Dict[str, Tuple[float, int, float]],
                  sampling=get_sampling("int_random")):
         refDirs = get_reference_directions(
@@ -619,7 +628,9 @@ class NSGA3(NSGABase):
             medianProcessTime=medianProcessTime,
             generationNum=generationNum,
             populationSize=populationSize,
-            bps=bps)
+            bps=bps,
+            ping=ping
+        )
 
 
 if __name__ == '__main__':

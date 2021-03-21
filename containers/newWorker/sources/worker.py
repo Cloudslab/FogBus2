@@ -268,7 +268,10 @@ class Worker(Node, GatherContainerStat):
     def __handleNetTestReceive(self, message: Message):
         sourceAddr = message.content['sourceAddr']
         sourceMachineID = message.content['sourceMachineID']
-        msg = {'type': 'netTestSend'}
+        msg = {
+            'type': 'netTestSend',
+            'targetMachineID': self.machineID
+        }
         self.sendMessage(msg, sourceAddr)
         self.logger.info(
             'Running net profiling from %s to %s as target',
@@ -281,14 +284,15 @@ class Worker(Node, GatherContainerStat):
             self,
             sourceMachineID: str):
         server = NetProfServer()
-        server.bind_address = self.myAddr[0]
+        server.bind_address = self.addr[0]
         server.port = 10000
-        result = server.run().received_bps
+        bps = server.run().received_bps
         msg = {'type': 'netTestResult',
                'sourceMachineID': sourceMachineID,
                'targetMachineID': self.machineID,
-               'bps': result}
+               'bps': bps}
         self.sendMessage(msg, self.masterAddr)
+
         self.logger.info(
             'Uploaded net profiling log from %s to %s ',
             sourceMachineID[:7],
@@ -315,6 +319,22 @@ class Worker(Node, GatherContainerStat):
                 continue
         self.logger.info(
             'Done net profiling from %s to %s as source',
+            self.myAddr[0],
+            message.source.addr[0]
+        )
+
+        pingResponseList = ping(message.source.addr[0], size=40, count=10)
+        pingResult = pingResponseList.rtt_avg_ms
+
+        msg = {
+            'type': 'pingResult',
+            'sourceMachineID': self.machineID,
+            'targetMachineID': message.content['targetMachineID'],
+            'pingResult': pingResult
+        }
+        self.sendMessage(msg, self.masterAddr)
+        self.logger.info(
+            'Uploaded ping from %s to %s',
             self.myAddr[0],
             message.source.addr[0]
         )

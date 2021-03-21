@@ -52,6 +52,8 @@ class RemoteLogger(Profiler, Node):
             self.__handleImagesAndRunningContainers(message=message)
         elif message.type == 'bps':
             self.__handleBPS(message=message)
+        elif message.type == 'ping':
+            self.__handlePing(message=message)
         elif message.type == 'requestProfiler':
             self.__handleRequestProfiler(message=message)
         self.lock.release()
@@ -120,6 +122,10 @@ class RemoteLogger(Profiler, Node):
         bps = message.content['bps']
         self.bps = bps
 
+    def __handlePing(self, message: Message):
+        ping = message.content['ping']
+        self.ping = ping
+
     def __handleRequestProfiler(self, message: Message):
         if not message.source.role == 'Master':
             return
@@ -132,7 +138,8 @@ class RemoteLogger(Profiler, Node):
                 self.medianProcessTime,
                 self.medianRespondTime,
                 self.imagesAndRunningContainers,
-                self.bps
+                self.bps,
+                self.ping
             ]}
         self.sendMessage(msg, message.source.addr)
 
