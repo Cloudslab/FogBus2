@@ -21,11 +21,11 @@ RUN python -m \
     pymoo autograd
 
 RUN apk add --no-cache \
-    iperf3 pythonping
+    iperf3
 
 RUN python -m \
     pip install --no-cache-dir \
-    iperf3
+    iperf3 pythonping
 
 ADD ./sources /workplace
 

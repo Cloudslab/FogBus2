@@ -23,14 +23,14 @@ RUN python -m \
     numpy psutil GPUtil docker \
     pymoo autograd
 
+RUN apk add --no-cache docker docker-compose
+
 RUN apk add --no-cache \
     iperf3
 
 RUN python -m \
     pip install --no-cache-dir \
     iperf3 pythonping
-
-RUN apk add --no-cache docker docker-compose
 
 ADD ./sources /workplace
 
