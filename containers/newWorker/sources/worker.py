@@ -17,6 +17,7 @@ from traceback import print_exc
 from time import sleep
 from iperf3 import Server as NetProfServer
 from iperf3 import Client as NetProfClient
+from pythonping import ping
 
 
 class Worker(Node, GatherContainerStat):
