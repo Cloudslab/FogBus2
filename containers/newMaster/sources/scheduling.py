@@ -117,6 +117,7 @@ class Scheduler:
             medianProcessTime: Dict[str, Tuple[float, int, float]],
             bps: Dict[str, Dict[str, float]],
             ping: Dict[str, Dict[str, float]],
+            medianPackageSize: Dict[str, Dict[str, float]],
     ):
         self.name: str = name
         self.medianDelay: Dict[str, Dict[str, float]] = medianDelay
@@ -127,6 +128,7 @@ class Scheduler:
         self.edgesByName = {}
         self.bps = bps
         self.ping = ping
+        self.medianPackageSize = medianPackageSize
 
     def schedule(
             self,
@@ -266,14 +268,18 @@ class Evaluator:
             self._dfs(dest, cost, res)
 
     def _edgeCost(self, source, dest) -> float:
+
         sourceMachine = self.individual[source]
         sourceName = '%s#%s' % (source, sourceMachine)
         destMachine = self.individual[dest]
         destName = '%s#%s' % (dest, destMachine)
 
-        if sourceName in self.medianDelay \
-                and destName in self.medianDelay[sourceName]:
-            return self.medianDelay[sourceName][destName]
+        if sourceMachine == destMachine:
+            return 0
+
+        # if sourceName in self.medianDelay \
+        #         and destName in self.medianDelay[sourceName]:
+        #     return self.medianDelay[sourceName][destName]
 
         if sourceMachine in self.ping \
                 and destMachine in self.ping[sourceMachine]:
@@ -282,7 +288,8 @@ class Evaluator:
             if sourceName in self.medianPackageSize \
                     and destName in self.medianPackageSize[sourceName]:
                 packageSize = self.medianPackageSize[sourceName][destName]
-                return packageSize / bps * 1000 + cost
+                bytePerSecond = bps / 8
+                return packageSize / bytePerSecond * 1000 + cost
             return cost
 
         return 1
@@ -320,6 +327,9 @@ class GeneticProblem(Problem, Evaluator):
             masterName,
             masterMachine,
             medianDelay: Dict[str, Dict[str, float]],
+            bps: Dict[str, Dict[str, float]],
+            ping: Dict[str, Dict[str, float]],
+            medianPackageSize: Dict[str, Dict[str, float]],
             medianProcessTime: Dict[str, Tuple[float, int, float]],
             edgesByName: EdgesByName,
             entrance: str,
@@ -334,9 +344,9 @@ class GeneticProblem(Problem, Evaluator):
             masterName,
             masterMachine,
             medianDelay=self.medianDelay,
-            bps=self.bps,
-            ping=self.ping,
-            medianPackageSize=self.medianPackageSize,
+            bps=bps,
+            ping=ping,
+            medianPackageSize=medianPackageSize,
             medianProcessTime=medianProcessTime,
             edgesByName=edgesByName,
             entrance=entrance,
@@ -446,6 +456,7 @@ class NSGABase(Scheduler):
             medianDelay: Dict[str, Dict[str, float]],
             bps: Dict[str, Dict[str, float]],
             ping: Dict[str, Dict[str, float]],
+            medianPackageSize: Dict[str, Dict[str, float]],
             medianProcessTime: Dict[str, Tuple[float, int, float]],
             generationNum: int,
             populationSize: int
@@ -458,7 +469,8 @@ class NSGABase(Scheduler):
             medianDelay=medianDelay,
             medianProcessTime=medianProcessTime,
             bps=bps,
-            ping=ping
+            ping=ping,
+            medianPackageSize=medianPackageSize
         )
         self.geneticProblem = None
 
@@ -506,6 +518,9 @@ class NSGABase(Scheduler):
             masterName,
             masterMachine,
             medianDelay=self.medianDelay,
+            bps=self.bps,
+            ping=self.ping,
+            medianPackageSize=self.medianPackageSize,
             medianProcessTime=self.medianProcessTime,
             edgesByName=edgesByName,
             entrance=entrance,
@@ -596,6 +611,7 @@ class NSGA2(NSGABase):
                  medianDelay: Dict[str, Dict[str, float]],
                  bps: Dict[str, Dict[str, float]],
                  ping: Dict[str, Dict[str, float]],
+                 medianPackageSize: Dict[str, Dict[str, float]],
                  medianProcessTime: Dict[str, Tuple[float, int, float]],
                  sampling=get_sampling("int_random")):
         geneticAlgorithm = NSGA2_(
@@ -612,7 +628,8 @@ class NSGA2(NSGABase):
             generationNum=generationNum,
             populationSize=populationSize,
             bps=bps,
-            ping=ping
+            ping=ping,
+            medianPackageSize=medianPackageSize
         )
 
 
@@ -625,6 +642,7 @@ class NSGA3(NSGABase):
                  medianDelay: Dict[str, Dict[str, float]],
                  bps: Dict[str, Dict[str, float]],
                  ping: Dict[str, Dict[str, float]],
+                 medianPackageSize: Dict[str, Dict[str, float]],
                  medianProcessTime: Dict[str, Tuple[float, int, float]],
                  sampling=get_sampling("int_random")):
         refDirs = get_reference_directions(
@@ -646,7 +664,8 @@ class NSGA3(NSGABase):
             generationNum=generationNum,
             populationSize=populationSize,
             bps=bps,
-            ping=ping
+            ping=ping,
+            medianPackageSize=medianPackageSize
         )
 
 

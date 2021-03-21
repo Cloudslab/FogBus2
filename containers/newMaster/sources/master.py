@@ -56,7 +56,10 @@ class Master(Registry):
         self.minWorkers: int = minWorkers
 
         self.sysHosts: Set = set([])
-        self.netTestEvent: DefaultDict[str, DefaultDict[str, Event]] = defaultdict(lambda: defaultdict(lambda: Event()))
+        self.netTestPingEvent: DefaultDict[str, DefaultDict[str, Event]] = defaultdict(
+            lambda: defaultdict(lambda: Event()))
+        self.netTestBPSEvent: DefaultDict[str, DefaultDict[str, Event]] = defaultdict(
+            lambda: defaultdict(lambda: Event()))
         self.netTest: Event = Event()
 
     def run(self):
@@ -389,8 +392,10 @@ class Master(Registry):
                         and targetMachineID in self.bps[sourceMachineID]:
                     continue
                 self.__runNetTest(sourceMachineID, targetMachineID)
-                self.netTestEvent[sourceMachineID][targetMachineID].wait()
-                del self.netTestEvent[sourceMachineID][targetMachineID]
+                self.netTestPingEvent[sourceMachineID][targetMachineID].wait()
+                self.netTestBPSEvent[sourceMachineID][targetMachineID].wait()
+                del self.netTestPingEvent[sourceMachineID][targetMachineID]
+                del self.netTestBPSEvent[sourceMachineID][targetMachineID]
         self.netTest.set()
         self.logger.info('Finished Net Test')
 
@@ -506,6 +511,7 @@ class Master(Registry):
         if sourceMachineID not in self.bps:
             self.bps[sourceMachineID] = {}
         self.bps[sourceMachineID][targetMachineID] = bps
+        self.netTestBPSEvent[sourceMachineID][targetMachineID].set()
 
     def __handlePingResult(self, message: Message):
         sourceMachineID = message.content['sourceMachineID']
@@ -515,13 +521,14 @@ class Master(Registry):
         if sourceMachineID not in self.ping:
             self.ping[sourceMachineID] = {}
         self.ping[sourceMachineID][targetMachineID] = pingResult
-        self.netTestEvent[sourceMachineID][targetMachineID].set()
+        self.netTestPingEvent[sourceMachineID][targetMachineID].set()
+        self.netTestBPSEvent[sourceMachineID][targetMachineID].wait()
         self.logger.info(
             'got NetTest result from %s to %s: %f, %f',
             sourceMachineID[:7],
             targetMachineID[:7],
             pingResult,
-            self.bps[sourceMachineID][targetMachineID]
+            self.ping[sourceMachineID][targetMachineID]
         )
         from pprint import pformat
         print(pformat(self.bps), pformat(self.ping))

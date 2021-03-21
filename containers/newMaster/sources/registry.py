@@ -151,7 +151,8 @@ class Registry(Profiler, Node, ABC):
                 generationNum=generationNum,
                 dasDennisP=1,
                 bps=self.bps,
-                ping=self.ping
+                ping=self.ping,
+                medianPackageSize=self.medianPackageSize
             )
         elif schedulerName == 'NSGA2':
             return NSGA2(
@@ -160,7 +161,8 @@ class Registry(Profiler, Node, ABC):
                 medianProcessTime=self.medianProcessTime,
                 populationSize=populationSize,
                 generationNum=generationNum,
-                ping=self.ping
+                ping=self.ping,
+                medianPackageSize=self.medianPackageSize
             )
         self.logger.warning('Unknown scheduler: %s', schedulerName)
         os._exit(0)
