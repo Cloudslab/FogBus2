@@ -178,6 +178,8 @@ class Master(Registry):
                 'You are not TaskHandler')
 
         taskHandlerToken = message.content['token']
+        if taskHandlerToken not in self.taskHandlerByToken:
+            return
         taskHandler = self.taskHandlerByToken[taskHandlerToken]
         taskHandler.ready.set()
 

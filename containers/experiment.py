@@ -145,7 +145,7 @@ class Experiment:
         os.system('rm -rf %s/newMaster/sources/profiler/medianProcessTime.json' % self.currPath)
         os.system('rm -rf %s/newMaster/sources/profiler/medianDelay.json' % self.currPath)
         os.system('rm -rf %s/newMaster/sources/profiler/medianRespondTime.json' % self.currPath)
-        
+
         os.system('rm -f %s/newMaster/sources/decisions.json' % self.currPath)
         self.logger.info('Removed logs')
 
@@ -326,7 +326,7 @@ if __name__ == '__main__':
     experiment = Experiment()
     targetRound_ = 5
     repeatTimes_ = 100
-    waitTime = 300
+    waitTime = 600
     # experiment.runInitWithLog(
     #     initWithLog=True,
     #     roundNum=targetRound_,
