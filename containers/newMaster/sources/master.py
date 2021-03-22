@@ -490,7 +490,7 @@ class Master(Registry):
                 res = client.run().sent_bps
                 print(res)
                 break
-            except AttributeError:
+            except {AttributeError, IndexError}:
                 self.logger.warning(
                     'Retry connecting %s',
                     message.source.addr[0]

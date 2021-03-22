@@ -291,7 +291,7 @@ class Worker(Node, GatherContainerStat):
             try:
                 bps = server.run().received_bps
                 break
-            except AttributeError:
+            except {AttributeError, IndexError}:
                 self.logger.warning(
                     'Retry receiving',
                 )
