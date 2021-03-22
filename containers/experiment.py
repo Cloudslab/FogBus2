@@ -151,6 +151,7 @@ class Experiment:
             tmp = '&'
         if script == './runWorker.sh':
             script = '%s %s %s %s' % (script, ips[machine], masterIP, masterIP)
+            print(script)
         os.system('ssh %s \'%s\' > /dev/null 2>&1 %s' % (machine, script, tmp))
         event.set()
 
