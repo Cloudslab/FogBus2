@@ -287,7 +287,17 @@ class Worker(Node, GatherContainerStat):
         server = NetProfServer()
         server.bind_address = self.addr[0]
         server.port = 10000
-        bps = server.run().received_bps
+        while True:
+            try:
+                bps = server.run().received_bps
+                break
+            except AttributeError:
+                self.logger.warning(
+                    'Retry receiving',
+                )
+                sleep(1)
+                continue
+
         msg = {'type': 'netTestResult',
                'sourceMachineID': sourceMachineID,
                'targetMachineID': self.machineID,

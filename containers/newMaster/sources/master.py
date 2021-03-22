@@ -425,12 +425,16 @@ class Master(Registry):
             'sourceAddr': sourceAddr,
             'sourceMachineID': sourceMachineID
         }
-        self.sendMessage(msg, targetAddr)
         self.logger.info(
             'Waiting for net profile from %s to %s',
             sourceAddr[0],
             targetAddr[0]
         )
+        while not self.netTestBPSEvent[sourceMachineID][targetMachineID].isSet() \
+                or not self.netTestPingEvent[sourceMachineID][targetMachineID].isSet():
+            self.sendMessage(msg, targetAddr)
+            sleep(5)
+
 
     def __handleNetTestReceive(self, message: Message):
         sourceAddr = message.content['sourceAddr']
@@ -453,7 +457,16 @@ class Master(Registry):
         server = NetProfServer()
         server.bind_address = self.addr[0]
         server.port = 10000
-        bps = server.run().received_bps
+        while True:
+            try:
+                bps = server.run().received_bps
+                break
+            except AttributeError:
+                self.logger.warning(
+                    'Retry receiving',
+                )
+                sleep(1)
+                continue
         msg = {'type': 'netTestResult',
                'sourceMachineID': sourceMachineID,
                'targetMachineID': self.machineID,
