@@ -198,7 +198,7 @@ class User(Node):
         self.sendMessage(msg, self.remoteLogger.addr)
 
     def __saveRespondTime(self):
-        if self.app.respondTimeCount > 1:
+        if self.app.respondTimeCount > 5:
             return
         logFilename = 'log/respondTime.json'
         if os.path.exists(logFilename):
