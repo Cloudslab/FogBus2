@@ -188,6 +188,7 @@ class Experiment:
         self.runRemoteLogger()
         self.runMaster(schedulerName, initWithLog)
         self.runWorker()
+        sleep(3)
         self.runRemoteWorkers()
         sleep(1)
 
