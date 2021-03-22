@@ -92,19 +92,7 @@ class Registry(Profiler, Node, ABC):
         if periodicTasks is None:
             periodicTasks = []
         Profiler.__init__(self)
-        Node.__init__(
-            self,
-            role='Master',
-            containerName=containerName,
-            myAddr=myAddr,
-            masterAddr=masterAddr,
-            loggerAddr=loggerAddr,
-            ignoreSocketErr=ignoreSocketErr,
-            periodicTasks=periodicTasks + [
-                (self._saveToPersistentStorage, 2),
-                (self.__requestProfiler, 1)],
-            logLevel=logLevel
-        )
+
         self.__currentWorkerID: int = 0
         self.__lockCurrentWorkerID: Lock = Lock()
         self.__currentTaskHandlerID: int = 0
@@ -128,6 +116,20 @@ class Registry(Profiler, Node, ABC):
         self.locks: DefaultDict[str, Lock] = defaultdict(lambda: Lock())
         self.decisionResultFromWorker: Dict[Decision] = {}
         self.logger = None
+
+        Node.__init__(
+            self,
+            role='Master',
+            containerName=containerName,
+            myAddr=myAddr,
+            masterAddr=masterAddr,
+            loggerAddr=loggerAddr,
+            ignoreSocketErr=ignoreSocketErr,
+            periodicTasks=periodicTasks + [
+                (self._saveToPersistentStorage, 2),
+                (self.__requestProfiler, 1)],
+            logLevel=logLevel
+        )
 
     @staticmethod
     def __loadProfilers():
