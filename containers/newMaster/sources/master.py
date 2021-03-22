@@ -119,6 +119,8 @@ class Master(Registry):
             self.__handlePingResult(message=message)
 
     def __handleRegister(self, message: Message):
+        if message.content['role'] == 'User':
+            self.netTest.wait()
         respond = self.registerClient(message=message)
         if respond is None:
             self.__stopClient(
