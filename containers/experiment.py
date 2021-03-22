@@ -133,13 +133,20 @@ class Experiment:
             return 0
 
     def removeLogs(self):
-        os.system('mv %s/newLogger/sources/profiler/bps.json bps' % self.currPath)
-        os.system('mv %s/newLogger/sources/profiler/ping.json ping' % self.currPath)
-        os.system('rm -rf %s/newLogger/sources/profiler/*.json' % self.currPath)
-        os.system('rm -rf %s/newMaster/sources/profiler/*.json' % self.currPath)
+        os.system('rm -rf %s/newLogger/sources/profiler/medianPackageSize.json' % self.currPath)
+        os.system('rm -rf %s/newLogger/sources/profiler/nodeResources.json' % self.currPath)
+        os.system('rm -rf %s/newLogger/sources/profiler/imagesAndRunningContainers.json' % self.currPath)
+        os.system('rm -rf %s/newLogger/sources/profiler/medianProcessTime.json' % self.currPath)
+        os.system('rm -rf %s/newLogger/sources/profiler/medianDelay.json' % self.currPath)
+        os.system('rm -rf %s/newLogger/sources/profiler/medianRespondTime.json' % self.currPath)
+        os.system('rm -rf %s/newLogger/sources/profiler/medianPackageSize.json' % self.currPath)
+        os.system('rm -rf %s/newMaster/sources/profiler/nodeResources.json' % self.currPath)
+        os.system('rm -rf %s/newMaster/sources/profiler/imagesAndRunningContainers.json' % self.currPath)
+        os.system('rm -rf %s/newMaster/sources/profiler/medianProcessTime.json' % self.currPath)
+        os.system('rm -rf %s/newMaster/sources/profiler/medianDelay.json' % self.currPath)
+        os.system('rm -rf %s/newMaster/sources/profiler/medianRespondTime.json' % self.currPath)
+        
         os.system('rm -f %s/newMaster/sources/decisions.json' % self.currPath)
-        os.system('mv bps %s/newLogger/sources/profiler/bps.json' % self.currPath)
-        os.system('mv ping %s/newLogger/sources/profiler/ping.json' % self.currPath)
         self.logger.info('Removed logs')
 
     def stopLocalTaskHandler(self):
