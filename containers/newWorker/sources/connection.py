@@ -147,7 +147,7 @@ class Connection:
                 return
             raise ConnectionRefusedError
 
-    def send(self, message: Dict, retries: int = 5):
+    def send(self, message: Dict, retries: int = 10):
         message['_sentAt'] = time() * 1000
         self.__send(encrypt(message), retries=retries)
 

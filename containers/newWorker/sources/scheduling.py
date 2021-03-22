@@ -370,6 +370,12 @@ class GeneticProblem(Problem, Evaluator):
         # print('[Population]: ')
         events = [threading.Event() for _ in range(len(xs))]
         for i, x in enumerate(xs):
+            if x.count(x[0]) / len(x) > .8:
+                maxIndex = max(x)
+                for j in range(len(x)):
+                    randNum = np.random.random(1)[0]
+                    if randNum < .3:
+                        x[j] = np.random.randint(maxIndex + 1)
             # print('chromosome ----> ', x)
             individual = self.indexesToMachines(x)
             # print(individual)

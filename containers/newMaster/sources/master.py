@@ -244,8 +244,14 @@ class Master(Registry):
         self.medianProcessTime = {**self.medianProcessTime, **profilers[3]}
         self.medianRespondTime = {**self.medianRespondTime, **profilers[4]}
         self.imagesAndRunningContainers = {**self.imagesAndRunningContainers, **profilers[5]}
-        self.bps = {**self.bps, **profilers[6]}
-        self.ping = {**self.ping, **profilers[7]}
+
+        for sourceMachineID, dests in profilers[6].items():
+            for destMachineID, value in dests.items():
+                self.bps[sourceMachineID][destMachineID] = value
+
+        for sourceMachineID, dests in profilers[7].items():
+            for destMachineID, value in dests.items():
+                self.ping[sourceMachineID][destMachineID] = value
 
         # update
         self.scheduler.medianPackageSize = self.medianPackageSize
@@ -430,11 +436,10 @@ class Master(Registry):
             sourceAddr[0],
             targetAddr[0]
         )
-        while not self.netTestBPSEvent[sourceMachineID][targetMachineID].isSet() \
-                or not self.netTestPingEvent[sourceMachineID][targetMachineID].isSet():
-            self.sendMessage(msg, targetAddr)
-            sleep(5)
-
+        # while not self.netTestBPSEvent[sourceMachineID][targetMachineID].isSet() \
+        #         or not self.netTestPingEvent[sourceMachineID][targetMachineID].isSet():
+        self.sendMessage(msg, targetAddr)
+        # sleep(5)
 
     def __handleNetTestReceive(self, message: Message):
         sourceAddr = message.content['sourceAddr']
@@ -547,7 +552,6 @@ class Master(Registry):
             sourceMachineID[:7],
             targetMachineID[:7]
         )
-
 
     def __uploadBPS(self):
         msg = {'type': 'bps', 'bps': self.bps}
