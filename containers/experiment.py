@@ -6,6 +6,24 @@ from logger import get_logger
 from tqdm import tqdm
 from time import sleep
 
+machines = [
+    '4GB-rpi-4B-alpha',
+    '2GB-rpi-4B-alpha',
+    '2GB-rpi-4B-beta',
+    'uniCloud1',
+    'uniCloud2'
+]
+ips = {
+    '4GB-rpi-4B-alpha': '10.0.0.101',
+    '2GB-rpi-4B-alpha': '10.0.0.103',
+    '2GB-rpi-4B-beta': '10.0.0.104',
+    'uniCloud1': '10.0.0.2',
+    'uniCloud2': '10.0.0.3'
+}
+
+masterIP = '10.0.0.101'
+minWorkers = len(machines)
+
 
 class Experiment:
 
@@ -19,6 +37,7 @@ class Experiment:
         # self.logger.info('Stopped all containers on where this script is running')
 
     def runRemoteLogger(self):
+        global masterIP
         self.logger.info('Starting RemoteLogger ...')
         os.system(
             'cd ./newLogger && '
@@ -27,12 +46,13 @@ class Experiment:
             '--name RemoteLogger '
             'remote-logger '
             'RemoteLogger '
-            '192.168.3.20 5001 '
-            '192.168.3.20 5000 '
-            '> /dev/null 2>&1 &')
+            '%s 5001 '
+            '%s 5000 '
+            '> /dev/null 2>&1 &' % (masterIP, masterIP))
         # self.logger.info('Ran RemoteLogger')
 
     def runMaster(self, schedulerName, initWithLog=False):
+        global masterIP, minWorkers
         self.logger.info('Starting Master ...')
         os.system(
             'cd ./newMaster && '
@@ -41,16 +61,22 @@ class Experiment:
             '--name Master '
             'master '
             'Master '
-            '192.168.3.20 5000 '
-            '192.168.3.20 5001 '
-            '%s %s'
+            '%s 5000 '
+            '%s 5001 '
+            '%s '
+            '--minWorkers %d'
+            '%s '
             '> /dev/null 2>&1 &'
             % (
+                masterIP,
+                masterIP,
                 schedulerName,
+                minWorkers,
                 '--initWithLog True' if initWithLog else ''))
         # self.logger.info('Ran Master')
 
     def runWorker(self):
+        global masterIP
         self.logger.info('Starting Worker ...')
         os.system(
             'cd ./newWorker && '
@@ -59,10 +85,14 @@ class Experiment:
             '--name Worker '
             'worker '
             'Worker '
-            '192.168.3.20 '
-            '192.168.3.20 5000 '
-            '192.168.3.20 5001 '
-            '> /dev/null 2>&1 &')
+            '%s '
+            '%s 5000 '
+            '%s 5001 '
+            '> /dev/null 2>&1 &' % (
+                masterIP,
+                masterIP,
+                masterIP
+            ))
         self.logger.info('Ran Worker')
 
     def runUser(self):
@@ -74,13 +104,17 @@ class Experiment:
             '--name User '
             'user '
             'User '
-            '192.168.3.20 '
-            '192.168.3.20 5000 '
-            '192.168.3.20 5001 '
+            '%s '
+            '%s 5000 '
+            '%s 5001 '
             'GameOfLifePyramid '
-            '256 '
+            '128 '
             '--no-show '
-            '> /dev/null 2>&1 &')
+            '> /dev/null 2>&1 &' % (
+                masterIP,
+                masterIP,
+                masterIP
+            ))
         self.logger.info('Ran User')
 
     def stopUser(self):
@@ -115,16 +149,14 @@ class Experiment:
             tmp = ''
         else:
             tmp = '&'
+        if script == './runWorker.sh':
+            script = '%s %s %s %s' % (script, ips[machine], masterIP, masterIP)
         os.system('ssh %s \'%s\' > /dev/null 2>&1 %s' % (machine, script, tmp))
         event.set()
 
     @staticmethod
     def manageRpi(runnable, script, synchronized=False):
-        machines = [
-            '4GB-rpi-4B-alpha',
-            '2GB-rpi-4B-alpha',
-            '4GB-rpi-4B-beta',
-            '2GB-rpi-4B-beta']
+        global machines
         events = [threading.Event() for _ in machines]
         for i, machine in enumerate(machines):
             threading.Thread(
@@ -279,20 +311,35 @@ class Experiment:
 
 if __name__ == '__main__':
     experiment = Experiment()
-    targetRound_ = 1
-    repeatTimes_ = 30
-    waitTime = 150
+    targetRound_ = 5
+    repeatTimes_ = 100
+    waitTime = 300
     # experiment.runInitWithLog(
     #     initWithLog=True,
     #     roundNum=targetRound_,
     #     iterNum=repeatTimes_)
     for num in range(targetRound_):
-        for algorithm in ['NSGA2', 'NSGA3']:
-            for initWithLog_ in [True, False]:
-                experiment.run(
-                    algorithm,
-                    initWithLog_,
-                    num + 1,
-                    targetRound_,
-                    repeatTimes=repeatTimes_,
-                    userMaxWaitTime=waitTime)
+        experiment.run(
+            'NSGA2',
+            False,
+            num + 1,
+            targetRound_,
+            repeatTimes=repeatTimes_,
+            removeLog=True,
+            userMaxWaitTime=waitTime)
+        experiment.run(
+            'NSGA3',
+            False,
+            num + 1,
+            targetRound_,
+            repeatTimes=repeatTimes_,
+            removeLog=True,
+            userMaxWaitTime=waitTime)
+        experiment.run(
+            'NSGA2',
+            True,
+            num + 1,
+            targetRound_,
+            repeatTimes=repeatTimes_,
+            removeLog=True,
+            userMaxWaitTime=waitTime)
