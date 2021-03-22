@@ -604,11 +604,11 @@ def parseArg():
     )
 
     parser.add_argument(
-        '--minWorkers',
-        metavar='MinWorkers',
+        '--minHosts',
+        metavar='MinHosts',
         default=1,
         type=int,
-        help='minimum workers needed'
+        help='minimum hosts needed'
     )
     return parser.parse_args()
 
