@@ -104,7 +104,7 @@ class User(Node):
         self.__register()
 
     def __waitForWorkers(self):
-        targetCount = 2
+        targetCount = 5
         msg = {'type': 'workersCount'}
         count = 3000
         while count > 0:

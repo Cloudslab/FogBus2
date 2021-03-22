@@ -314,7 +314,10 @@ class Evaluator:
             processTime *= totalCPUCores * cpuFreq
             processTime /= worker.totalCPUCores * worker.cpuFreq
             return processTime
-        return 1 / (worker.cpuFreq * worker.totalCPUCores)
+        divider = worker.cpuFreq * worker.totalCPUCores
+        if divider == 0:
+            return 1
+        return 1 / divider
 
 
 class GeneticProblem(Problem, Evaluator):
