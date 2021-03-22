@@ -286,6 +286,8 @@ class Master(Registry):
         self.logger.info('Received decision from %s' % message.source.nameLogPrinting)
 
     def __handleTaskHandlerWaiting(self, message: Message):
+        if message.source.id not in self.taskHandlers:
+            return
         taskHandler = self.taskHandlers[message.source.id]
         self.makeTaskHandlerWait(taskHandler)
 

@@ -298,7 +298,7 @@ class TaskHandler(Node):
     def __handleWait(self):
         msg = {'type': 'waiting'}
         self.sendMessage(msg, self.master.addr)
-        waitTimeout = 60
+        waitTimeout = 600
         sleep(waitTimeout)
         if not self.resetEvent.isSet():
             msg = {
