@@ -396,8 +396,8 @@ class Master(Registry):
                 self.__runNetTest(sourceMachineID, targetMachineID)
                 self.netTestPingEvent[sourceMachineID][targetMachineID].wait()
                 self.netTestBPSEvent[sourceMachineID][targetMachineID].wait()
-                del self.netTestPingEvent[sourceMachineID][targetMachineID]
-                del self.netTestBPSEvent[sourceMachineID][targetMachineID]
+                # del self.netTestPingEvent[sourceMachineID][targetMachineID]
+                # del self.netTestBPSEvent[sourceMachineID][targetMachineID]
         self.netTest.set()
         self.logger.info('Finished Net Test')
 
@@ -514,6 +514,11 @@ class Master(Registry):
             self.bps[sourceMachineID] = {}
         self.bps[sourceMachineID][targetMachineID] = bps
         self.netTestBPSEvent[sourceMachineID][targetMachineID].set()
+        self.logger.info(
+            'Received BPS result from %s to %s',
+            sourceMachineID[:7],
+            targetMachineID[:7]
+        )
 
     def __handlePingResult(self, message: Message):
         sourceMachineID = message.content['sourceMachineID']
@@ -524,16 +529,12 @@ class Master(Registry):
             self.ping[sourceMachineID] = {}
         self.ping[sourceMachineID][targetMachineID] = pingResult
         self.netTestPingEvent[sourceMachineID][targetMachineID].set()
-        self.netTestBPSEvent[sourceMachineID][targetMachineID].wait()
         self.logger.info(
-            'got NetTest result from %s to %s: %f, %f',
+            'Received Ping result from %s to %s',
             sourceMachineID[:7],
-            targetMachineID[:7],
-            pingResult,
-            self.ping[sourceMachineID][targetMachineID]
+            targetMachineID[:7]
         )
-        from pprint import pformat
-        print(pformat(self.bps), pformat(self.ping))
+
 
     def __uploadBPS(self):
         msg = {'type': 'bps', 'bps': self.bps}
