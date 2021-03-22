@@ -28,7 +28,7 @@ class Master(Registry):
             initWithLog: bool,
             schedulerName: str,
             createdBy: str,
-            minWorkers: int,
+            minHosts: int,
             masterID: int = 0,
             netGateway: str = '',
             subnetMask: str = '255.255.255.0',
@@ -53,7 +53,7 @@ class Master(Registry):
         self.subnetMask = subnetMask
         self.neighboursIP = None
         self.createdBy = createdBy
-        self.minWorkers: int = minWorkers
+        self.minHosts: int = minHosts
 
         self.sysHosts: Set = set([])
         self.netTestPingEvent: DefaultDict[str, DefaultDict[str, Event]] = defaultdict(
@@ -380,12 +380,12 @@ class Master(Registry):
         self.sendMessage(msg, identity.addr)
 
     def __netProfile(self):
-        minWorker = self.minWorkers + 1
-        self.logger.info('Waiting for %d workers', self.minWorkers)
-        while len(self.sysHosts) < minWorker:
+        minHosts = self.minHosts
+        self.logger.info('Waiting for %d hosts', self.minHosts)
+        while len(self.sysHosts) < minHosts:
             self.sysHosts = self.__getHosts()
             sleep(1)
-        self.logger.info('%d workers connected, begin network profiling', self.minWorkers)
+        self.logger.info('%d workers connected, begin network profiling', self.minHosts)
         for sourceMachineID in self.sysHosts:
             for targetMachineID in self.sysHosts:
                 if targetMachineID == sourceMachineID:
@@ -624,6 +624,6 @@ if __name__ == '__main__':
         schedulerName=args.schedulerName,
         initWithLog=True if args.initWithLog else False,
         createdBy=args.createdBy,
-        minWorkers=args.minWorkers
+        minHosts=args.minHosts
     )
     master_.run()

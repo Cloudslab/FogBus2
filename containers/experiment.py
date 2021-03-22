@@ -64,7 +64,7 @@ class Experiment:
             '%s 5000 '
             '%s 5001 '
             '%s '
-            '--minWorkers %d'
+            '--minHosts %d'
             '%s '
             '> /dev/null 2>&1 &'
             % (
@@ -179,7 +179,7 @@ class Experiment:
 
     def runRemoteWorkers(self):
         self.logger.info('Starting remote Workers ...')
-        self.manageRpi(self._sshRunScript, './runWorker.sh')
+        self.manageRpi(self._sshRunScript, './runWorker.sh', synchronized=True)
         # self.logger.info('Ran remote Workers')
 
     def rerunNecessaryContainers(self, schedulerName, initWithLog=False):
@@ -188,7 +188,7 @@ class Experiment:
         self.runRemoteLogger()
         self.runMaster(schedulerName, initWithLog)
         self.runWorker()
-        sleep(3)
+        sleep(5)
         self.runRemoteWorkers()
         sleep(1)
 
