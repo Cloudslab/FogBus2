@@ -143,7 +143,7 @@ class Registry(Profiler, Node, ABC):
     def _getScheduler(
             self,
             schedulerName: str) -> Scheduler:
-        populationSize = 200
+        populationSize = 100
         generationNum = 200
         if schedulerName in {None, 'NSGA3'}:
             return NSGA3(

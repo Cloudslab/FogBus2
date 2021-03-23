@@ -10,7 +10,7 @@ services:
       dockerfile: ./Dockerfile
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-      - ./sources/profiler:/workplace/profiler
+      - ./sources/:/workplace/
     environment:
       PUID: 1000
       PGID: 1000

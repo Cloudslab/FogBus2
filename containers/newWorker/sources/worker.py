@@ -40,6 +40,7 @@ class Worker(Node, GatherContainerStat):
             myAddr=myAddr,
             masterAddr=masterAddr,
             loggerAddr=loggerAddr,
+            ignoreSocketErr=True,
             periodicTasks=[
                 (self.__uploadImagesAndRunningContainersList, 10),
                 (self.__uploadResources, 20),
