@@ -9,14 +9,14 @@ from time import sleep
 machines = [
     '4GB-rpi-4B-alpha',
     '2GB-rpi-4B-alpha',
-    '2GB-rpi-4B-beta',
+    '4GB-rpi-4B-beta',
     'uniCloud1',
     'uniCloud2'
 ]
 ips = {
     '4GB-rpi-4B-alpha': '10.0.0.101',
     '2GB-rpi-4B-alpha': '10.0.0.103',
-    '2GB-rpi-4B-beta': '10.0.0.104',
+    '4GB-rpi-4B-beta': '10.0.0.102',
     'uniCloud1': '10.0.0.2',
     'uniCloud2': '10.0.0.3'
 }
@@ -326,7 +326,7 @@ if __name__ == '__main__':
     experiment = Experiment()
     targetRound_ = 5
     repeatTimes_ = 100
-    waitTime = 300
+    waitTime = 200
     # experiment.runInitWithLog(
     #     initWithLog=True,
     #     roundNum=targetRound_,
