@@ -470,7 +470,7 @@ class Master(Registry):
             try:
                 bps = server.run().received_bps
                 break
-            except AttributeError:
+            except (AttributeError, IndexError):
                 self.logger.warning(
                     'Retry receiving',
                 )
@@ -499,7 +499,7 @@ class Master(Registry):
                 res = client.run().sent_bps
                 print(res)
                 break
-            except {AttributeError, IndexError}:
+            except (AttributeError, IndexError):
                 self.logger.warning(
                     'Retry connecting %s',
                     message.source.addr[0]
