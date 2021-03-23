@@ -104,7 +104,7 @@ class User(Node):
         self.__register()
 
     def __waitForWorkers(self):
-        targetCount = 5
+        targetCount = 4
         msg = {'type': 'workersCount'}
         count = 3000
         while count > 0:
@@ -198,7 +198,7 @@ class User(Node):
         self.sendMessage(msg, self.remoteLogger.addr)
 
     def __saveRespondTime(self):
-        if self.app.respondTimeCount < 5:
+        if self.app.respondTimeCount < 7:
             return
         logFilename = 'log/respondTime.json'
         if os.path.exists(logFilename):

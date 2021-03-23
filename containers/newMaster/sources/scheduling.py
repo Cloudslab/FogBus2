@@ -268,18 +268,17 @@ class Evaluator:
             self._dfs(dest, cost, res)
 
     def _edgeCost(self, source, dest) -> float:
-
         sourceMachine = self.individual[source]
         sourceName = '%s#%s' % (source, sourceMachine)
         destMachine = self.individual[dest]
         destName = '%s#%s' % (dest, destMachine)
 
+        if sourceName in self.medianDelay \
+                and destName in self.medianDelay[sourceName]:
+            return self.medianDelay[sourceName][destName]
+
         if sourceMachine == destMachine:
             return 0
-
-        # if sourceName in self.medianDelay \
-        #         and destName in self.medianDelay[sourceName]:
-        #     return self.medianDelay[sourceName][destName]
 
         if sourceMachine in self.ping \
                 and destMachine in self.ping[sourceMachine]:
@@ -291,6 +290,10 @@ class Evaluator:
                 bytePerSecond = bps / 8
                 return (packageSize / bytePerSecond * 1000) + pingCost
             return pingCost
+
+        if sourceMachine in self.medianDelay \
+                and destMachine in self.medianDelay[sourceMachine]:
+            return self.medianDelay[sourceMachine][destMachine]
         return 1
 
     def _computingCost(self, machineName) -> float:

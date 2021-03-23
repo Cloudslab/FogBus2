@@ -34,7 +34,7 @@ class ApplicationUserSide:
         self.targetHeight = targetHeight
         self.showWindow: bool = showWindow
         self.videoPath: str = videoPath
-        self.respondTime: Median = Median(maxRecordNumber=32)
+        self.respondTime: Median = Median(maxRecordNumber=5)
         self.respondTimeCount = 0
         self.logger = get_logger('AppLogger', logging.DEBUG)
 

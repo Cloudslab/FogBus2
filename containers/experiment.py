@@ -8,20 +8,24 @@ from time import sleep
 
 machines = [
     '4GB-rpi-4B-alpha',
-    '2GB-rpi-4B-alpha',
     '4GB-rpi-4B-beta',
-    'uniCloud1',
-    'uniCloud2'
+    '2GB-rpi-4B-beta',
+    '2GB-rpi-4B-alpha',
+    # 'uniCloud1',
+    # 'uniCloud2',
+    # 'desktop-remote'
 ]
 ips = {
     '4GB-rpi-4B-alpha': '10.0.0.101',
-    '2GB-rpi-4B-alpha': '10.0.0.103',
     '4GB-rpi-4B-beta': '10.0.0.102',
-    'uniCloud1': '10.0.0.2',
-    'uniCloud2': '10.0.0.3'
+    '2GB-rpi-4B-beta': '10.0.0.104',
+    '2GB-rpi-4B-alpha': '10.0.0.103',
+    # 'uniCloud1': '10.0.0.2',
+    # 'uniCloud2': '10.0.0.3',
+    'desktop-remote': '10.0.0.1'
 }
 
-masterIP = '10.0.0.101'
+masterIP = '10.0.0.1'
 minWorkers = len(machines)
 
 
@@ -64,7 +68,7 @@ class Experiment:
             '%s 5000 '
             '%s 5001 '
             '%s '
-            '--minHosts %d'
+            '--minHosts %d '
             '%s '
             '> /dev/null 2>&1 &'
             % (
@@ -324,14 +328,22 @@ class Experiment:
 
 if __name__ == '__main__':
     experiment = Experiment()
-    targetRound_ = 5
+    targetRound_ = 1
     repeatTimes_ = 100
-    waitTime = 200
+    waitTime = 300
     # experiment.runInitWithLog(
     #     initWithLog=True,
     #     roundNum=targetRound_,
     #     iterNum=repeatTimes_)
     for num in range(targetRound_):
+        # experiment.run(
+        #     'NSGA2',
+        #     True,
+        #     num + 1,
+        #     targetRound_,
+        #     repeatTimes=repeatTimes_,
+        #     removeLog=True,
+        #     userMaxWaitTime=waitTime)
         experiment.run(
             'NSGA2',
             False,
@@ -343,14 +355,6 @@ if __name__ == '__main__':
         experiment.run(
             'NSGA3',
             False,
-            num + 1,
-            targetRound_,
-            repeatTimes=repeatTimes_,
-            removeLog=True,
-            userMaxWaitTime=waitTime)
-        experiment.run(
-            'NSGA2',
-            True,
             num + 1,
             targetRound_,
             repeatTimes=repeatTimes_,
