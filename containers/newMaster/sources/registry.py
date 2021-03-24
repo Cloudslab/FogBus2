@@ -652,19 +652,20 @@ class Registry(Profiler, Node, ABC):
         cpuUsageA = workerAResources['cpuUsage']
         memoryUsageA = workerAResources['memoryUsage']
         maxMemoryA = workerAResources['maxMemory']
-        cpuPercentA = cpuUsageA / systemCPUUsageA
-        memPercentA = memoryUsageA / maxMemoryA
+
+        cpuA = systemCPUUsageA - cpuUsageA
+        memA = maxMemoryA - memoryUsageA
 
         workerBResources = self.nodeResources[workerB.nameConsistent]
         systemCPUUsageB = workerBResources['systemCPUUsage']
         cpuUsageB = workerBResources['cpuUsage']
         memoryUsageB = workerBResources['memoryUsage']
         maxMemoryB = workerBResources['maxMemory']
-        cpuPercentB = cpuUsageB / systemCPUUsageB
-        memPercentB = memoryUsageB / maxMemoryB
+        cpuB = systemCPUUsageB - cpuUsageB
+        memB = maxMemoryB - memoryUsageB
 
-        if cpuPercentA < cpuPercentB:
+        if cpuA > cpuB:
             return True
-        if memPercentA < memPercentB:
+        if memA > memB:
             return True
         return False
