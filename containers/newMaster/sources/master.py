@@ -240,12 +240,23 @@ class Master(Registry):
     def __handleProfiler(self, message: Message):
         profilers = message.content['profiler']
         # Merge
-        self.medianPackageSize = {**self.medianPackageSize, **profilers[0]}
-        self.medianDelay = {**self.medianDelay, **profilers[1]}
+
         self.nodeResources = {**self.nodeResources, **profilers[2]}
         self.medianProcessTime = {**self.medianProcessTime, **profilers[3]}
         self.medianRespondTime = {**self.medianRespondTime, **profilers[4]}
         self.imagesAndRunningContainers = {**self.imagesAndRunningContainers, **profilers[5]}
+
+        for sourceMachineID, dests in profilers[0].items():
+            if sourceMachineID not in self.medianPackageSize:
+                self.medianPackageSize[sourceMachineID] = {}
+            for destMachineID, value in dests.items():
+                self.medianPackageSize[sourceMachineID][destMachineID] = value
+
+        for sourceMachineID, dests in profilers[1].items():
+            if sourceMachineID not in self.medianDelay:
+                self.medianDelay[sourceMachineID] = {}
+            for destMachineID, value in dests.items():
+                self.medianDelay[sourceMachineID][destMachineID] = value
 
         for sourceMachineID, dests in profilers[6].items():
             for destMachineID, value in dests.items():
