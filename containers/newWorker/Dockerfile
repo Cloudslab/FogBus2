@@ -38,4 +38,4 @@ ADD ./sources /workplace
 RUN echo "Worker" > /etc/hostname
 
 # Run Worker
-ENTRYPOINT ["python", "worker.py"]
+ENTRYPOINT ["python", "-u", "worker.py"]

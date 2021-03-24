@@ -203,6 +203,8 @@ class Registry(Profiler, Node, ABC):
         return taskHandlerID
 
     def __addWorker(self, message: Message):
+        if message.source.addr[0] in self.workers:
+            return
         workerID = self.__newWorkerID()
         machineID = message.content['machineID']
         resources = message.content['resources']
@@ -230,6 +232,7 @@ class Registry(Profiler, Node, ABC):
         self.workers[workerID] = worker
         self.workers[worker.machineID] = worker
         self.workers[worker.nameConsistent] = worker
+        self.workers[worker.addr[0]] = worker
         self.workersCount += 1
         respond = {
             'type': 'registered',

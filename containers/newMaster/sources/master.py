@@ -238,6 +238,7 @@ class Master(Registry):
                 return
             del self.workers[message.source.id]
             del self.workers[message.source.machineID]
+            del self.workers[message.source.addr[0]]
             self.workersCount -= 1
 
     def __handleGetProfiler(self, message: Message):
