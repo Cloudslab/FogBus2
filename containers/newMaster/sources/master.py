@@ -79,6 +79,7 @@ class Master(Registry):
             addr = (self.createdBy, 5000)
             self.__getWorkersAddrFrom(addr)
             self.__getProfiler(addr)
+            self.netTest.set()
             return
 
         self.__netProfile()
