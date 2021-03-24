@@ -54,6 +54,7 @@ class Graph:
             data = self.readFromJson(file)
             roundNum = int(parts[2]) - 1
             iterationNum = int(parts[3].split('.')[0])
+
             evaluation[algorithmName][roundNum][iterationNum] = np.asarray(data)
         self.evaluation = evaluation
 
@@ -181,13 +182,17 @@ class Graph:
 
 
 def testNSGA2AndNSGA3():
-    resultPath = 'results/10rounds/'
+    resultPath = 'results/final/excel'
     if len(sys.argv) > 1:
         resultPath = sys.argv[1]
     graph_ = Graph(
         resultPath,
-        ['NSGA2', 'NSGA3'],
-        10,
+        [
+            'NSGA2',
+            'NSGA3',
+            'NSGA2InitWithLog'
+        ],
+        1,
         100,
         200)
     graph_.run()
@@ -197,7 +202,7 @@ def testNSGA2AndNSGA3():
 
 
 def testInitWithLog():
-    resultPath = 'results/initWithLog'
+    resultPath = 'results/final/excel'
     if len(sys.argv) > 1:
         resultPath = sys.argv[1]
     graph_ = Graph(
@@ -205,10 +210,10 @@ def testInitWithLog():
         [
             'NSGA2',
             'NSGA3',
-            'NSGA3InitWithLog',
-            'NSGA2InitWithLog'],
+            'NSGA2InitWithLog'
+        ],
         1,
-        30,
+        100,
         200)
     graph_.run()
     graph_.drawConvergenceForInitWithLog()

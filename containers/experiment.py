@@ -328,7 +328,7 @@ class Experiment:
 
 if __name__ == '__main__':
     experiment = Experiment()
-    targetRound_ = 3
+    targetRound_ = 1
     repeatTimes_ = 100
     waitTime = 300
     # experiment.runInitWithLog(
@@ -336,14 +336,14 @@ if __name__ == '__main__':
     #     roundNum=targetRound_,
     #     iterNum=repeatTimes_)
     for num in range(targetRound_):
-        experiment.run(
-            'NSGA3',
-            False,
-            num + 1,
-            targetRound_,
-            repeatTimes=repeatTimes_,
-            removeLog=True,
-            userMaxWaitTime=waitTime)
+        # experiment.run(
+        #     'NSGA3',
+        #     False,
+        #     num + 1,
+        #     targetRound_,
+        #     repeatTimes=repeatTimes_,
+        #     removeLog=True,
+        #     userMaxWaitTime=waitTime)
         experiment.run(
             'NSGA2',
             True,
@@ -352,11 +352,11 @@ if __name__ == '__main__':
             repeatTimes=repeatTimes_,
             removeLog=False,
             userMaxWaitTime=waitTime)
-        experiment.run(
-            'NSGA2',
-            False,
-            num + 1,
-            targetRound_,
-            repeatTimes=repeatTimes_,
-            removeLog=True,
-            userMaxWaitTime=waitTime)
+        # experiment.run(
+        #     'NSGA2',
+        #     False,
+        #     num + 1,
+        #     targetRound_,
+        #     repeatTimes=repeatTimes_,
+        #     removeLog=True,
+        #     userMaxWaitTime=waitTime)

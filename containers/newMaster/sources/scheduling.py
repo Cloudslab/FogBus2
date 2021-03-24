@@ -561,7 +561,7 @@ class NSGABase(Scheduler):
                     crossover=crossover,
                     mutation=mutation,
                     selection=selection,
-                    eliminate_duplicates=True)
+                    eliminate_duplicates=False)
             if isinstance(self.geneticAlgorithm, NSGA3_):
                 self.geneticAlgorithm = NSGA3_(
                     pop_size=self.geneticAlgorithm.pop_size,
@@ -570,7 +570,7 @@ class NSGABase(Scheduler):
                     mutation=mutation,
                     selection=selection,
                     ref_dirs=self.geneticAlgorithm.ref_dirs,
-                    eliminate_duplicates=True)
+                    eliminate_duplicates=False)
             print('[*] Initialized with %d individuals' % len(machinesIndex))
 
         res = minimize(self.geneticProblem,
@@ -624,7 +624,7 @@ class NSGA2(NSGABase):
             sampling=sampling,
             crossover=get_crossover("int_sbx", prob=1.0, eta=3.0),
             mutation=get_mutation("int_pm", eta=3.0),
-            eliminate_duplicates=True)
+            eliminate_duplicates=False)
         super().__init__(
             'NSGA2',
             geneticAlgorithm,
@@ -660,7 +660,7 @@ class NSGA3(NSGABase):
             crossover=get_crossover("int_sbx", prob=1.0, eta=3.0),
             mutation=get_mutation("int_pm", eta=3.0),
             ref_dirs=refDirs,
-            eliminate_duplicates=True)
+            eliminate_duplicates=False)
         super().__init__(
             'NSGA3',
             algorithm,

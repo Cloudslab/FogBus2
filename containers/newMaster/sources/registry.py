@@ -2,6 +2,7 @@ import logging
 import os
 import threading
 import json
+import psutil
 from abc import ABC
 from threading import Lock
 from node import Node
@@ -29,19 +30,19 @@ class Decisions:
         self._requestedAppCount: DefaultDict[str, int] = defaultdict(lambda: 0)
         self._loadFromFile()
 
-    def update(
-            self,
-            appName,
-            machinesIndex: List[int],
-            indexToMachine: List[str]):
-        self._requestedAppCount[appName] += 1
-        if appName not in self.decision:
-            self.decision[appName] = []
-        indexes = [int(i) for i in machinesIndex]
-        machines = indexToMachine
-        self.decision[appName].append((indexes, machines))
-        self._clean()
-        self._saveToFile()
+    # def update(
+    #         self,
+    #         appName,
+    #         machinesIndex: List[int],
+    #         indexToMachine: List[str]):
+    #     self._requestedAppCount[appName] += 1
+    #     if appName not in self.decision:
+    #         self.decision[appName] = []
+    #     indexes = [int(i) for i in machinesIndex]
+    #     machines = indexToMachine
+    #     self.decision[appName].append((indexes, machines))
+    #     self._clean()
+    #     self._saveToFile()
 
     def _clean(self):
         totalRequest = sum(self._requestedAppCount.values())
@@ -458,7 +459,7 @@ class Registry(Profiler, Node, ABC):
                 machinesIndex = self.decisions.good(user.appName)
         # self.logger.info(machinesIndex)
         #  TODO: thread safe
-        if self.__schedulingNum < 2:
+        if psutil.cpu_percent() <= 50 and self.__schedulingNum <= 5:
             # if True:
             self.__schedulingNum += 1
             decision = self.scheduler.schedule(
@@ -471,10 +472,10 @@ class Registry(Profiler, Node, ABC):
                 availableWorkers=allWorkers,
                 machinesIndex=machinesIndex)
             self.__schedulingNum -= 1
-            self.decisions.update(
-                appName=user.appName,
-                machinesIndex=decision.machinesIndex,
-                indexToMachine=decision.indexToMachine)
+            # self.decisions.update(
+            #     appName=user.appName,
+            #     machinesIndex=decision.machinesIndex,
+            #     indexToMachine=decision.indexToMachine)
 
             messageForAssignees = self.__parseDecision(decision, user)
             self.logger.info(
