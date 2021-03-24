@@ -444,6 +444,7 @@ class Registry(Profiler, Node, ABC):
         return res
 
     def __schedule(self, user):
+        self.logger.info('Scheduling for %s' % user.appName)
         allWorkers = {}
         if len(self.workers) == 0:
             return False, 'No Worker'

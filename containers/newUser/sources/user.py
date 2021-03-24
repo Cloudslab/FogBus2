@@ -185,6 +185,7 @@ class User(Node):
         self.logger.info(
             'Found Master at %s' % str(newMasterAddr)
         )
+        self.__waitForWorkers()
         self.__registerAt(newMasterAddr)
 
     def __ready(self):
@@ -224,10 +225,9 @@ class User(Node):
             f.close()
             self.logger.info(content)
 
-    @staticmethod
-    def __testConnectivity(addr: Address):
+    def __testConnectivity(self, addr: Address):
         try:
-            Connection(addr).send({})
+            self.sendMessage({'type': ''}, addr)
             return True
         except Exception:
             return False
