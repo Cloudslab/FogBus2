@@ -650,9 +650,10 @@ class Registry(Profiler, Node, ABC):
             return False
 
         if workerB is None:
-            return False
+            return True
 
-        if workerA.addr[0] == self.createdBy:
+        if workerA.addr[0] == self.createdBy \
+                or workerA.addr[0] == self.addr[0]:
             return False
 
         workerAResources = self.nodeResources[workerA.nameConsistent]
