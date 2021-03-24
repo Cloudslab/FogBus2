@@ -278,6 +278,8 @@ class Master(Registry):
                 self.medianDelay[sourceMachineID][destMachineID] = value
 
         for sourceMachineID, dests in profilers[6].items():
+            if sourceMachineID not in self.bps:
+                self.bps[sourceMachineID] = {}
             for destMachineID, value in dests.items():
                 self.bps[sourceMachineID][destMachineID] = value
 

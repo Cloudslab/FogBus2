@@ -460,7 +460,7 @@ class Registry(Profiler, Node, ABC):
                 machinesIndex = self.decisions.good(user.appName)
         # self.logger.info(machinesIndex)
         #  TODO: thread safe
-        if psutil.cpu_percent() <= 80 and self.__schedulingNum <= 5:
+        if psutil.cpu_percent() <= 80 and self.__schedulingNum <= 50:
             # if True:
             self.__schedulingNum += 1
             scheduler = self._getScheduler(self.scheduler.name)
