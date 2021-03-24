@@ -145,7 +145,7 @@ class Registry(Profiler, Node, ABC):
             self,
             schedulerName: str) -> Scheduler:
         populationSize = 100
-        generationNum = 200
+        generationNum = 70
         if schedulerName in {None, 'NSGA3'}:
             return NSGA3(
                 medianDelay=self.medianDelay,
@@ -483,11 +483,11 @@ class Registry(Profiler, Node, ABC):
                     self.scheduler.name,
                     decision.cost))
 
-            for message, assignee in messageForAssignees:
-                if isinstance(assignee, TaskHandler):
-                    if assignee.id in self.taskHandlers:
-                        del self.taskHandlers[assignee.id]
-                self.sendMessage(message, assignee.addr)
+            # for message, assignee in messageForAssignees:
+            #     if isinstance(assignee, TaskHandler):
+            #         if assignee.id in self.taskHandlers:
+            #             del self.taskHandlers[assignee.id]
+            #     self.sendMessage(message, assignee.addr)
 
             return True, None
 

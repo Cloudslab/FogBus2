@@ -54,6 +54,8 @@ class User(Node):
         self.__lastDataSentTime = time()
         self.workersCount = 0
 
+        self.requestSentTime = 0
+
         if self.appName == 'FaceDetection':
             self.app: ApplicationUserSide = FaceDetection(
                 appName=self.appName,
@@ -136,6 +138,7 @@ class User(Node):
             self.__handleForward(message)
 
     def __handleRegistered(self, message: Message):
+        self.__saveRequestTime()
         self.logger.info("Registered at %s"
                          ". Waiting for resources to be ready ..." % str(message.source.addr))
         role = message.content['role']
@@ -146,6 +149,15 @@ class User(Node):
         self.setName(message)
         self.logger = get_logger(self.nameLogPrinting, self.logLevel)
         self.isRegistered.set()
+
+    def __saveRequestTime(self):
+        currTime = time()
+        timeCost = currTime - self.requestSentTime
+        filename = '%s@%s@%f' % (self.appName, self.nameConsistent, currTime)
+        f = open(filename, 'w+')
+        f.write(str(timeCost))
+        f.close()
+        os._exit(0)
 
     def __handleReady(self):
         threading.Thread(target=self.__ready).start()
@@ -233,7 +245,9 @@ class User(Node):
             'label': self.label,
             'appName': self.appName,
             'machineID': self.machineID}
+
         self.sendMessage(message, self.master.addr)
+        self.requestSentTime = time()
         self.logger.info('Sent registration to  %s ...' % str(self.master.addr))
 
 
