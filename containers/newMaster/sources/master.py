@@ -35,6 +35,7 @@ class Master(Registry):
             logLevel=logging.DEBUG):
         Registry.__init__(
             self,
+            createdBy=createdBy,
             containerName=containerName,
             myAddr=myAddr,
             masterAddr=masterAddr,

@@ -80,6 +80,7 @@ class Registry(Profiler, Node, ABC):
 
     def __init__(
             self,
+            createdBy,
             containerName,
             myAddr,
             masterAddr,
@@ -89,7 +90,7 @@ class Registry(Profiler, Node, ABC):
             initWithLog: bool,
             periodicTasks=None,
             logLevel=logging.DEBUG):
-
+        self.createdBy = createdBy
         if periodicTasks is None:
             periodicTasks = []
         Profiler.__init__(self)
@@ -645,8 +646,12 @@ class Registry(Profiler, Node, ABC):
         return workerWithMostUtilization
 
     def __compareTwoWorkers(self, workerA: Worker, workerB: Worker):
+        if workerA.addr[0] == self.createdBy:
+            if workerA.addr[0] == workerB.addr[0]:
+                return 0
+            return -1
         if workerB is None:
-            return True
+            return 1
         workerAResources = self.nodeResources[workerA.nameConsistent]
         systemCPUUsageA = workerAResources['systemCPUUsage']
         cpuUsageA = workerAResources['cpuUsage']
@@ -665,7 +670,9 @@ class Registry(Profiler, Node, ABC):
         memB = maxMemoryB - memoryUsageB
 
         if cpuA > cpuB:
-            return True
+            return 1
         if memA > memB:
-            return True
-        return False
+            return 1
+        if cpuA == cpuB and memA == memB:
+            return 0
+        return -1
