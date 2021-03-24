@@ -153,7 +153,7 @@ class User(Node):
     def __saveRequestTime(self):
         currTime = time()
         timeCost = currTime - self.requestSentTime
-        filename = '%s@%s@%f.json' % (self.appName, self.nameConsistent, currTime)
+        filename = '%s@%s@%f.json' % (self.appName, self.nameLogPrinting, currTime)
         f = open(filename, 'w+')
         f.write(str(timeCost))
         f.close()

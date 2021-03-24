@@ -117,6 +117,7 @@ class Registry(Profiler, Node, ABC):
         self.locks: DefaultDict[str, Lock] = defaultdict(lambda: Lock())
         self.decisionResultFromWorker: Dict[Decision] = {}
         self.logger = None
+        self.knowMasters = []
 
         Node.__init__(
             self,
@@ -459,10 +460,11 @@ class Registry(Profiler, Node, ABC):
                 machinesIndex = self.decisions.good(user.appName)
         # self.logger.info(machinesIndex)
         #  TODO: thread safe
-        if psutil.cpu_percent() <= 50 and self.__schedulingNum <= 5:
+        if psutil.cpu_percent() <= 80 and self.__schedulingNum <= 5:
             # if True:
             self.__schedulingNum += 1
-            decision = self.scheduler.schedule(
+            scheduler = self._getScheduler(self.scheduler.name)
+            decision = scheduler.schedule(
                 userName=user.name,
                 userMachine=user.machineID,
                 masterName=self.name,
@@ -490,10 +492,13 @@ class Registry(Profiler, Node, ABC):
             #     self.sendMessage(message, assignee.addr)
 
             return True, None
+        if len(self.knowMasters):
+            return False, self.knowMasters[-1]
 
         worker = self.__getWorkerWithMostUtilization()
         if worker is not None:
             self.__askWorkerToCreateMaster(worker)
+            self.knowMasters.append(worker.addr)
             return False, worker.addr
         return False, 'No Worker and Cannot Create New Master'
 
@@ -600,6 +605,10 @@ class Registry(Profiler, Node, ABC):
         :param worker:
         :return:
         """
+        self.logger.info(
+            'Asked %s to create a new Master',
+            str(worker.addr[0])
+        )
         msg = {
             'type': 'createMaster',
             'loggerAddr': self.loggerAddr,

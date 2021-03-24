@@ -78,6 +78,7 @@ class Master(Registry):
             self.logger.info('Created by %s' % self.createdBy)
             addr = (self.createdBy, 5000)
             self.__getWorkersAddrFrom(addr)
+            self.__getProfiler(addr)
             return
 
         self.__netProfile()
@@ -97,6 +98,8 @@ class Master(Registry):
             self.__handleExit(message=message)
         elif message.type == 'profiler':
             self.__handleProfiler(message=message)
+        elif message.type == 'getProfiler':
+            self.__handleGetProfiler(message=message)
         elif message.type == 'workersCount':
             self.__handleWorkersCount(message=message)
         elif message.type == 'nodeResources':
@@ -236,6 +239,22 @@ class Master(Registry):
             del self.workers[message.source.id]
             del self.workers[message.source.machineID]
             self.workersCount -= 1
+
+    def __handleGetProfiler(self, message: Message):
+        msg = {
+            'type': 'profiler',
+            'profiler': [
+                self.medianPackageSize,
+                self.medianDelay,
+                self.nodeResources,
+                self.medianProcessTime,
+                self.medianRespondTime,
+                self.imagesAndRunningContainers,
+                self.bps,
+                self.ping
+            ]
+        }
+        self.sendMessage(msg, message.source.addr)
 
     def __handleProfiler(self, message: Message):
         profilers = message.content['profiler']
@@ -379,6 +398,10 @@ class Master(Registry):
         :return:
         """
         msg = {'type': 'workersAddr'}
+        self.sendMessage(msg, addr)
+
+    def __getProfiler(self, addr: Address):
+        msg = {'type': 'getProfiler'}
         self.sendMessage(msg, addr)
 
     def __generateNeighboursIP(self):

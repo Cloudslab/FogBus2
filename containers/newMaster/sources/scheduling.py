@@ -210,6 +210,7 @@ class Scheduler:
             for name in v:
                 res[k].update([name])
             result[k] = list(res[k])
+        print(userAppName)
         self.edgesByName[applicationName] = result, userAppName
         return result, userAppName
 
