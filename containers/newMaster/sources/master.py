@@ -284,6 +284,8 @@ class Master(Registry):
                 self.bps[sourceMachineID][destMachineID] = value
 
         for sourceMachineID, dests in profilers[7].items():
+            if sourceMachineID not in self.ping:
+                self.ping[sourceMachineID] = {}
             for destMachineID, value in dests.items():
                 self.ping[sourceMachineID][destMachineID] = value
 
