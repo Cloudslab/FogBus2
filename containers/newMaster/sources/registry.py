@@ -646,12 +646,17 @@ class Registry(Profiler, Node, ABC):
         return workerWithMostUtilization
 
     def __compareTwoWorkers(self, workerA: Worker, workerB: Worker):
+        if workerA is None:
+            return -1
+
+        if workerB is None:
+            return 1
+
         if workerA.addr[0] == self.createdBy:
             if workerA.addr[0] == workerB.addr[0]:
                 return 0
             return -1
-        if workerB is None:
-            return 1
+
         workerAResources = self.nodeResources[workerA.nameConsistent]
         systemCPUUsageA = workerAResources['systemCPUUsage']
         cpuUsageA = workerAResources['cpuUsage']
