@@ -647,23 +647,23 @@ class Registry(Profiler, Node, ABC):
 
     def __compareTwoWorkers(self, workerA: Worker, workerB: Worker):
         if workerA is None:
-            return 1
+            return 0
 
         if workerB is None:
-            return -1
+            return 0
 
         if workerA.addr[0] == self.createdBy:
-            if workerA.addr[0] == workerB.addr[0]:
-                return 0
-            return 1
+            return 0
 
         workerAResources = self.nodeResources[workerA.nameConsistent]
         systemCPUUsageA = workerAResources['systemCPUUsage']
         cpuUsageA = workerAResources['cpuUsage']
         memoryUsageA = workerAResources['memoryUsage']
         maxMemoryA = workerAResources['maxMemory']
+        freqA = workerAResources['cpuFreq']
+        coresA = workerAResources['totalCPUCores']
 
-        cpuA = systemCPUUsageA - cpuUsageA
+        cpuA = (systemCPUUsageA - cpuUsageA) / systemCPUUsageA * freqA * coresA
         memA = maxMemoryA - memoryUsageA
 
         workerBResources = self.nodeResources[workerB.nameConsistent]
@@ -671,13 +671,15 @@ class Registry(Profiler, Node, ABC):
         cpuUsageB = workerBResources['cpuUsage']
         memoryUsageB = workerBResources['memoryUsage']
         maxMemoryB = workerBResources['maxMemory']
-        cpuB = systemCPUUsageB - cpuUsageB
+        freqB = workerBResources['cpuFreq']
+        coresB = workerBResources['totalCPUCores']
+        cpuB = (systemCPUUsageB - cpuUsageB) / systemCPUUsageB * freqB * coresB
         memB = maxMemoryB - memoryUsageB
 
         if cpuA > cpuB:
-            return -1
+            return 1
         if memA > memB:
-            return -1
+            return 1
         if cpuA == cpuB and memA == memB:
-            return 0
-        return 1
+            return 1
+        return 0
