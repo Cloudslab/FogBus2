@@ -164,6 +164,7 @@ class Message:
         self.content: Dict = content
 
         if 'source' not in self.content:
+            print(content)
             raise MessageDoesNotContainSourceInfo
 
         if 'type' not in self.content:
