@@ -254,7 +254,6 @@ class Experiment:
         for _ in range(count):
             sleep(0.001)
             if randint(0, 100) % 2:
-
                 self.runUserGameOfLife()
                 continue
             self.runUserOCR()
@@ -300,7 +299,8 @@ class Experiment:
             desc = '[%s-%d/%d]' % (schedulerName, roundNum, targetRound)
 
         i = 0
-        users = [1, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20]
+        users = [2 * i for i in range(1, 101)]
+        users = [1] + users
 
         processBar = tqdm(
             total=repeatTimes * len(users),
@@ -321,6 +321,7 @@ class Experiment:
                 self.moveResultsToFolder(count)
                 self.stopUser()
                 processBar.update(1)
+            i += 1
 
 
 if __name__ == '__main__':
