@@ -292,7 +292,7 @@ class Registry(Profiler, Node, ABC):
 
         respond = {
             'type': 'stop',
-            'addr': 'No Worker and No Master'}
+            'reason': 'No Worker and No Master'}
         return respond
 
     def __addTaskHandler(self, message: Message):
@@ -647,13 +647,13 @@ class Registry(Profiler, Node, ABC):
 
     def __compareTwoWorkers(self, workerA: Worker, workerB: Worker):
         if workerA is None:
-            return 0
+            return False
 
         if workerB is None:
-            return 0
+            return False
 
         if workerA.addr[0] == self.createdBy:
-            return 0
+            return False
 
         workerAResources = self.nodeResources[workerA.nameConsistent]
         systemCPUUsageA = workerAResources['systemCPUUsage']
@@ -677,9 +677,9 @@ class Registry(Profiler, Node, ABC):
         memB = maxMemoryB - memoryUsageB
 
         if cpuA > cpuB:
-            return 1
+            return True
         if memA > memB:
-            return 1
+            return True
         if cpuA == cpuB and memA == memB:
-            return 1
-        return 0
+            return True
+        return False
