@@ -522,22 +522,22 @@ class Master(Registry):
             self.myAddr[0],
             message.source.addr[0]
         )
+        for i in range(5):
+            pingResponseList = ping(message.source.addr[0], size=40, count=10)
+            pingResult = pingResponseList.rtt_avg_ms
 
-        pingResponseList = ping(message.source.addr[0], size=40, count=10)
-        pingResult = pingResponseList.rtt_avg_ms
-
-        msg = {
-            'type': 'pingResult',
-            'sourceMachineID': self.machineID,
-            'targetMachineID': message.content['targetMachineID'],
-            'pingResult': pingResult
-        }
-        self.sendMessage(msg, self.masterAddr)
-        self.logger.info(
-            'Uploaded ping from %s to %s',
-            self.myAddr[0],
-            message.source.addr[0]
-        )
+            msg = {
+                'type': 'pingResult',
+                'sourceMachineID': self.machineID,
+                'targetMachineID': message.content['targetMachineID'],
+                'pingResult': pingResult
+            }
+            self.sendMessage(msg, self.masterAddr)
+            self.logger.info(
+                'Uploaded ping from %s to %s',
+                self.myAddr[0],
+                message.source.addr[0]
+            )
 
     def __handleNetTestResult(self, message: Message):
         sourceMachineID = message.content['sourceMachineID']

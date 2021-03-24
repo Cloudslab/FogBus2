@@ -335,21 +335,22 @@ class Worker(Node, GatherContainerStat):
             message.source.addr[0]
         )
 
-        pingResponseList = ping(message.source.addr[0], size=40, count=10)
-        pingResult = pingResponseList.rtt_avg_ms
+        for i in range(5):
+            pingResponseList = ping(message.source.addr[0], size=40, count=10)
+            pingResult = pingResponseList.rtt_avg_ms
 
-        msg = {
-            'type': 'pingResult',
-            'sourceMachineID': self.machineID,
-            'targetMachineID': message.content['targetMachineID'],
-            'pingResult': pingResult
-        }
-        self.sendMessage(msg, self.masterAddr)
-        self.logger.info(
-            'Uploaded ping from %s to %s',
-            self.myAddr[0],
-            message.source.addr[0]
-        )
+            msg = {
+                'type': 'pingResult',
+                'sourceMachineID': self.machineID,
+                'targetMachineID': message.content['targetMachineID'],
+                'pingResult': pingResult
+            }
+            self.sendMessage(msg, self.masterAddr)
+            self.logger.info(
+                'Uploaded ping from %s to %s',
+                self.myAddr[0],
+                message.source.addr[0]
+            )
 
     @staticmethod
     def __shouldCreateWorker():

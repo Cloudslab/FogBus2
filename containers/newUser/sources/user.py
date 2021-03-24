@@ -106,7 +106,7 @@ class User(Node):
         self.__register()
 
     def __waitForWorkers(self):
-        targetCount = 7
+        targetCount = 10
         msg = {'type': 'workersCount'}
         count = 3000
         while count > 0:
@@ -153,7 +153,7 @@ class User(Node):
     def __saveRequestTime(self):
         currTime = time()
         timeCost = currTime - self.requestSentTime
-        filename = '%s@%s@%f' % (self.appName, self.nameConsistent, currTime)
+        filename = '%s@%s@%f.json' % (self.appName, self.nameConsistent, currTime)
         f = open(filename, 'w+')
         f.write(str(timeCost))
         f.close()
