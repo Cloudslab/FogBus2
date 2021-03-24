@@ -8,6 +8,7 @@ from time import time, sleep
 from queue import Queue
 from typing import Dict, Tuple, List
 from exceptions import *
+from traceback import print_exc
 
 Address = Tuple[str, int]
 
@@ -164,7 +165,6 @@ class Message:
         self.content: Dict = content
 
         if 'source' not in self.content:
-            print(content)
             raise MessageDoesNotContainSourceInfo
 
         if 'type' not in self.content:
@@ -236,7 +236,11 @@ class Server:
             content, messageSize = self.__receiveMessage(request.clientSocket)
             if messageSize == 0:
                 continue
-            message = Message(content=content)
+            try:
+                message = Message(content=content)
+            except Exception:
+                print_exc()
+                continue
             self.messageQueue.put((message, messageSize))
 
     @staticmethod

@@ -45,4 +45,4 @@ RUN python -m pip install -r requirements.txt --no-cache-dir
 RUN echo "User" > /etc/hostname
 
 # Run User
-ENTRYPOINT ["python", "user.py"]
+ENTRYPOINT ["python","-u", "user.py"]
