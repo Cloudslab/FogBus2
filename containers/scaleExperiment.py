@@ -328,7 +328,7 @@ if __name__ == '__main__':
     experiment = Experiment()
     targetRound_ = 1
     repeatTimes_ = 3
-    waitTime = 300
+    waitTime = 40
     # experiment.runInitWithLog(
     #     initWithLog=True,
     #     roundNum=targetRound_,

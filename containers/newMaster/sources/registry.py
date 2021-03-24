@@ -626,7 +626,7 @@ class Registry(Profiler, Node, ABC):
 
         if not len(self.workers):
             return None
-        workerWithMostUtilization = None
+        workerWithMostUtilization = list(self.workers.values())[0]
         for worker in self.workers.values():
 
             if worker.addr[0] == self.addr[0]:
