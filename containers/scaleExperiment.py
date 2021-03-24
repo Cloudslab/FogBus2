@@ -326,7 +326,7 @@ class Experiment:
 if __name__ == '__main__':
     experiment = Experiment()
     targetRound_ = 1
-    repeatTimes_ = 5
+    repeatTimes_ = 3
     waitTime = 300
     # experiment.runInitWithLog(
     #     initWithLog=True,
