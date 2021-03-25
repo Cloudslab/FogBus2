@@ -299,8 +299,8 @@ class Experiment:
             desc = '[%s-%d/%d]' % (schedulerName, roundNum, targetRound)
 
         i = 0
-        users = [2 * i for i in range(1, 101)]
-        users = [1] + users
+        users = [10 for i in range(1, 101)]
+        users = [10] + users
 
         processBar = tqdm(
             total=repeatTimes * len(users),

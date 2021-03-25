@@ -147,7 +147,7 @@ class Registry(Profiler, Node, ABC):
             self,
             schedulerName: str) -> Scheduler:
         populationSize = 100
-        generationNum = 70
+        generationNum = 10
         if schedulerName in {None, 'NSGA3'}:
             return NSGA3(
                 medianDelay=self.medianDelay,
