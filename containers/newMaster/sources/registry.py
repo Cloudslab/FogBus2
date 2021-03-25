@@ -119,6 +119,8 @@ class Registry(Profiler, Node, ABC):
         self.decisionResultFromWorker: Dict[Decision] = {}
         self.logger = None
         self.knowMasters = []
+        self.requestQueue = Queue()
+        self.scheduleLock = Lock()
 
         Node.__init__(
             self,
@@ -146,7 +148,7 @@ class Registry(Profiler, Node, ABC):
     def _getScheduler(
             self,
             schedulerName: str) -> Scheduler:
-        populationSize = 100
+        populationSize = 20
         generationNum = 10
         if schedulerName in {None, 'NSGA3'}:
             return NSGA3(
@@ -465,8 +467,10 @@ class Registry(Profiler, Node, ABC):
                 machinesIndex = self.decisions.good(user.appName)
         # self.logger.info(machinesIndex)
         #  TODO: thread safe
-        if psutil.cpu_percent() <= 60 and self.__schedulingNum <= 4:
-            self.__schedulingNum += 1
+        # if psutil.cpu_percent() <= 60 and self.requestQueue.qsize() <= 5:
+        if True:
+            self.requestQueue.put(1)
+            self.scheduleLock.acquire()
             scheduler = self._getScheduler(self.scheduler.name)
             decision = scheduler.schedule(
                 userName=user.name,
@@ -477,7 +481,8 @@ class Registry(Profiler, Node, ABC):
                 label=user.label,
                 availableWorkers=allWorkers,
                 machinesIndex=machinesIndex)
-            self.__schedulingNum -= 1
+            self.requestQueue.get()
+            self.scheduleLock.release()
             # self.decisions.update(
             #     appName=user.appName,
             #     machinesIndex=decision.machinesIndex,
