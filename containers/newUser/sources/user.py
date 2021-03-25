@@ -151,7 +151,7 @@ class User(Node):
         self.isRegistered.set()
 
     def __saveRequestTime(self):
-        currTime = time()
+        currTime = time() * 1000
         timeCost = currTime - self.requestSentTime
         filename = '%s@%s@%f.json' % (self.appName, self.nameLogPrinting, currTime)
         f = open(filename, 'w+')
@@ -247,7 +247,7 @@ class User(Node):
             'machineID': self.machineID}
 
         self.sendMessage(message, self.master.addr)
-        self.requestSentTime = time()
+        self.requestSentTime = time() * 1000
         self.logger.info('Sent registration to  %s ...' % str(self.master.addr))
 
 

@@ -467,12 +467,12 @@ class Registry(Profiler, Node, ABC):
                 machinesIndex = self.decisions.good(user.appName)
         # self.logger.info(machinesIndex)
         #  TODO: thread safe
-        # if psutil.cpu_percent() <= 60 and self.requestQueue.qsize() <= 5:
-        if True:
+        if psutil.cpu_percent() <= 60 and self.requestQueue.qsize() <= 5:
+        # if True:
             self.requestQueue.put(1)
             self.scheduleLock.acquire()
-            scheduler = self._getScheduler(self.scheduler.name)
-            decision = scheduler.schedule(
+            # scheduler = self._getScheduler(self.scheduler.name)
+            decision = self.scheduler.schedule(
                 userName=user.name,
                 userMachine=user.machineID,
                 masterName=self.name,
