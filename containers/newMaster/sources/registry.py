@@ -471,8 +471,8 @@ class Registry(Profiler, Node, ABC):
         # if True:
             self.requestQueue.put(1)
             self.scheduleLock.acquire()
-            # scheduler = self._getScheduler(self.scheduler.name)
-            decision = self.scheduler.schedule(
+            scheduler = self._getScheduler(self.scheduler.name)
+            decision = scheduler.schedule(
                 userName=user.name,
                 userMachine=user.machineID,
                 masterName=self.name,
