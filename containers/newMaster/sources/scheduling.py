@@ -556,7 +556,7 @@ class NSGABase(Scheduler):
             selection = MyTournamentSelection(
                 func_comp=self.selectionCmp)
             if isinstance(self.geneticAlgorithm, NSGA2_):
-                self.geneticAlgorithm = NSGA2_(
+                self.geneticAlgorithm = NzSGA2_(
                     pop_size=self.geneticAlgorithm.pop_size,
                     sampling=pop,
                     crossover=crossover,
