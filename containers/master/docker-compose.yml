@@ -2,35 +2,21 @@ version: '3'
 
 services:
 
-  fogbus-master: 
-    container_name: fogbus-master
-    build: 
-      context: ../../
-      dockerfile: ./containers/master/Dockerfile
-    volumes: 
-        - ../../src/master:/config/www/
-        - ../../src/nginx:/config/nginx
+  fogbus2-master:
+    # image: fogbus2-master
+    image: cloudslab/fogbus2-master
+    build:
+      context: ./
+      dockerfile: ./Dockerfile
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./sources/:/workplace/
+      - ./sources/.mysql.env:/workplace/.mysql.env
     environment:
       PUID: 1000
       PGID: 1000
       TZ: Australia/Melbourne
-    ports:
-      - 80:80
-    restart: unless-stopped
-
-  database:
-    image: linuxserver/mariadb
-    container_name: fogbus-database
-    volumes: 
-      - ../../src/mysql-dump:/config/initdb.d/
-      - ./data/db:/config
-    ports:
-      - "3306:3306"
-    environment:
-      PUID: 1000
-      PGID: 1000
-      TZ: Australia/Melbourne
-      MYSQL_DATABASE: users
-      MYSQL_USER: fogbus
-      MYSQL_PASSWORD: fogbus
+      PYTHONUNBUFFERED: 0
+    network_mode:
+      host
     restart: unless-stopped

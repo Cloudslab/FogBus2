@@ -1,0 +1,17 @@
+version: '3'
+
+services:
+
+  fogbus2-face_detection:
+    # image: fogbus2-face_detection
+    image: cloudslab/fogbus2-face_detection
+    build:
+      context: ../../
+      dockerfile: dockerFiles/FaceDetection/Dockerfile
+    environment:
+      PUID: 1000
+      PGID: 1000
+      TZ: Australia/Melbourne
+    network_mode:
+      host
+

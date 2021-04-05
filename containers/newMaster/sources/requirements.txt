@@ -1,5 +1,0 @@
-numpy
-psutil
-GPUtil
-autograd
-pymoo

@@ -1,0 +1,17 @@
+version: '3'
+
+services:
+
+  fogbus2-game_of_life47:
+    # image: fogbus2-game_of_life47
+    image: cloudslab/fogbus2-game_of_life47
+    build:
+      context: ../../
+      dockerfile: dockerFiles/GameOfLife47/Dockerfile
+    environment:
+      PUID: 1000
+      PGID: 1000
+      TZ: Australia/Melbourne
+    network_mode:
+      host
+

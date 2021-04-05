@@ -1,0 +1,16 @@
+version: '3'
+
+services:
+
+  fogbus2-naive_formula2:
+    # image: fogbus2-naive_formula2
+    image: cloudslab/fogbus2-naive_formula2
+    build:
+      context: ../../
+      dockerfile: dockerFiles/NaiveFormula2/Dockerfile
+    environment:
+      PUID: 1000
+      PGID: 1000
+      TZ: Australia/Melbourne
+    network_mode:
+      host

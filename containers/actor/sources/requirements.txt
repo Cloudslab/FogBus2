@@ -1,0 +1,6 @@
+psutil
+docker
+python-dotenv
+iperf3
+pythonping
+six

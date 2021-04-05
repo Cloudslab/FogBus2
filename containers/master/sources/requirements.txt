@@ -1,0 +1,12 @@
+psutil
+docker
+python-dotenv
+mysql-connector-python
+iperf3
+pythonping
+numpy
+psutil
+GPUtil
+pymoo
+autograd
+cx_Oracle

@@ -1,0 +1,10 @@
+hostname, publicIP
+nectar1-amd, 45.113.235.222
+nectar2-amd, 45.113.232.187
+oracle1-ampere, 168.138.8.100
+oracle2-ampere, 168.138.13.174
+oracle3-intel, 168.138.8.46
+oracle4-intel, 168.138.14.220
+rpiA-4gb-arm64v8,
+rpiB-2gb-arm64v8,
+laptop,

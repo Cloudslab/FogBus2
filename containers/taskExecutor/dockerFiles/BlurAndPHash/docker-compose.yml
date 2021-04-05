@@ -1,0 +1,17 @@
+version: '3'
+
+services:
+
+  fogbus2-blur_and_p_hash:
+    # image: fogbus2-blur_and_p_hash
+    image: cloudslab/fogbus2-blur_and_p_hash
+    build:
+      context: ../../
+      dockerfile: dockerFiles/BlurAndPHash/Dockerfile
+    environment:
+      PUID: 1000
+      PGID: 1000
+      TZ: Australia/Melbourne
+    network_mode:
+      host
+

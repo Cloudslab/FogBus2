@@ -1,0 +1,22 @@
+version: '3'
+
+services:
+
+  fogbus2-user:
+    # image: fogbus2-user
+    image: cloudslab/fogbus2-user
+    build:
+      context: ./
+      dockerfile: ./Dockerfile
+    volumes:
+      - ./sources:/workplace
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      PUID: 1000
+      PGID: 1000
+      TZ: Australia/Melbourne
+    privileged: true
+    network_mode:
+      host
+    restart: unless-stopped
+

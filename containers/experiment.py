@@ -1,10 +1,12 @@
+import json
 import logging
 import os
-import json
 import threading
-from logger import get_logger
-from tqdm import tqdm
 from time import sleep
+
+from tqdm import tqdm
+
+from logger import get_logger
 
 machines = [
     '4GB-rpi-4B-alpha',
@@ -22,11 +24,10 @@ ips = {
     '2GB-rpi-4B-alpha': '10.0.0.103',
     'cloud1': '10.0.0.201',
     'cloud2': '10.0.0.202',
-    'desktop-remote': '10.0.0.1'
-}
+    'desktop-remote': '10.0.0.1'}
 
 masterIP = '10.0.0.1'
-minWorkers = len(machines)
+minActors = len(machines)
 
 
 class Experiment:
@@ -36,7 +37,8 @@ class Experiment:
         self.logger = get_logger('Experiment', level_name=logging.DEBUG)
 
     def stopAllContainers(self):
-        self.logger.info('Stopping all containers on where this script is running ...')
+        self.logger.info(
+            'Stopping all containers on where this script is running ...')
         os.system('./stopContainer.sh > /dev/null 2>&1')
         # self.logger.info('Stopped all containers on where this script is running')
 
@@ -48,7 +50,7 @@ class Experiment:
             'docker-compose run '
             '--rm '
             '--name RemoteLogger '
-            'remote-logger '
+            'remote_logger '
             'RemoteLogger '
             '%s 5001 '
             '%s 5000 '
@@ -56,7 +58,7 @@ class Experiment:
         # self.logger.info('Ran RemoteLogger')
 
     def runMaster(self, schedulerName, initWithLog=False):
-        global masterIP, minWorkers
+        global masterIP, minActors
         self.logger.info('Starting Master ...')
         os.system(
             'cd ./newMaster && '
@@ -75,29 +77,28 @@ class Experiment:
                 masterIP,
                 masterIP,
                 schedulerName,
-                minWorkers,
+                minActors,
                 '--initWithLog True' if initWithLog else ''))
         # self.logger.info('Ran Master')
 
-    def runWorker(self):
+    def runActor(self):
         global masterIP
-        self.logger.info('Starting Worker ...')
+        self.logger.info('Starting Actor ...')
         os.system(
-            'cd ./newWorker && '
+            'cd ./newActor && '
             'docker-compose run '
             '--rm '
-            '--name Worker '
-            'worker '
-            'Worker '
+            '--name Actor '
+            'Actor '
+            'Actor '
             '%s '
             '%s 5000 '
             '%s 5001 '
             '> /dev/null 2>&1 &' % (
                 masterIP,
                 masterIP,
-                masterIP
-            ))
-        self.logger.info('Ran Worker')
+                masterIP))
+        self.logger.info('Ran Actor')
 
     def runUser(self):
         self.logger.info('Starting User ...')
@@ -117,8 +118,7 @@ class Experiment:
             '> /dev/null 2>&1 &' % (
                 masterIP,
                 masterIP,
-                masterIP
-            ))
+                masterIP))
         self.logger.info('Ran User')
 
     def stopUser(self):
@@ -127,36 +127,48 @@ class Experiment:
         self.logger.info('Stopped User')
 
     @staticmethod
-    def readRespondTime(filename):
+    def readResponseTime(filename):
         with open(filename, 'r') as f:
-            respondTime = json.loads(f.read())
+            responseTime = json.loads(f.read())
             f.close()
             os.system('rm -f %s' % filename)
-            if len(respondTime):
-                return list(respondTime.values())[0]
+            if len(responseTime):
+                return list(responseTime.values())[0]
             return 0
 
     def removeLogs(self):
-        os.system('rm -rf %s/newLogger/sources/profiler/medianPackageSize.json' % self.currPath)
-        os.system('rm -rf %s/newLogger/sources/profiler/nodeResources.json' % self.currPath)
-        os.system('rm -rf %s/newLogger/sources/profiler/imagesAndRunningContainers.json' % self.currPath)
-        os.system('rm -rf %s/newLogger/sources/profiler/medianProcessTime.json' % self.currPath)
-        os.system('rm -rf %s/newLogger/sources/profiler/medianDelay.json' % self.currPath)
-        os.system('rm -rf %s/newLogger/sources/profiler/medianRespondTime.json' % self.currPath)
-        os.system('rm -rf %s/newLogger/sources/profiler/medianPackageSize.json' % self.currPath)
-        os.system('rm -rf %s/newMaster/sources/profiler/nodeResources.json' % self.currPath)
-        os.system('rm -rf %s/newMaster/sources/profiler/imagesAndRunningContainers.json' % self.currPath)
-        os.system('rm -rf %s/newMaster/sources/profiler/medianProcessTime.json' % self.currPath)
-        os.system('rm -rf %s/newMaster/sources/profiler/medianDelay.json' % self.currPath)
-        os.system('rm -rf %s/newMaster/sources/profiler/medianRespondTime.json' % self.currPath)
+        os.system(
+            'rm -rf %s/newLogger/sources/profiler/medianPackageSize.json' % self.currPath)
+        os.system(
+            'rm -rf %s/newLogger/sources/profiler/nodeResources.json' % self.currPath)
+        os.system(
+            'rm -rf %s/newLogger/sources/profiler/imagesAndRunningContainers.json' % self.currPath)
+        os.system(
+            'rm -rf %s/newLogger/sources/profiler/medianProcessTime.json' % self.currPath)
+        os.system(
+            'rm -rf %s/newLogger/sources/profiler/medianDelay.json' % self.currPath)
+        os.system(
+            'rm -rf %s/newLogger/sources/profiler/medianResponseTime.json' % self.currPath)
+        os.system(
+            'rm -rf %s/newLogger/sources/profiler/medianPackageSize.json' % self.currPath)
+        os.system(
+            'rm -rf %s/newMaster/sources/profiler/nodeResources.json' % self.currPath)
+        os.system(
+            'rm -rf %s/newMaster/sources/profiler/imagesAndRunningContainers.json' % self.currPath)
+        os.system(
+            'rm -rf %s/newMaster/sources/profiler/medianProcessTime.json' % self.currPath)
+        os.system(
+            'rm -rf %s/newMaster/sources/profiler/medianDelay.json' % self.currPath)
+        os.system(
+            'rm -rf %s/newMaster/sources/profiler/medianResponseTime.json' % self.currPath)
 
         os.system('rm -f %s/newMaster/sources/decisions.json' % self.currPath)
         self.logger.info('Removed logs')
 
-    def stopLocalTaskHandler(self):
-        self.logger.info('Stopping local TaskHandlers ...')
-        os.system('./stopContainer.sh TaskHandler > /dev/null 2>&1')
-        # self.logger.info('Stopped local TaskHandlers')
+    def stopLocalTaskExecutor(self):
+        self.logger.info('Stopping local TaskExecutors ...')
+        os.system('./stopContainer.sh TaskExecutor > /dev/null 2>&1')
+        # self.logger.info('Stopped local TaskExecutors')
 
     @staticmethod
     def _sshRunScript(machine, script, event, synchronized=False):
@@ -164,7 +176,7 @@ class Experiment:
             tmp = ''
         else:
             tmp = '&'
-        if script == './runWorker.sh':
+        if script == './runActor.sh':
             script = '%s %s %s %s' % (script, ips[machine], masterIP, masterIP)
             print(script)
         os.system('ssh %s \'%s\' > /dev/null 2>&1 %s' % (machine, script, tmp))
@@ -182,29 +194,29 @@ class Experiment:
         for event in events:
             event.wait()
 
-    def stopRemoteTaskHandler(self):
-        self.logger.info('Stopping remote TaskHandlers ...')
-        self.manageRpi(self._sshRunScript, './stopTaskHandlers.sh')
-        # self.logger.info('Stopped remote TaskHandlers')
+    def stopRemoteTaskExecutor(self):
+        self.logger.info('Stopping remote TaskExecutors ...')
+        self.manageRpi(self._sshRunScript, './stopTaskExecutors.sh')
+        # self.logger.info('Stopped remote TaskExecutors')
 
-    def stopRemoteWorkers(self):
-        self.logger.info('Stopping remote Workers ... ')
-        self.manageRpi(self._sshRunScript, './stopWorker.sh', synchronized=True)
-        # self.logger.info('Stopped remote Workers')
+    def stopRemoteActors(self):
+        self.logger.info('Stopping remote Actors ... ')
+        self.manageRpi(self._sshRunScript, './stopActor.sh', synchronized=True)
+        # self.logger.info('Stopped remote Actors')
 
-    def runRemoteWorkers(self):
-        self.logger.info('Starting remote Workers ...')
-        self.manageRpi(self._sshRunScript, './runWorker.sh', synchronized=True)
-        # self.logger.info('Ran remote Workers')
+    def runRemoteActors(self):
+        self.logger.info('Starting remote Actors ...')
+        self.manageRpi(self._sshRunScript, './runActor.sh', synchronized=True)
+        # self.logger.info('Ran remote Actors')
 
     def rerunNecessaryContainers(self, schedulerName, initWithLog=False):
         self.stopAllContainers()
-        self.stopRemoteWorkers()
+        self.stopRemoteActors()
         self.runRemoteLogger()
         self.runMaster(schedulerName, initWithLog)
-        # self.runWorker()
+        # self.runActor()
         sleep(5)
-        self.runRemoteWorkers()
+        self.runRemoteActors()
         sleep(1)
 
     def run(
@@ -216,9 +228,9 @@ class Experiment:
             removeLog=False,
             repeatTimes=100,
             userMaxWaitTime=200):
-        respondTimeFilePath = '%s/newUser/sources/log/respondTime.json' % self.currPath
-        os.system('rm -f %s > /dev/null 2>&1' % respondTimeFilePath)
-        respondTimes = [0 for _ in range(repeatTimes)]
+        responseTimeFilePath = '%s/newUser/sources/log/responseTime.json' % self.currPath
+        os.system('rm -f %s > /dev/null 2>&1' % responseTimeFilePath)
+        responseTimes = [0 for _ in range(repeatTimes)]
 
         if removeLog:
             self.removeLogs()
@@ -237,9 +249,9 @@ class Experiment:
         sleep(2)
         while i < repeatTimes:
             self.runUser()
-            # self.logger.debug('Waiting for respondTime log file to be created ...')
+            # self.logger.debug('Waiting for responseTime log file to be created ...')
             sleepCount = 0
-            while not os.path.exists(respondTimeFilePath):
+            while not os.path.exists(responseTimeFilePath):
                 sleepCount += 1
                 sleep(1)
                 if sleepCount > userMaxWaitTime:
@@ -248,8 +260,8 @@ class Experiment:
                 self.rerunNecessaryContainers(schedulerName)
                 continue
             self.stopUser()
-            respondTimes[i] = self.readRespondTime(
-                respondTimeFilePath)
+            responseTimes[i] = self.readResponseTime(
+                responseTimeFilePath)
             self.saveEstimatedRecord(
                 schedulerName,
                 roundNum,
@@ -257,15 +269,16 @@ class Experiment:
                 initWithLog)
             i += 1
             processBar.update(1)
-            self.logger.info('[*] Result-[%d/%d]: %s', i, repeatTimes, str(respondTimes))
-            self.stopLocalTaskHandler()
-            self.stopRemoteTaskHandler()
+            self.logger.info('[*] Result-[%d/%d]: %s', i, repeatTimes,
+                             str(responseTimes))
+            self.stopLocalTaskExecutor()
+            self.stopRemoteTaskExecutor()
         self.saveRes(
             schedulerName,
-            respondTimes,
+            responseTimes,
             roundNum,
             initWithLog=initWithLog)
-        self.logger.info(respondTimes)
+        self.logger.info(responseTimes)
 
     def runInitWithLog(
             self,
@@ -287,8 +300,7 @@ class Experiment:
                 schedulerName,
                 roundNum,
                 i,
-                initWithLog=initWithLog
-            )
+                initWithLog=initWithLog)
             self.stopUser()
         self.logger.info('Done init with log')
 
@@ -310,7 +322,7 @@ class Experiment:
     @staticmethod
     def saveRes(
             schedulerName,
-            respondTimes,
+            responseTimes,
             roundNum,
             initWithLog):
         fix = 'InitWithLog' if initWithLog else ''
@@ -322,7 +334,7 @@ class Experiment:
                 fix,
                 roundNum)
         with open(filename, 'w+') as f:
-            json.dump(respondTimes, f)
+            json.dump(responseTimes, f)
             f.close()
 
 

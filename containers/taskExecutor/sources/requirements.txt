@@ -1,0 +1,6 @@
+psutil
+docker
+python-dotenv
+pytesseract
+editdistance
+six

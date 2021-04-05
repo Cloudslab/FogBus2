@@ -1,6 +1,0 @@
-pytesseract
-editdistance
-numpy
-psutil
-GPUtil
-docker

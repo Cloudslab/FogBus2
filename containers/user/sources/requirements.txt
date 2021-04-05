@@ -1,0 +1,6 @@
+numpy
+psutil
+python-dotenv
+opencv-python
+six
+docker

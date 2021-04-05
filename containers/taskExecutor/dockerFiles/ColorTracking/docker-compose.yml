@@ -1,0 +1,17 @@
+version: '3'
+
+services:
+
+  fogbus2-color_tracking:
+    # image: fogbus2-color_tracking
+    image: cloudslab/fogbus2-color_tracking
+    build:
+      context: ../../
+      dockerfile: dockerFiles/ColorTracking/Dockerfile
+    environment:
+      PUID: 1000
+      PGID: 1000
+      TZ: Australia/Melbourne
+    network_mode:
+      host
+

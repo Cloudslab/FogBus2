@@ -1,9 +1,9 @@
+import json
 import os
 import sys
-import json
-import numpy as np
-
 from typing import List
+
+import numpy as np
 from matplotlib import pyplot as plt
 
 
@@ -18,15 +18,15 @@ class Graph:
             iterationOfGA):
         self.logPath = logPath
         self.algorithms = algorithms
-        self.realRespondTime = {}
+        self.realResponseTime = {}
         self.evaluation = {}
         self.roundNum = roundNum
         self.iterationEachRound = iterationEachRound
         self.iterationOfGA = iterationOfGA
 
     def run(self):
-        self._readEstimatedRespondTime()
-        self._readRealRespondTime()
+        self._readEstimatedResponseTime()
+        self._readRealResponseTime()
 
     def readFromJson(self, filename):
         filename = os.path.join(self.logPath, filename)
@@ -35,11 +35,12 @@ class Graph:
         f.close()
         return data
 
-    def _readEstimatedRespondTime(self):
+    def _readEstimatedResponseTime(self):
         allFiles = os.listdir(self.logPath)
         evaluation = {}
         for algorithmName in self.algorithms:
-            evaluation[algorithmName] = np.empty((self.roundNum, self.iterationEachRound, self.iterationOfGA))
+            evaluation[algorithmName] = np.empty(
+                (self.roundNum, self.iterationEachRound, self.iterationOfGA))
         for file in allFiles:
             if os.path.isdir(file):
                 continue
@@ -58,11 +59,12 @@ class Graph:
             evaluation[algorithmName][roundNum][iterationNum] = np.asarray(data)
         self.evaluation = evaluation
 
-    def _readRealRespondTime(self):
+    def _readRealResponseTime(self):
         allFiles = os.listdir(self.logPath)
-        realRespondTime = {}
+        realResponseTime = {}
         for algorithmName in self.algorithms:
-            realRespondTime[algorithmName] = np.empty((self.roundNum, self.iterationEachRound))
+            realResponseTime[algorithmName] = np.empty(
+                (self.roundNum, self.iterationEachRound))
         for file in allFiles:
             if os.path.isdir(file):
                 continue
@@ -74,9 +76,9 @@ class Graph:
                 continue
             data = self.readFromJson(file)
             roundNum = int(parts[1].split('.')[0]) - 1
-            realRespondTime[algorithmName][roundNum] = np.asarray(data)
+            realResponseTime[algorithmName][roundNum] = np.asarray(data)
 
-        self.realRespondTime = realRespondTime
+        self.realResponseTime = realResponseTime
 
     def draw(
             self,
@@ -124,8 +126,9 @@ class Graph:
 
         for algorithm in self.algorithms:
             fig, ax = plt.subplots()
-            evaluationData = np.mean(self.evaluation[algorithm][:, :, -1], axis=0)
-            realData = np.mean(self.realRespondTime[algorithm], axis=0)
+            evaluationData = np.mean(self.evaluation[algorithm][:, :, -1],
+                                     axis=0)
+            realData = np.mean(self.realResponseTime[algorithm], axis=0)
             x = [i + 1 for i in range(evaluationData.shape[0])]
             ax.plot(x, evaluationData)
             ax.plot(x, realData)
@@ -143,14 +146,16 @@ class Graph:
         fig, ax = plt.subplots()
         for algorithm, evaluationData in self.evaluation.items():
             shape = evaluationData.shape
-            reshapedData = evaluationData.reshape((shape[0] * shape[1], shape[2]))
+            reshapedData = evaluationData.reshape(
+                (shape[0] * shape[1], shape[2]))
             meanData = np.mean(reshapedData, axis=0)
             x = [i + 1 for i in range(meanData.shape[0])]
             ax.plot(x, meanData)
 
         ax.legend(self.evaluation.keys())
         ax.set_ylabel('Respond Time (ms)')
-        ax.set_xlabel('Iteration Number (Generation Number of Genetic Algorithm)')
+        ax.set_xlabel(
+            'Iteration Number (Generation Number of Genetic Algorithm)')
         title = 'Estimated Respond Time \n' \
                 'on Average '
         ax.set_title(title)
@@ -161,14 +166,16 @@ class Graph:
         fig, ax = plt.subplots()
         for algorithm, evaluationData in self.evaluation.items():
             shape = evaluationData.shape
-            reshapedData = evaluationData.reshape((shape[0] * shape[1], shape[2]))
+            reshapedData = evaluationData.reshape(
+                (shape[0] * shape[1], shape[2]))
             meanData = np.mean(reshapedData, axis=0)
             x = [i + 1 for i in range(meanData.shape[0])]
             ax.plot(x, meanData)
 
         ax.legend(self.evaluation.keys())
         ax.set_ylabel('Respond Time (ms)')
-        ax.set_xlabel('Iteration Number (Generation Number of Genetic Algorithm)')
+        ax.set_xlabel(
+            'Iteration Number (Generation Number of Genetic Algorithm)')
         title = 'Estimated Respond Time on Average'
         ax.set_title(title)
         self.saveToFile(title)
@@ -198,7 +205,7 @@ def testNSGA2AndNSGA3():
     graph_.run()
     graph_.drawConvergence()
     graph_.drawDiff()
-    graph_.draw(graph_.realRespondTime)
+    graph_.draw(graph_.realResponseTime)
 
 
 def testInitWithLog():

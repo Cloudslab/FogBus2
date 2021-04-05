@@ -1,15 +1,38 @@
 # Base
-FROM linuxserver/nginx
+FROM python:3.9-alpine3.14 as base
 
-# Alter Mirror
-RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.tuna.tsinghua.edu.cn/g' /etc/apk/repositories
+FROM base as builder
 
-# JAVA8
-RUN apk add --no-cache openjdk8
+RUN mkdir /install
+WORKDIR /install
 
-# Ports
-EXPOSE 80 
+## Dependencies
+RUN apk add --no-cache \
+    make automake gcc g++ subversion \
+    linux-headers
 
-# Run FogBus
-WORKDIR /config/www
-CMD ["sh","-c","java -jar MasterInterface.jar"]
+RUN apk add --no-cache \
+    gfortran openblas-dev lapack-dev \
+    jpeg-dev zlib-dev
+
+## Python libraries
+RUN python -m pip install --retries 100 --default-timeout=600  --no-cache-dir --upgrade pip
+COPY ./sources/requirements.txt /install/requirements.txt
+RUN python -m pip install --retries 100 --default-timeout=600  \
+    --prefix=/install \
+    --no-cache-dir \
+    -r /install/requirements.txt
+
+# Copy files
+FROM base
+COPY --from=builder /install /usr/local
+COPY --from=builder /usr/lib/ /usr/lib/
+COPY ./sources/ /workplace
+RUN apk add --no-cache iperf3
+
+# Hostname
+RUN echo "Master" > /etc/hostname
+
+# Run Master
+WORKDIR /workplace
+ENTRYPOINT ["python", "-u", "master.py"]

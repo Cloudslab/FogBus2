@@ -1,0 +1,4 @@
+psutil
+docker
+python-dotenv
+mysql-connector-python

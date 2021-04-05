@@ -3,7 +3,8 @@ import logging
 
 # https://www.programcreek.com/python/example/192/logging.Formatter
 # https://stackoverflow.com/questions/533048
-def get_logger(logger_name, level_name=logging.DEBUG, create_file=False, log_file_name='harvest.log'):
+def get_logger(logger_name, level_name=logging.DEBUG, create_file=False,
+               log_file_name='harvest.log'):
     """
     create a new logger
     :param logger_name: string, logs logger name

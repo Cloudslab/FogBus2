@@ -1,0 +1,17 @@
+version: '3'
+
+services:
+
+  fogbus2-eye_detection:
+    # image: fogbus2-eye_detection
+    image: cloudslab/fogbus2-eye_detection
+    build:
+      context: ../../
+      dockerfile: dockerFiles/EyeDetection/Dockerfile
+    environment:
+      PUID: 1000
+      PGID: 1000
+      TZ: Australia/Melbourne
+    network_mode:
+      host
+
