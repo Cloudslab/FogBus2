@@ -1,7 +1,7 @@
 # FogBus2 Framework
 
 # Abstract
-FogBus2 as a new python-based framework, developed from scratch, offers a lightweight and distributed container-based framework for the integration of IoT-enabled systems with heterogenoeus multi-cloud and multi-edge resources. Also, several IoT aaplications, ranging from AI-based applications (e.g., Face Detection) to small-sized games (e.g., GameOfLife) are implemented and integrated with this framework.
+FogBus2 as a new python-based framework, developed from scratch, offers a lightweight and distributed container-based framework for the integration of IoT-enabled systems with heterogeneous multi-cloud and multi-edge resources. Also, several IoT applications, ranging from AI-based applications (e.g., Face Detection) to small-sized games (e.g., GameOfLife) are implemented and integrated with this framework.
 
 # Major Contributions
 The major contributions of this work are as follow:
