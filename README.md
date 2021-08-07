@@ -42,7 +42,12 @@ Internet of Things, Edge/Fog Computing, Containers Scheduling, Scalability
 ```
 ## Book Chapter
 ```
-Citation info coming Soon....
+@article{goudarzi2021resource,
+  title={Resource Management in Edge and Fog Computing using FogBus2 Framework},
+  author={Goudarzi, Mohammad and Deng, Qifan and Buyya, Rajkumar},
+  journal={arXiv preprint arXiv:2108.00591},
+  year={2021}
+}cita
 ```
 
 # Other GuideLines
