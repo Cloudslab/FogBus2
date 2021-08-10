@@ -72,5 +72,8 @@ See [Configs](docs/Configs.md) to understand how to modify configs. Includes,
 - [Hosts Config](docs/Configs.md#hosts-information) 
 - [Wireguard Config](docs/Configs.md#wireguard-network)
 
+# Sample Environment Architecture
+[](/images/HighLevelAbstractDiagram.png)
+
 # References
 Coming Soon....
