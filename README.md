@@ -73,7 +73,7 @@ See [Configs](docs/Configs.md) to understand how to modify configs. Includes,
 - [Wireguard Config](docs/Configs.md#wireguard-network)
 
 # Sample Environment Architecture
-[](/images/HighLevelAbstractDiagram.png)
+[](images/HighLevelAbstractDiagram.png)
 
 # References
 Coming Soon....
