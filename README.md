@@ -63,7 +63,7 @@ Internet of Things, Edge/Fog Computing, Containers Scheduling, Scalability
 |[Wireguard](https://www.wireguard.com/)|[scripts/wireguard/generateConf.py](scripts/wireguard/generateConf.py)|*follow guide*|[Wireguard (VPN)](docs/Wireguard.md)|
 
 ## Docker Pull commands
-To directly download all docker images to your instances, please check [Prepare Docker Images](docs/PrepareDockerImages.md).
+To directly download all docker images to your instances or building docker images locally, please check [Prepare Docker Images](docs/PrepareDockerImages.md).
 
 ## Important Configs
 See [Configs](docs/Configs.md) to understand how to modify configs. Includes,
