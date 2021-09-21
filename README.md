@@ -62,6 +62,9 @@ Internet of Things, Edge/Fog Computing, Containers Scheduling, Scalability
 |Demo|[demo/demo.py](demo/demo.py)|`python3.9 demo.py -h`|[Demo](docs/Demo.md)|
 |[Wireguard](https://www.wireguard.com/)|[scripts/wireguard/generateConf.py](scripts/wireguard/generateConf.py)|*follow guide*|[Wireguard (VPN)](docs/Wireguard.md)|
 
+## Docker Pull commands
+To directly download all docker images to your instances, please check [Prepare Docker Images](docs/PrepareDockerImages).
+
 ## Important Configs
 See [Configs](docs/Configs.md) to understand how to modify configs. Includes,
 - [Remote Logger Config](docs/Configs.md#remote-logger) 
