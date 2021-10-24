@@ -1,6 +1,7 @@
 # Demo
 This demo is for user to easily play around. 
-Make sure [docker and python environment](../README.md#requirements) are prepared.
+Make sure [docker and python environment](Requirements.md) 
+are prepared.
 
 ## Build Docker Images
 This may take long time to run. 
