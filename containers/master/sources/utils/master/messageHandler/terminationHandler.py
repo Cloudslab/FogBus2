@@ -51,3 +51,4 @@ class TerminationHandler:
                 self.registry.deregisterActor(actor)
         return terminateMessage(
             component=source, reason='User cancelled', data=responseData)
+    

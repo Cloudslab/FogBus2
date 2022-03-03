@@ -12,7 +12,7 @@ iperf3==0.1.11
 kiwisolver==1.3.1
 matplotlib==3.4.2
 mysql-connector-python==8.0.26
-numpy==1.21.1
+numpy==1.22.2
 Pillow==8.3.1
 protobuf==3.17.3
 psutil==5.8.0

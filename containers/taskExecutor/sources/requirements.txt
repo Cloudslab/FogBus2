@@ -3,7 +3,7 @@ charset-normalizer==2.0.4
 docker==5.0.0
 editdistance==0.5.3
 idna==3.2
-numpy==1.21.1
+numpy==1.22.2
 Pillow==8.3.1
 psutil==5.8.0
 pytesseract==0.3.8

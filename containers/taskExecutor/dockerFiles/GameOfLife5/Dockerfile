@@ -13,7 +13,7 @@ RUN apk add --no-cache \
     openjpeg tesseract-ocr zlib unzip openjpeg-tools
 
 RUN python -m pip install --retries 100 --default-timeout=600  --no-cache-dir --upgrade pip
-RUN python -m pip install --retries 100 --default-timeout=600  numpy --no-cache-dir
+RUN python -m pip install --retries 100 --default-timeout=600  numpy==1.22.2 --no-cache-dir
 
 ## OpenCV Source Code
 WORKDIR /workplace

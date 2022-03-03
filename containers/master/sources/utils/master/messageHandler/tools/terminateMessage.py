@@ -12,6 +12,8 @@ def terminateMessage(
     if data is None:
         data = {}
     data['reason'] = reason
+    if 'packetSize' not in data:
+        data['packetSize'] = 0
     messageToSend = MessageToSend(
         messageType=MessageType.TERMINATION,
         messageSubType=MessageSubType.STOP,
