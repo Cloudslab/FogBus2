@@ -39,6 +39,8 @@ class TerminationHandler:
                 packetSize = self.basicComponent.receivedPacketSize[
                     nameConsistent]
                 responseData = {'packetSize': packetSize.median()}
+            else:
+                responseData = {'packetSize': -1}
         elif source.role is ComponentRole.TASK_EXECUTOR:
             if componentID in registeredManager.taskExecutors:
                 taskExecutor = registeredManager.taskExecutors[componentID]
@@ -49,3 +51,4 @@ class TerminationHandler:
                 self.registry.deregisterActor(actor)
         return terminateMessage(
             component=source, reason='User cancelled', data=responseData)
+    

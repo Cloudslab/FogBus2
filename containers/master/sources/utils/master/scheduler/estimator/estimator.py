@@ -51,8 +51,12 @@ class Estimator:
                 continue
             for actor in allActors:
                 if imageName not in actor.actorResources.images:
-                    continue
+                    if 'cloudslab/'+ imageName not in \
+                            actor.actorResources.images:
+                        continue
                 availableActors[taskName].append(actor)
+            if len(availableActors[taskName]) == 0:
+                raise Exception('No available actor for task: ' + taskName)
         return availableActors
 
     def estimateCost(self, indexSequence: List[int]):

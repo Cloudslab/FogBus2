@@ -1,4 +1,12 @@
-psutil
-docker
-python-dotenv
-mysql-connector-python
+certifi==2021.5.30
+charset-normalizer==2.0.4
+docker==5.0.0
+idna==3.2
+mysql-connector-python==8.0.26
+protobuf==3.17.3
+psutil==5.8.0
+python-dotenv==0.19.0
+requests==2.26.0
+six==1.16.0
+urllib3==1.26.6
+websocket-client==1.1.0

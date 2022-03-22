@@ -94,6 +94,11 @@ class TaskExecutorInitiator(BaseInitiator):
             self.basicComponent.debugLogger.debug(
                 'Init TaskExecutor in container:\n%s', args)
         except APIError as e:
+            if 'cloudslab/' != imageName[:10]:
+                return self.initTaskExecutorInContainer(
+                    args=args,
+                    imageName='cloudslab/'+imageName,
+                    containerName=containerName)
             self.basicComponent.debugLogger.warning(str(e))
 
     @staticmethod
