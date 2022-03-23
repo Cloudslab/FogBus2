@@ -4,7 +4,10 @@
 ### Required
 
 - [Docker Engine](https://docs.docker.com/engine/install/) 
+  - You may run `sudo usermod -aG docker $USER` to use `docker` without 
+    `sudo` in terminal
 - [Docker Compose](https://docs.docker.com/compose/install/) 
+- [Docker Buildx](https://docs.docker.com/buildx/working-with-buildx/#install)
 
 ### Optional
 
