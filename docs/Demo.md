@@ -22,7 +22,9 @@ $ pwd
 
 /path/to/FogBus2/demo
 
-$ python demo.py --buildAll --platforms linux/amd64,linux/arm64,linux/arm/v7,linux/arm/v6 --dockerHubUsername cloudslab --push
+$ docker buildx create --use
+$ python demo.py --buildAll --platforms linux/amd64,linux/arm64,linux/arm/v7,
+linux/arm/v6 --dockerHubUsername cloudslab --push
 
 ...
 ```
