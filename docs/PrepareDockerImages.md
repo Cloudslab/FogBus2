@@ -7,7 +7,8 @@ There are two ways of preparing docker images,
 - [Build from scratch](#build-from-scratch)
 - [Pull from Docker Hub](#pull-from-docker-hub)
 
-For any of them, make sure you have  [Docker Environment](../README.md#required) before you start.
+For any of them, make sure you have  [Docker Environment](Requirements.md) 
+before you start.
 ## Build from scratch
 
 Use the following command build images from scratch,
