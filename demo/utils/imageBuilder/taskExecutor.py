@@ -15,7 +15,7 @@ class TaskExecutorImageBuilder:
 
     def build(
             self,
-            proxy: str = None,
+            proxy: str = '',
             platforms: str = '',
             dockerHubUsername: str = '',
             push: bool = False) -> int:
@@ -28,17 +28,22 @@ class TaskExecutorImageBuilder:
             # copy sources folder
             os.system('cp -r %s/../../sources %s/sources' % (
                 folderAbsPath, folderAbsPath))
-
-            if proxy is None:
-                if platforms != '':
-                    ret = self.crossCompile(
-                        composeFolder=folderAbsPath,
-                        platforms=platforms,
-                        dockerHubUsername=dockerHubUsername,
-                        push=push)
-                else:
-                    ret = os.system(
-                        'cd %s && docker-compose build' % folderAbsPath)
+            ret = -1
+            if platforms != '':
+                ret = self.crossCompile(
+                    composeFolder=folderAbsPath,
+                    proxy=proxy,
+                    platforms=platforms,
+                    dockerHubUsername=dockerHubUsername,
+                    push=push)
+            else:
+                command = 'cd %s && docker-compose build' % folderAbsPath
+                
+                if proxy != '':
+                    command += ' --build-arg http_proxy=%s' % proxy + \
+                            ' --build-arg https_proxy=%s' % proxy
+                ret = os.system(
+                    'cd %s && docker-compose build' % folderAbsPath)
             # delete sources folder
             os.system('rm -rf %s/sources' % folderAbsPath)
 
@@ -49,6 +54,7 @@ class TaskExecutorImageBuilder:
     @staticmethod
     def crossCompile(
             composeFolder: str,
+            proxy: str = '',
             platforms: str = 'linux/amd64,'
                              'linux/arm64,'
                              'linux/arm/v7,'
@@ -59,6 +65,9 @@ class TaskExecutorImageBuilder:
         command = 'cd %s ' % composeFolder + \
                   ' && docker buildx build ' + \
                   ' --platform %s ' % platforms
+        if proxy != '':
+            command += ' --build-arg http_proxy=%s' % proxy + \
+                       ' --build-arg https_proxy=%s' % proxy
         basename = camelToSnake(basename)
         if len(dockerHubUsername):
             command += ' -t %s/fogbus2-%s' % (dockerHubUsername,

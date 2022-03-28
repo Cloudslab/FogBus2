@@ -20,7 +20,7 @@ class ImageBuilder:
     def build(
             self,
             composeFolder: str = None,
-            proxy: str = None,
+            proxy: str = '',
             platforms: str = '',
             dockerHubUsername: str = '',
             push: bool = False) -> int:
@@ -28,26 +28,23 @@ class ImageBuilder:
         if composeFolder is None:
             composeFolder = self.composeFolder
 
-        if proxy is None:
-            if platforms:
-                return self.crossCompile(
-                    composeFolder=composeFolder,
-                    platforms=platforms,
-                    dockerHubUsername=dockerHubUsername,
-                    push=push)
-            return os.system('cd %s && docker-compose build' % composeFolder)
-
-        ret = os.system('cd %s && docker-compose build'
-                        ' --build-arg  HTTP_PROXY="%s"'
-                        '  --build-arg  HTTPS_PROXY="%s"' % (
-                            composeFolder, proxy, proxy))
-        if ret != 0:
-            raise Exception('Failed to build: %s' % composeFolder)
-        return ret
+        if platforms:
+            return self.crossCompile(
+                composeFolder=composeFolder,
+                proxy=proxy,
+                platforms=platforms,
+                dockerHubUsername=dockerHubUsername,
+                push=push)
+        command = 'cd %s && docker-compose build' % composeFolder
+        if proxy != '':
+            command += ' --build-arg http_proxy=%s' % proxy + \
+                       ' --build-arg https_proxy=%s' % proxy
+        return os.system(command)
 
     def crossCompile(
             self,
             composeFolder: str,
+            proxy: str = '',
             platforms: str = 'linux/amd64,'
                              'linux/arm64,'
                              'linux/arm/v7,'
@@ -60,6 +57,9 @@ class ImageBuilder:
         command = 'cd %s ' % composeFolder + \
                   ' && docker buildx build ' + \
                   ' --platform %s ' % platforms
+        if proxy != '':
+            command += ' --build-arg http_proxy=%s' % proxy + \
+                       ' --build-arg https_proxy=%s' % proxy
         basename = camelToSnake(basename)
         if len(dockerHubUsername):
             command += ' -t %s/fogbus2-%s' % (dockerHubUsername,

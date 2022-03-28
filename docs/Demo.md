@@ -23,21 +23,30 @@ $ pwd
 /path/to/FogBus2/demo
 
 $ docker buildx create --use
-$ python demo.py --buildAll --platforms linux/amd64,linux/arm64,linux/arm/v7,
-linux/arm/v6 --dockerHubUsername cloudslab --push
+$ python demo.py --buildAll --platforms linux/amd64,linux/arm64,linux/arm/v7,linux/arm/v6  --dockerHubUsername cloudslab 
+--push
 
 ...
 ```
-If you don't want to push to your Docker Hub, do not set `--push`. 
+If you encounter **networking issues**, try appending ` --buildProxy http://127.
+0.0.1:8080` to build behind your own **proxy**.
+
+If you don't want to push to your Docker Hub, **do not** set `--push`. 
 
 Before pushing any built image to Docker Hub, run `docker login`. 
 
-Before cross building, run `docker run --privileged --rm tonistiigi/binfmt --install all`. Moreover, if you use `docker buildx` to build for cross platforms with builder using ***mutiple nodes***(different architectures), the following command may be used to 
-build and join a node using proxy during building.
+Before cross building, run `docker run --privileged --rm tonistiigi/binfmt 
+--install all`. Moreover, if you use `docker buildx` to build for cross 
+platforms with builder using ***multiple nodes***(different architectures), 
+the following command may be used. It creates a builder with many nodes that 
+build for different platforms you set. You may need the `--driver-opt env.
+http_proxy=http://127.0.0.1:8080` for proxy use.
 ```shell
 docker buildx create --name multiNodesBuilder
 
-DOCKER_HOST=ssh://user@host docker buildx create --append --name multiNodesBuilder --node OneNode --platform=linux/arm/v7  --driver-opt env.http_proxy=http://127.0.0.1:8080 --driver-opt env.https_proxy=http://127.0.0.1:8080 --buildkitd-flags '--allow-insecure-entitlement network.host'
+DOCKER_HOST=ssh://user@host docker buildx create --append --name 
+multiNodesBuilder --node NodeName --platform=linux/arm/v7  --driver-opt env.
+http_proxy=http://127.0.0.1:8080 --driver-opt env.https_proxy=http://127.0.0.1:8080 --buildkitd-flags '--allow-insecure-entitlement network.host'
 
 ```
 
