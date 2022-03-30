@@ -28,8 +28,7 @@ $ python demo.py --buildAll --platforms linux/amd64,linux/arm64,linux/arm/v7,lin
 
 ...
 ```
-If you encounter **networking issues**, try appending ` --buildProxy http://127.
-0.0.1:8080` to build behind your own **proxy**.
+If you encounter **networking issues**, try appending ` --buildProxy http://127. 0.0.1:8080` to build behind your own **proxy**.
 
 If you don't want to push to your Docker Hub, **do not** set `--push`. 
 
