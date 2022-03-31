@@ -1,7 +1,7 @@
 import os
 
 from .camelToSnake import camelToSnake
-
+from .base import crossCompileBase
 
 class TaskExecutorImageBuilder:
 
@@ -15,7 +15,7 @@ class TaskExecutorImageBuilder:
 
     def build(
             self,
-            proxy: str = '',
+            proxy: str = None,
             platforms: str = '',
             dockerHubUsername: str = '',
             push: bool = False) -> int:
@@ -28,7 +28,6 @@ class TaskExecutorImageBuilder:
             # copy sources folder
             os.system('cp -r %s/../../sources %s/sources' % (
                 folderAbsPath, folderAbsPath))
-            ret = -1
             if platforms != '':
                 ret = self.crossCompile(
                     composeFolder=folderAbsPath,
@@ -39,7 +38,7 @@ class TaskExecutorImageBuilder:
             else:
                 command = 'cd %s && docker-compose build' % folderAbsPath
                 
-                if proxy != '':
+                if proxy is not None:
                     command += ' --build-arg http_proxy=%s' % proxy + \
                             ' --build-arg https_proxy=%s' % proxy
                 ret = os.system(
@@ -54,32 +53,19 @@ class TaskExecutorImageBuilder:
     @staticmethod
     def crossCompile(
             composeFolder: str,
-            proxy: str = '',
+            proxy: str = None,
             platforms: str = 'linux/amd64,'
                              'linux/arm64,'
                              'linux/arm/v7,'
                              'linux/arm/v6',
             dockerHubUsername: str = '',
             push: bool = False):
-        basename = os.path.basename(composeFolder)
-        command = 'cd %s ' % composeFolder + \
-                  ' && docker buildx build ' + \
-                  ' --platform %s ' % platforms
-        if proxy != '':
-            command += ' --build-arg http_proxy=%s' % proxy + \
-                       ' --build-arg https_proxy=%s' % proxy
-        basename = camelToSnake(basename)
-        if len(dockerHubUsername):
-            command += ' -t %s/fogbus2-%s' % (dockerHubUsername,
-                                              basename)
-        if push:
-            command += ' --push'
-        command += ' .'
-        print(command)
-        ret = os.system(command)
-        if ret != 0:
-            raise Exception('Failed to build: %s' % command)
-        return ret
+        return crossCompileBase(
+            composeFolder=composeFolder,
+            proxy=proxy,
+            platforms=platforms,
+            dockerHubUsername=dockerHubUsername,
+            push=push)
 
 
 if __name__ == '__main__':
