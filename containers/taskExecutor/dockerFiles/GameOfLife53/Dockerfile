@@ -39,7 +39,7 @@ RUN cd /workplace/opencv-4.5.1 \
 
 ## Compile
 
-RUN cd /workplace/opencv-4.5.1/build && make -j $(nproc)
+RUN cd /workplace/opencv-4.5.1/build && make -j $(( $(nproc) - 1 ))
 RUN cd /workplace/opencv-4.5.1/build && make install
 
 ## Python libraries
