@@ -26,7 +26,7 @@ def crossCompileBase(
     if push:
         command += ' --push'
     command += ' .'
-    print('[*]' + command)
+    print('[*] ' + command)
     ret = os.system(command)
     if ret != 0:
         raise Exception('Failed to build: %s' % command)
