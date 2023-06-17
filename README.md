@@ -56,11 +56,11 @@ Internet of Things, Edge/Fog Computing, Containers Scheduling, Scalability
 * Working with automatic demo script. It helps to build multi-arch images and run default applications of FogBus2 framework. To run demo script, see [Demo](docs/Demo.md#quick-start). 
  
  ## Automatic Scripts
-|Script |Path|Usage|Guide|
-|:-------------|:-------------|:-------------|:-------------|
-|[MariaDB:10.5.9](https://hub.docker.com/_/mariadb)|[containers/database/mariadb/configure.py](containers/database/mariadb/configure.py)|`python3.9 configure.py -h`|[MariaDB](docs/MariaDB.md)|
-|Demo|[demo/demo.py](demo/demo.py)|`python3.9 demo.py -h`|[Demo](docs/Demo.md)|
-|[Wireguard](https://www.wireguard.com/)|[scripts/wireguard/generateConf.py](scripts/wireguard/generateConf.py)|*follow guide*|[Wireguard (VPN)](docs/Wireguard.md)|
+| Script                                             | Path                                                                                 | Usage                       | Guide                                |
+| :------------------------------------------------- | :----------------------------------------------------------------------------------- | :-------------------------- | :----------------------------------- |
+| [MariaDB:10.5.9](https://hub.docker.com/_/mariadb) | [containers/database/mariadb/configure.py](containers/database/mariadb/configure.py) | `python3.9 configure.py -h` | [MariaDB](docs/MariaDB.md)           |
+| Demo                                               | [demo/demo.py](demo/demo.py)                                                         | `python3.9 demo.py -h`      | [Demo](docs/Demo.md)                 |
+| [Wireguard](https://www.wireguard.com/)            | [scripts/wireguard/generateConf.py](scripts/wireguard/generateConf.py)               | *follow guide*              | [Wireguard (VPN)](docs/Wireguard.md) |
 
 ## Docker Pull commands
 To directly download all docker images to your instances or building docker images locally, please check [Prepare Docker Images](docs/PrepareDockerImages.md).
@@ -79,4 +79,5 @@ See [Configs](docs/Configs.md) to understand how to modify configs. Includes,
 ![](images/HighLevelAbstractDiagram.png)
 
 # References
-Coming Soon....
+* **Q. Deng, M. Goudarzi, and R. Buyya, “[FogBus2: a lightweight and distributed container-based framework for integration of IoTenabled systems with edge and cloud computing](https://www.researchgate.net/profile/Mohammad_Goudarzi10/publication/352364687_FogBus2_A_Lightweight_and_Distributed_Container-based_Framework_for_Integration_of_IoT-enabled_Systems_with_Edge_and_Cloud_Computing/links/60c6012492851ca6f8e68383/FogBus2-A-Lightweight-and-Distributed-Container-based-Framework-for-Integration-of-IoT-enabled-Systems-with-Edge-and-Cloud-Computing.pdf),” in Proceedings of the International Workshop on Big Data in Emergent Distributed Environments, 2021, pp. 1–8.**
+* Goudarzi, Mohammad, Qifan Deng, and Rajkumar Buyya. "[Resource management in edge and fog computing using FogBus2 framework.](https://arxiv.org/pdf/2108.00591.pdf)" arXiv preprint arXiv:2108.00591 (2021).
