@@ -6,7 +6,7 @@ if __name__ == '__main__':
         port=3306,
         user='root',
         password='passwordForRoot',
-        database='FogBus2_Tasks')
+        database='fogbus2_tasks')
 
     cursor = conn.cursor()
     import json
@@ -33,7 +33,7 @@ if __name__ == '__main__':
     #     port=3306,
     #     user='root',
     #     password='passwordForRoot',
-    #     database='FogBus2_Applications'
+    #     database='fogbus2_applications'
     # )
 
     # cursor = conn.cursor()

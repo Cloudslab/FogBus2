@@ -33,9 +33,9 @@ class MySQLDatabase(BaseDatabase, ABC):
             password: str,
             host: str = '127.0.0.1',
             port: int = 3306,
-            dbImages: str = 'FogBus2_Images',
-            dbResources: str = 'FogBus2_Resources',
-            dbSystemPerformance: str = 'FogBus2_SystemPerformance',
+            dbImages: str = 'fogbus2_images',
+            dbResources: str = 'fogbus2_resources',
+            dbSystemPerformance: str = 'fogbus2_systemperformance',
             **kwargs):
         BaseDatabase.__init__(self)
         self.connImages = self.connectionsPool(

@@ -18,8 +18,8 @@ class MySQLDatabase(BaseDatabase):
             password: str = 'passwordForRoot',
             host: str = '127.0.0.1',
             port: int = 3306,
-            dbTasks: str = 'FogBus2_Tasks',
-            dbApplications: str = 'FogBus2_Applications',
+            dbTasks: str = 'fogbus2_tasks',
+            dbApplications: str = 'fogbus2_applications',
             **kwargs):
         BaseDatabase.__init__(self)
         self.dbTasks = connector.connect(

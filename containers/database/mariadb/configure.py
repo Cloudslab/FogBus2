@@ -57,7 +57,7 @@ def create():
               ' -e MYSQL_ROOT_PASSWORD="%s"' % password + \
               ' -e MYSQL_USER=fogbus2' + \
               ' -e MYSQL_PASSWORD="%s"' % password + \
-              ' -d mariadb:10.5.9'
+              ' -d mariadb:11.2.2'
     ret = os.system(command=command)
     if ret != 0:
         return terminate()
@@ -79,9 +79,9 @@ def backup():
     command = 'docker run --rm -it' \
               ' --net host' \
               ' -e MYSQL_PWD=%s ' % environment['MYSQL_PASSWORD'] + \
-              ' mariadb:10.5.9' \
+              ' mariadb:11.2.2' \
               ' bash -c ' \
-              '"mysqldump -h 127.0.0.1' \
+              '"mariadb-dump -h 127.0.0.1' \
               ' -u root' \
               ' --all-databases"' \
               ' > %s' % sqlFilePath
@@ -135,9 +135,9 @@ def init():
               ' --net host' \
               ' -e MYSQL_PWD=%s ' % environment['MYSQL_PASSWORD'] + \
               ' -v %s:/sqlFiles/' % sqlFileFolder + \
-              ' mariadb:10.5.9' \
+              ' mariadb:11.2.2' \
               ' bash -c ' \
-              '"mysql -h 127.0.0.1' \
+              '"mariadb -h 127.0.0.1' \
               ' -u root' \
               ' < /sqlFiles/%s"' % sqlFilename
     ret = os.system(command)
