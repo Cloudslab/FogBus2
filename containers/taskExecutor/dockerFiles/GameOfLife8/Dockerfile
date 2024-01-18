@@ -42,6 +42,7 @@ RUN cd /workplace/opencv-4.5.1 \
 RUN cd /workplace/opencv-4.5.1/build && make -j $(( $(nproc) - 1 ))
 RUN cd /workplace/opencv-4.5.1/build && make install
 
+RUN apk add --no-cache py3-scikit-learn py3-scipy
 ## Python libraries
 COPY ./sources/requirements.txt /install/requirements.txt
 RUN python -m pip install --retries 100 --default-timeout=600  \
