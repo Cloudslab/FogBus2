@@ -1,5 +1,5 @@
 # Base
-FROM python:3.9-alpine3.14 as base
+FROM python:3.9.17-alpine3.18 as base
 FROM base as builder
 
 ## Dependencies
@@ -18,17 +18,17 @@ RUN python -m pip install --retries 100 --default-timeout=600  numpy==1.22.2 --n
 ## OpenCV Source Code
 WORKDIR /workplace
 RUN cd /workplace/ \
-    && curl -L "https://github.com/opencv/opencv/archive/4.5.1.zip" -o opencv.zip \
-    && curl -L "https://github.com/opencv/opencv_contrib/archive/4.5.1.zip" -o opencv_contrib.zip \
+    && curl -L "https://github.com/opencv/opencv/archive/4.9.0.zip" -o opencv.zip \
+    && curl -L "https://github.com/opencv/opencv_contrib/archive/4.9.0.zip" -o opencv_contrib.zip \
     && unzip opencv.zip \
     && unzip opencv_contrib.zip \
     && rm opencv.zip opencv_contrib.zip
 
 ## Configure
-RUN cd /workplace/opencv-4.5.1 \
+RUN cd /workplace/opencv-4.9.0 \
     && mkdir -p build && cd build \
     && cmake \
-        -DOPENCV_EXTRA_MODULES_PATH=../../opencv_contrib-4.5.1/modules \
+        -DOPENCV_EXTRA_MODULES_PATH=../../opencv_contrib-4.9.0/modules \
         -DBUILD_NEW_PYTHON_SUPPORT=ON \
         -DBUILD_opencv_python3=ON \
         -DHAVE_opencv_python3=ON \
@@ -39,16 +39,21 @@ RUN cd /workplace/opencv-4.5.1 \
 
 ## Compile
 
-RUN cd /workplace/opencv-4.5.1/build && make -j $(( $(nproc) - 1 ))
-RUN cd /workplace/opencv-4.5.1/build && make install
+RUN cd /workplace/opencv-4.9.0/build && make -j $(( $(nproc) - 1 ))
+RUN cd /workplace/opencv-4.9.0/build && make install
 
-RUN apk add --no-cache py3-scikit-learn py3-scipy
+
 ## Python libraries
 COPY ./sources/requirements.txt /install/requirements.txt
 RUN python -m pip install --retries 100 --default-timeout=600  \
     --prefix=/install \
     --no-cache-dir \
     -r /install/requirements.txt
+
+RUN curl -L "https://github.com/scikit-learn/scikit-learn/archive/refs/tags/1.0.2.tar.gz" -o scikit-learn-1.0.2.tar.gz \
+    && tar -xzf scikit-learn-1.0.2.tar.gz \
+    && cd scikit-learn-1.0.2 \
+    && python setup.py install
 
 ## Copy files
 FROM base

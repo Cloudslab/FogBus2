@@ -2,7 +2,7 @@ version: '3'
 
 services:
 
-  fogbus2-naive_formula3:
+  fogbus2-diabetes_prediction:
     # image: fogbus2-naive_formula3
     image: cloudslab/fogbus2-diabetes_prediction
     build:
