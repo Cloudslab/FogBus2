@@ -31,6 +31,7 @@ class User:
             videoPath: str,
             golInitText: str,
             containerName: str = '',
+            csvPath: str = '',
             logLevel=DEBUG):
         self.containerName = containerName
         self.basicComponent = BasicComponent(
@@ -56,7 +57,8 @@ class User:
             videoPath=videoPath,
             showWindow=showWindow,
             basicComponent=self.basicComponent,
-            golInitText=golInitText)
+            golInitText=golInitText,
+            csvPath=csvPath)
         if self.actuator is None:
             self.basicComponent.debugLogger.error(
                 'Application is not supported: %s',
@@ -203,6 +205,13 @@ def parseArg():
         default='Qifan Deng',
         type=str,
         help='GameOfLife initial world text')
+    parser.add_argument(
+        '--csvPath',
+        metavar='CSVPath',
+        nargs='?',
+        default='',
+        type=str,
+        help='path to csv file of diabetes prediction')
     return parser.parse_args()
 
 
@@ -218,5 +227,6 @@ if __name__ == "__main__":
         showWindow=args.showWindow,
         videoPath=args.videoPath,
         golInitText=args.golInitText,
-        logLevel=args.verbose)
+        logLevel=args.verbose,
+        csvPath=args.csvPath)
     user_.run()

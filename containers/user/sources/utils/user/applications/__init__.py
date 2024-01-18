@@ -8,3 +8,4 @@ from .gameOfLifeSerialized import GameOfLifeSerialized
 from .naiveFormulaParallelized import NaiveFormulaParallelized
 from .naiveFormulaSerialized import NaiveFormulaSerialized
 from .videoOCR import VideoOCR
+from .diabetesPrediction import DiabetesPrediction

@@ -76,3 +76,4 @@ from .naiveFormula2 import NaiveFormula2
 from .naiveFormula3 import NaiveFormula3
 from .ocr import OCR
 from .testTask import TestTask
+from .diabetesPrediction import DiabetesPrediction

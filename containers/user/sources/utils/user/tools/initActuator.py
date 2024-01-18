@@ -10,6 +10,7 @@ from ..applications import GameOfLifeSerialized
 from ..applications import NaiveFormulaParallelized
 from ..applications import NaiveFormulaSerialized
 from ..applications import VideoOCR
+from ..applications import DiabetesPrediction
 from ...component.basic import BasicComponent
 
 
@@ -19,7 +20,8 @@ def initActuator(
         label: str,
         showWindow: bool,
         basicComponent: BasicComponent,
-        golInitText: str) -> Union[ApplicationUserSide, None]:
+        golInitText: str,
+        csvPath: str) -> Union[ApplicationUserSide, None]:
     actuator = None
     if appName == 'FaceDetection':
         actuator = FaceDetection(
@@ -77,5 +79,9 @@ def initActuator(
             videoPath=videoPath,
             targetHeight=int(label),
             showWindow=showWindow,
+            basicComponent=basicComponent)
+    elif appName == 'DiabetesPrediction':
+        actuator = DiabetesPrediction(
+            csvPath=csvPath,
             basicComponent=basicComponent)
     return actuator
