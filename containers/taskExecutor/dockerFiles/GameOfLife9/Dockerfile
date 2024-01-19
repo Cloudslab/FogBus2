@@ -54,7 +54,6 @@ RUN curl -L "https://github.com/scikit-learn/scikit-learn/archive/refs/tags/1.0.
     && tar -xzf scikit-learn-1.0.2.tar.gz \
     && cd scikit-learn-1.0.2 \
     && python -m pip install Cython==0.29.36 scipy==1.11.2 threadpoolctl==3.2.0 \
-    && make -j $(( $(nproc) - 1 )) \
     && python setup.py install
 
 ## Copy files
