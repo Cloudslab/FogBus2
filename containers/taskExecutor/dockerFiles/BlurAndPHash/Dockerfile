@@ -1,5 +1,5 @@
 # Base
-FROM python:3.9.17-alpine3.14 as base
+FROM python:3.9.17-alpine3.18 as base
 FROM base as builder
 
 ## Dependencies
