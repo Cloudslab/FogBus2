@@ -52,9 +52,9 @@ RUN python -m pip install --retries 100 --default-timeout=600  \
 
 RUN curl -L "https://github.com/scikit-learn/scikit-learn/archive/refs/tags/1.0.2.tar.gz" -o scikit-learn-1.0.2.tar.gz \
     && tar -xzf scikit-learn-1.0.2.tar.gz \
-    && cd scikit-learn-1.0.2 \
-    && python -m pip install Cython==0.29.36 scipy==1.11.2 threadpoolctl==3.2.0 \
-    && python setup.py install
+    && python -m pip install Cython==0.29.36 scipy==1.11.2 threadpoolctl==3.2.0
+
+RUN cd scikit-learn-1.0.2 && python setup.py install
 
 ## Copy files
 FROM base
