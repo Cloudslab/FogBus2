@@ -4,12 +4,10 @@ The following instructions are for Ubuntu x86_64 only.
 ## Install Docker
 **Step1**: Uninstall old versions
 ```shell
-# Remove existing Docker installations
 for pkg in docker.io docker-doc docker-compose docker-compose-v2 podman-docker containerd runc; do sudo apt-get remove $pkg; done
 ```
 **Step2**: Add Docker's official GPG key
 ```bash
-# Add Docker's official GPG key:
 sudo apt-get update -y
 sudo apt-get install ca-certificates curl gnupg -y
 sudo install -m 0755 -d /etc/apt/keyrings
@@ -18,7 +16,6 @@ sudo chmod a+r /etc/apt/keyrings/docker.gpg
 ```
 **Step3**: Set up the stable repository.
 ```bash
-# Add the repository to Apt sources:
 echo \
   "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
   $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | \
@@ -37,7 +34,11 @@ sudo docker run hello-world
 ```bash
 sudo usermod -aG docker $USER
 ```
-**Step7**: logout and login again.
+**Step7**: Logout and login again.
+**Step8**: Install docker compose.
+```bash
+sudo apt install docker-compose -y
+```
 
 ## Prepare the Network
 **Step0**: Know your devices. Assume we have 6 devices, `A`, `B`,`C`,`D`,`E`, and `F`.
@@ -302,7 +303,7 @@ cd FogBus2/containers/database/mariadb/
 ```bash
 docker run -p 3306:3306 \
             --name fogbus2-mariadb \
-            -v ./mysql:/var/lib/mysql \
+            -v $(pwd)/mysql:/var/lib/mysql \
             -e MYSQL_ROOT_PASSWORD=passwordForRoot \
             -e MYSQL_USER=fogbus2 \
             -e MYSQL_PASSWORD=passwordForRoot \
@@ -313,7 +314,7 @@ docker run -p 3306:3306 \
 docker run --rm -it \
            --net host \
            -e MYSQL_PWD=passwordForRoot \
-           -v ./sqlFiles:/sqlFiles/ \
+           -v $(pwd)/sqlFiles:/sqlFiles/ \
            mariadb:11.2.2 \
            bash -c \
                "mariadb -h 127.0.0.1 \
@@ -323,10 +324,118 @@ docker run --rm -it \
 
 ## Run FogBus2
 
-### Run RemoteLogger
+### Run RemoteLogger, Master, and Actor on A
 **step0**: Navigate to the folder of remote logger.
 
 ```bash
 git clone https://github.com/Cloudslab/FogBus2.git
 cd FogBus2/containers/remoteLogger
+```
+**step1**: Run RemoteLogger in a Docker container.
+```bash
+docker pull cloudslab/fogbus2-remote_logger
+docker-compose run \
+                  --rm \
+                  --name RemoteLogger \
+                  fogbus2-remote_logger \
+                  --bindIP 10.4.2.101 \
+                  --bindPort 5000 \
+                  --containerName RemoteLogger
+```
+
+**step2**: Run Master in a Docker container.
+```bash
+cd FogBus2/containers/master
+docker pull cloudslab/fogbus2-master
+docker-compose run \
+                  --rm \
+                  --name Master \
+                  fogbus2-master \
+                  --bindIP 10.4.2.101 \
+                  --bindPort 5001 \
+                  --containerName Master \
+                  --remoteLoggerIP 10.4.2.101 \
+                  --remoteLoggerPort 5000
+```
+
+**step2**: Run Actor in a Docker container.
+```bash
+cd FogBus2/containers/actor
+docker pull cloudslab/fogbus2-actor
+docker-compose run \
+                  --rm \
+                  --name Actor \
+                  fogbus2-actor \
+                  --bindIP REPLACE_IP
+                  --bindPort 50000 \
+                  --containerName Actor \
+                  --remoteLoggerIP REPLACE_IP
+                  --remoteLoggerPort 5000 \
+                  --masterIP REPLACE_IP
+                  --masterPort 5001
+```
+
+### Run Actor on B
+**step0**: Navigate to the folder of remote logger.
+
+```bash
+git clone https://github.com/Cloudslab/FogBus2.git
+cd FogBus2/containers/actor
+```
+
+**step1**: Run Actor in a Docker container.
+```bash
+docker pull cloudslab/fogbus2-actor
+docker-compose run \
+                  --rm \
+                  --name Actor \
+                  fogbus2-actor \
+                  --bindIP 10.4.2.102 \
+                  --bindPort 50000 \
+                  --containerName Actor \
+                  --remoteLoggerIP 10.4.2.101 \
+                  --remoteLoggerPort 5000 \
+                  --masterIP 10.4.2.101 \
+                  --masterPort 5001
+```
+
+### Run Actor on C
+**step0**: Navigate to the folder of remote logger.
+
+```bash
+git clone https://github.com/Cloudslab/FogBus2.git
+cd FogBus2/containers/actor
+```
+
+**step1**: Run Actor in a Docker container.
+```bash
+docker pull cloudslab/fogbus2-actor
+docker-compose run \
+                  --rm \
+                  --name Actor \
+                  fogbus2-actor \
+                  --bindIP 10.4.2.103 \
+                  --bindPort 50000 \
+                  --containerName Actor \
+                  --remoteLoggerIP 10.4.2.101 \
+                  --remoteLoggerPort 5000 \
+                  --masterIP 10.4.2.101 \
+                  --masterPort 5001
+```
+```shell
+docker pull cloudslab/fogbus2-user
+docker-compose run \
+                    --rm \
+                    --name UserDiabetesPrediction \
+                    -v $(pwd)/:/data \
+                    fogbus2-user \
+                        --bindIP REPLACE_IP
+                        --bindPort 50101 \
+                        --containerName UserDiabetesPrediction \
+                        --remoteLoggerIP REPLACE_IP
+                        --remoteLoggerPort 5000 \
+                        --masterIP REPLACE_IP
+                        --masterPort 5001 \
+                            --applicationName DiabetesPrediction \
+                            --csvPath /data/diabetes_PIMA.csv
 ```

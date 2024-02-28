@@ -111,4 +111,6 @@ docker pull cloudslab/fogbus2-eye_detection && docker tag cloudslab/fogbus2-eye_
 docker pull cloudslab/fogbus2-blur_and_p_hash && docker tag cloudslab/fogbus2-blur_and_p_hash fogbus2-blur_and_p_hash && 
 docker pull cloudslab/fogbus2-ocr && docker tag cloudslab/fogbus2-ocr fogbus2-ocr
 
+docker pull cloudslab/fogbus2-diabetes_prediction && docker tag cloudslab/fogbus2-diabetes_prediction fogbus2-diabetes_prediction
+
 ```
