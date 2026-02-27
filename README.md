@@ -6,7 +6,7 @@ FogBus2 as a new python-based framework, developed from scratch, offers a lightw
 # Major Contributions
 The major contributions of this work are as follow:
 * A distributed containerized framework in python language that integrates IoT enabled systems, Edge/Fog, and Cloud infrastructure to support various types of IoT applications ranging from latency-critical to computation-intensive ones.
-* Multi platform support. The docker image of framework's components and applications are built for different platroms, such as Intel, AMD, ARM, etc.
+* Multi platform support. The docker image of framework's components and applications are built for different platforms, such as Intel, AMD, ARM, etc.
 * Supporting different topology models for communication.
 * Scheduling mechanism and several scheduling policies currently implemented and integrated with this framework.
 * Dynamic scalability. There are some implemented mechanisms to dynamically scale the framework components based on the dynamics of the users' requests or the computing environment.
@@ -23,7 +23,7 @@ FogBus2 framework is developed by:
 * Rajkumar Buyya
 
 # Instructions to Install, Setup, Run, and Extend FogBus2 Framework and IoT Applications
-To find an installation guideline, sample setup, VPN setup, Important protocols, running current features, extending the framwork, implementing and extending new IoT applications, please refer and cite to:
+To find an installation guideline, sample setup, VPN setup, Important protocols, running current features, extending the framework, implementing and extending new IoT applications, please refer and cite to:
 * [Book Chapter](https://arxiv.org/abs/2108.00591)
 
 # Keywords
